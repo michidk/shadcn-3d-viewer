@@ -67,6 +67,28 @@ test("animated example loads the bundled model and plays", async ({ page }) => {
   ).toBeVisible();
 });
 
+test("default corner controls stay separated at desktop and phone widths", async ({ page }) => {
+  await openStory(page, "viewer-model-viewer--animated-model");
+  const viewer = page.locator('[data-slot="model-viewer"]');
+  const fullscreen = page.locator('[data-slot="model-viewer-fullscreen"]');
+  const animation = page.getByRole("toolbar", { name: "Animation controls" });
+  await expect(animation).toBeVisible();
+  for (const width of [1280, 720, 390]) {
+    await page.setViewportSize({ width, height: 900 });
+    const root = (await viewer.boundingBox())!;
+    const button = (await fullscreen.boundingBox())!;
+    const panel = (await animation.boundingBox())!;
+    expect(button.y - root.y).toBeLessThan(20);
+    expect(root.x + root.width - button.x - button.width).toBeLessThan(20);
+    expect(root.y + root.height - panel.y - panel.height).toBeLessThan(20);
+    expect(root.x + root.width - panel.x - panel.width).toBeLessThan(20);
+    const hint = (await page.locator('[data-slot="model-viewer-status"]').boundingBox())!;
+    expect(hint.x + hint.width <= panel.x || hint.y + hint.height <= panel.y).toBe(true);
+    const toolbar = (await page.locator('.viewer-toolbar-top').boundingBox())!;
+    expect(toolbar.x + toolbar.width).toBeLessThanOrEqual(button.x);
+  }
+});
+
 test("custom toolbar and inspector examples support their controlled state", async ({
   page,
 }) => {

@@ -129,8 +129,8 @@
   }
 
   .viewer-animation-controls {
-    left: 14px;
-    bottom: 52px;
+    right: 14px;
+    bottom: 14px;
     max-width: min(390px, calc(100% - 28px));
   }
   .viewer-animation-name {
@@ -152,7 +152,7 @@
 
   .viewer-fullscreen {
     right: 14px;
-    bottom: 14px;
+    top: 14px;
   }
   .viewer-overlay-slot {
     inset: 0;
@@ -214,13 +214,13 @@
       top: 9px;
       left: 9px;
       gap: 4px;
-      max-width: calc(100% - 18px);
+      max-width: calc(100% - 58px);
     }
 
     .viewer-animation-controls {
       top: auto;
-      bottom: 50px;
-      left: 9px;
+      bottom: 9px;
+      right: 9px;
       max-width: calc(100% - 18px);
     }
 
@@ -234,7 +234,10 @@
     }
     .viewer-fullscreen {
       right: 9px;
-      bottom: 9px;
+      top: 9px;
+    }
+    .model-viewer:has(.viewer-animation-controls) .viewer-help {
+      bottom: 62px;
     }
     .viewer-pane-label {
       top: 8px;

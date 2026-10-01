@@ -232,6 +232,8 @@ Controlled props stay controlled: a hook action reports the change callback, but
 
 Toolbar layout measures mounted top toolbars, including wraps and custom button sizes, to reserve room in split views. Use `placement="static"` for a toolbar that should not reserve top space. Primitive button sizing and menu styling are not overridden by viewer CSS.
 
+Fullscreen defaults to the top-right; animation controls default to the bottom-right. On narrow viewers, the interaction hint sits above the animation panel. Reposition the compound parts with `className` or `style` (for example, `className="top-auto bottom-3"` on `ModelViewerFullscreen`). The default top-right view cube leaves space below fullscreen; explicit `viewCubeMargin` values take precedence.
+
 `toolbar={null}` hides only the main toolbar; `showUi={false}` hides all built-in controls. `ModelViewerControls` and `ModelViewerAnimationControls` export the ready-made controlled toolbars. Arrow Left/Right and Home/End move focus between toolbar buttons; Tab retains normal browser navigation.
 
 DOM-facing components accept native props, React 19 refs, `className`, and `style`. `ModelViewer` forwards these to its root `div` (its `onLoad`/`onError` remain model lifecycle callbacks), and renders `children` as additional DOM overlays, not R3F scene children. Use positioned children with a z-index to place additional UI above the canvas.

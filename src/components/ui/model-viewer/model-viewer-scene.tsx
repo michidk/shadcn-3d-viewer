@@ -286,6 +286,7 @@ export function ModelViewerScene({
                   viewCubePosition={viewCubePosition}
                   viewCubeMargin={viewCubeMargin}
                   toolbarVisible={toolbarOffset > 0}
+                  showUi={showUi}
                   projection={projection}
                   onInspect={index === 0 ? reportInspection : undefined}
                   selectedMesh={selectedMesh}
@@ -541,6 +542,7 @@ function ViewerScene({
   viewCubePosition,
   viewCubeMargin,
   toolbarVisible,
+  showUi,
   projection,
   onInspect,
   selectedMesh,
@@ -577,6 +579,7 @@ function ViewerScene({
   viewCubePosition: ViewCubePosition;
   viewCubeMargin?: [number, number];
   toolbarVisible: boolean;
+  showUi: boolean;
   projection: "perspective" | "orthographic";
   onInspect?: (value: ModelInspection) => void;
   selectedMesh: string | null;
@@ -603,7 +606,9 @@ function ViewerScene({
     64,
     toolbarVisible && paneWidth <= 680 && viewCubePosition.startsWith("top-")
       ? 148
-      : 64,
+      : showUi && viewCubePosition === "top-right"
+        ? 104
+        : 64,
   ];
   const [fitVersion, setFitVersion] = useState(0);
   const [gridScale, setGridScale] = useState(1);
