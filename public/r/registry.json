@@ -1,0 +1,45 @@
+{
+  "$schema": "https://ui.shadcn.com/schema/registry.json",
+  "name": "frame",
+  "homepage": "https://shadcn-3d-viewer.preview.k8s.lohr.dev/",
+  "items": [
+    {
+      "name": "model-viewer",
+      "type": "registry:ui",
+      "title": "3D Model Viewer",
+      "description": "An interactive GLB viewer with orbit, split, fly, shading, screenshot, and fullscreen controls.",
+      "dependencies": [
+        "@react-three/drei",
+        "@react-three/fiber",
+        "lucide-react",
+        "three"
+      ],
+      "devDependencies": [
+        "@types/three"
+      ],
+      "registryDependencies": [
+        "alert",
+        "button",
+        "dropdown-menu"
+      ],
+      "files": [
+        {
+          "path": "src/components/ui/model-viewer/model-viewer.tsx",
+          "type": "registry:ui"
+        },
+        {
+          "path": "src/components/ui/model-viewer/model-viewer.css",
+          "type": "registry:ui"
+        },
+        {
+          "path": "src/components/ui/model-viewer/view-helper.tsx",
+          "type": "registry:ui"
+        },
+        {
+          "path": "src/components/ui/model-viewer/index.ts",
+          "type": "registry:ui"
+        }
+      ]
+    }
+  ]
+}
