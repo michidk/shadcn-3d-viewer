@@ -6,7 +6,7 @@ A source-owned shadcn component for viewing GLB models with React Three Fiber. I
 
 - Smooth camera controls, bounded zoom, and a single orthographic projection toggle
 - Optional orientation helper: Drei's labeled cube or Asset Studio's colored axes
-- Four independently orbitable front/right/back/left views sharing one WebGL renderer
+- Four fixed front/right/back/left views with independent pan and zoom, sharing one WebGL renderer
 - First-person fly camera with pointer-lock and drag-look fallback
 - Realistic, solid, normal, and wireframe shading
 - Procedural image-based studio lighting, day/night modes, and an optional fading grid
@@ -41,7 +41,7 @@ bun run registry:build
 bunx shadcn@latest add ./public/r/model-viewer.json
 ```
 
-The registry item installs its React Three Fiber dependencies and the shadcn `alert`, `button`, and `dropdown-menu` primitives.
+The registry item installs its React Three Fiber dependencies and the shadcn `alert`, `button`, `tooltip`, and `dropdown-menu` primitives.
 
 Or copy `src/components/ui/model-viewer/` into an existing shadcn project and install:
 
@@ -86,6 +86,8 @@ Omit `src` to render the built-in material study. Use `showUi={false}` for a cle
 | `showUi` | `boolean` | `true` |
 | `showOrientation` | `boolean` | follows `showUi` |
 | `viewCube` | `"drei" \| "asset-studio" \| false` | `"asset-studio"` |
+| `viewCubePosition` | Gizmo alignment, e.g. `"top-right"`, `"bottom-left"` | `"top-right"` |
+| `viewCubeMargin` | `[horizontal, vertical]` pixels | `[64, 64]`; toolbar clearance on narrow viewers |
 | `projection` | `"perspective" \| "orthographic"` | `"perspective"` |
 | `showInspector` | `boolean` | `false` |
 | `onInspect` | `(inspection: ModelInspection) => void` | none |
@@ -102,6 +104,29 @@ Omit `src` to render the built-in material study. Use `showUi={false}` for a cle
 `mode`, `lighting`, `shading`, `showGrid`, `viewCube`, `projection`, camera, and animation props are controlled when supplied. Use their corresponding `default*` props for uncontrolled initial values. Change callbacks report toolbar interactions. In particular, use `onViewCubeChange` and `onProjectionChange` when controlling these options externally.
 
 The toolbar offers one orthographic toggle; direction changes are available through the orientation helper. `cameraPreset` remains available for programmatic positioning. Helpers appear in orbit mode. Set `viewCube={false}` to hide one, or explicitly set `showOrientation` to show it in a UI-free viewer.
+
+`ViewCube` is also an exported, source-owned shadcn-style component. Compose it inside your own React Three Fiber `Canvas` with default camera controls, or configure it through `ModelViewer`:
+
+```tsx
+<ModelViewer defaultViewCube="drei" viewCubePosition="top-right" viewCubeMargin={[64, 80]} />
+
+// Inside an R3F Canvas:
+<ViewCube variant="asset-studio" position="top-right" margin={[64, 64]} />
+```
+
+Standalone `ViewCube` defaults to render priority 1. When composing with a custom renderer, use a later priority (the viewer uses 2). The four split panes keep fixed directions; dragging pans and scrolling zooms without rotating them.
+
+### Bring your own UI
+
+Controls include accessible tooltips by default. Replace either implementation without changing the viewer:
+
+```tsx
+<ModelViewer components={{ Button: AppButton, Tooltip: AppTooltip }} />
+```
+
+`Button` accepts the shadcn button props (including `variant` and `size`) and must forward its ref, event handlers, ARIA attributes, and `className` to the actual button. `Tooltip` receives `{ content, children }`; use `children` as its trigger while preserving refs and handlers. Exported `ViewerUiComponents` and `ViewerTooltipProps` describe these contracts. Define overrides outside render to preserve component identity.
+
+`ModelInspector` is separately exported with searchable/collapsible hierarchy, metric cards, dimensions, and selection state. Pass `inspection`, `selectedMesh`, `onSelectMesh`, optional `onClose`, `className`, and optional `components`. Use `ViewerUiProvider` to share overrides across composed controls. The inspector includes its stylesheet; override `className`/CSS for custom placement.
 
 Omitting `animation` automatically selects the first clip; passing `animation={null}` explicitly disables clip selection. Playback starts paused. Clip selection resets when replacing an uncontrolled model, and pause/resume preserves playback position. Respecting reduced motion suppresses playback and auto-rotation; use `respectReducedMotion={false}` only when your application explicitly requests motion.
 

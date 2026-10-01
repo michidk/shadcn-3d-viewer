@@ -77,7 +77,7 @@ test("orthographic toggle replaces presets and both view helpers render", async 
   await page.waitForTimeout(300);
   expect(await canvasImage(page)).not.toBe(off);
   const pane = (await page.locator(".viewer-view").boundingBox())!;
-  await page.mouse.click(pane.x + pane.width - 84, pane.y + pane.height - 93);
+  await page.mouse.click(pane.x + pane.width - 84, pane.y + 76);
   await page.mouse.move(0, 0);
   await page.waitForTimeout(2000);
   // Regressing DPR during the camera tween must not leave an empty drawing buffer.
@@ -96,16 +96,23 @@ test("orthographic toggle replaces presets and both view helpers render", async 
   await expect(page.getByRole("button", { name: "Orthographic view", exact: true })).toHaveAttribute("aria-pressed", "false");
 });
 
-test("split dragging changes only the selected pane", async ({ page }) => {
+test("split panes pan independently without changing their fixed directions", async ({ page }) => {
   await ready(page);
   await page.getByRole("button", { name: "Four-view split" }).click();
   await page.waitForTimeout(1500);
   await expect(page.locator("canvas")).toHaveCount(1);
+  const directions = () => page.evaluate(`(async () => {
+    const { _roots } = await import('/node_modules/.vite/deps/@react-three_fiber.js');
+    const state = [..._roots.values()][0].store.getState();
+    return state.internal.subscribers.filter(s => s.priority > 0).map(s => {
+      const { camera } = s.store.getState();
+      return { quaternion: camera.quaternion.toArray(), position: camera.position.toArray(), zoom: camera.zoom };
+    });
+  })()`);
+  const beforeDirections = await directions();
   const panes = page.locator(".viewer-view");
   const first = (await panes.nth(0).boundingBox())!;
-  const second = (await panes.nth(1).boundingBox())!;
   const beforeFirst = await page.screenshot({ clip: first });
-  const beforeSecond = await page.screenshot({ clip: second });
   await page.mouse.move(first.x + first.width / 2, first.y + first.height / 2);
   await page.mouse.down();
   await page.mouse.move(first.x + first.width / 2 + 100, first.y + first.height / 2 + 50, { steps: 20 });
@@ -113,7 +120,16 @@ test("split dragging changes only the selected pane", async ({ page }) => {
   await page.mouse.move(0, 0);
   await page.waitForTimeout(1800);
   expect((await page.screenshot({ clip: first })).equals(beforeFirst)).toBe(false);
-  expect((await page.screenshot({ clip: second })).equals(beforeSecond)).toBe(true);
+  const afterPan = await directions();
+  expect(afterPan.slice(1)).toEqual(beforeDirections.slice(1));
+  expect(afterPan[0].position).not.toEqual(beforeDirections[0].position);
+  afterPan.forEach((camera: { quaternion: number[] }, i: number) => camera.quaternion.forEach((value, j) => expect(value).toBeCloseTo(beforeDirections[i].quaternion[j], 10)));
+  await page.mouse.move(first.x + first.width / 2, first.y + first.height / 2);
+  await page.mouse.wheel(0, -200);
+  await page.waitForTimeout(1500);
+  const afterZoom = await directions();
+  expect(afterZoom.slice(1)).toEqual(beforeDirections.slice(1));
+  afterZoom.forEach((camera: { quaternion: number[] }, i: number) => camera.quaternion.forEach((value, j) => expect(value).toBeCloseTo(beforeDirections[i].quaternion[j], 10)));
 });
 
 test("skinned model animates, pauses, resumes, switches clips and resets on replacement", async ({ page }) => {
@@ -141,10 +157,10 @@ test("skinned model animates, pauses, resumes, switches clips and resets on repl
   await page.waitForTimeout(300);
   await page.getByRole("button", { name: "Pause animation", exact: true }).click();
   await page.getByRole("button", { name: "Inspect model", exact: true }).click();
-  await expect(page.getByRole("complementary", { name: "Model inspector" })).toContainText("triangles");
-  const dimensions = await page.locator(".viewer-inspector p").nth(1).textContent();
-  expect(dimensions?.split(":")[1].split("×").map(Number).every(value => value > 0 && value < 10)).toBe(true);
-  await page.locator(".viewer-inspector li button:enabled").first().click();
+  await expect(page.getByRole("complementary", { name: "Model inspector" })).toContainText("Triangles");
+  const dimensions = await page.locator(".inspector-axis-values strong").allTextContents();
+  expect(dimensions.map(Number).every(value => value > 0 && value < 10)).toBe(true);
+  await page.locator(".inspector-node:enabled").first().click();
   await expect(page.locator('.viewer-inspector li button[aria-pressed="true"]')).toHaveCount(1);
   await page.getByRole("button", { name: "Clear", exact: true }).click();
   await expect(page.getByRole("toolbar", { name: "Animation controls" })).toHaveCount(0);
@@ -200,4 +216,60 @@ test("static split panes stop drawing when idle", async ({ page }) => {
   expect(before).toBeGreaterThan(0);
   await page.waitForTimeout(500);
   expect(await page.evaluate(() => (window as Window & { viewerDraws: number }).viewerDraws)).toBe(before);
+});
+
+test("tooltips and searchable inspector remain usable on phones", async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await ready(page);
+  await page.getByRole("button", { name: "Inspect model", exact: true }).hover();
+  await expect(page.getByRole("tooltip")).toHaveText("Inspect model");
+  await page.getByRole("button", { name: "Inspect model", exact: true }).click();
+  const inspector = page.getByRole("complementary", { name: "Model inspector" });
+  const search = page.getByRole("textbox", { name: "Search hierarchy" });
+  await search.fill("Cube");
+  await expect(inspector.locator(".inspector-node:enabled")).toHaveCount(1);
+  await inspector.locator(".inspector-node:enabled").click();
+  await expect(inspector.locator(".inspector-selection")).toContainText("Cube");
+  await page.getByRole("button", { name: "Clear selection", exact: true }).click();
+  await search.fill("no-such-object");
+  await expect(inspector).toContainText("No objects match");
+  await page.getByRole("button", { name: "Clear search", exact: true }).click();
+  await page.getByRole("button", { name: "Collapse Group", exact: true }).click();
+  await expect(inspector.locator(".inspector-node:enabled")).toHaveCount(0);
+  await page.getByRole("button", { name: "Expand Group", exact: true }).click();
+  await expect(inspector.locator(".inspector-node:enabled")).toHaveCount(3);
+  expect(await inspector.evaluate(element => element.scrollWidth <= element.clientWidth)).toBe(true);
+  const panel = (await inspector.boundingBox())!;
+  const footer = (await inspector.locator(".inspector-selection").boundingBox())!;
+  expect(footer.y + footer.height).toBeLessThanOrEqual(panel.y + panel.height);
+});
+
+test("standalone inspector accepts custom button and tooltip implementations", async ({ page }) => {
+  await ready(page);
+  await page.evaluate(`(async () => {
+    const { default: React } = await import('/node_modules/.vite/deps/react.js');
+    const { default: ReactDOM } = await import('/node_modules/.vite/deps/react-dom_client.js');
+    const h = React.createElement;
+    const { createRoot } = ReactDOM;
+    const { ModelInspector } = await import('/src/components/ui/model-viewer/model-inspector.tsx');
+    const host = document.createElement('div');
+    host.id = 'custom-inspector';
+    host.style.cssText = 'position:fixed;inset:0;z-index:999;background:white';
+    document.body.append(host);
+    createRoot(host).render(h(ModelInspector, {
+      inspection: { triangles: 12, materials: 1, textures: 0, dimensions: [1, 2, 3], nodes: [{ id: '0', name: 'Custom mesh', type: 'Mesh', depth: 0, mesh: true }] },
+      onSelectMesh: id => host.dataset.selected = id,
+      onClose: () => host.dataset.closed = 'true',
+      components: {
+        Button: ({ variant, size, ...props }) => h('button', { ...props, 'data-custom-button': 'true', 'data-variant': variant, 'data-size': size }),
+        Tooltip: ({ content, children }) => h('span', { 'data-custom-tooltip': content }, children),
+      },
+    }));
+  })()`);
+  const inspector = page.locator("#custom-inspector");
+  await expect(inspector.locator('[data-custom-tooltip="Close inspector"]')).toBeVisible();
+  await inspector.getByRole("button", { name: "Custom mesh" }).click();
+  await expect(inspector).toHaveAttribute("data-selected", "0");
+  await inspector.getByRole("button", { name: "Close inspector" }).click();
+  await expect(inspector).toHaveAttribute("data-closed", "true");
 });

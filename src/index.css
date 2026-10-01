@@ -74,9 +74,9 @@ h1 em { color: #71826f; font-family: Georgia, "Times New Roman", serif; font-wei
 .usage p { max-width: 380px; margin: 22px 0 0; color: #aebcb0; font-size: 13px; line-height: 1.7; }
 .usage pre { overflow: auto; margin: 0; padding: 28px; border: 1px solid rgb(255 255 255 / 10%); border-radius: 14px; background: #18291f; box-shadow: 0 22px 60px rgb(0 0 0 / 15%); }
 .usage code { color: #cfe1cb; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12px; line-height: 1.8; }
-footer { width: min(1280px, calc(100% - 64px)); display: flex; justify-content: space-between; margin: 88px auto 0; padding: 30px 0 42px; border-top: 1px solid var(--border); color: var(--muted-foreground); font-size: 10px; letter-spacing: .08em; text-transform: uppercase; }
+.site-footer { width: min(1280px, calc(100% - 64px)); display: flex; justify-content: space-between; margin: 88px auto 0; padding: 30px 0 42px; border-top: 1px solid var(--border); color: var(--muted-foreground); font-size: 10px; letter-spacing: .08em; text-transform: uppercase; }
 @media (max-width: 780px) {
-  .site-header, main, footer { width: min(100% - 36px, 1280px); }
+  .site-header, main, .site-footer { width: min(100% - 36px, 1280px); }
   .header-meta { display: none; }
   .hero { padding: 72px 0 54px; }
   h1 { font-size: clamp(3.1rem, 15vw, 5rem); }
@@ -91,6 +91,6 @@ footer { width: min(1280px, calc(100% - 64px)); display: flex; justify-content: 
   .feature-grid article:last-child { border-bottom: 0; }
   .feature-grid h3 { margin-top: 20px; }
   .usage { grid-template-columns: 1fr; gap: 38px; padding: 42px 24px; }
-  footer { margin-top: 64px; }
+  .site-footer { margin-top: 64px; }
 }
 @media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }

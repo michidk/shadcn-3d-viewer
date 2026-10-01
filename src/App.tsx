@@ -113,7 +113,7 @@ export default function App() {
         </section>
       </main>
 
-      <footer><span>Frame 0.1</span><span>React 19 · Three.js · shadcn/ui</span></footer>
+      <footer className="site-footer"><span>Frame 0.1</span><span>React 19 · Three.js · shadcn/ui</span></footer>
     </div>
   );
 }

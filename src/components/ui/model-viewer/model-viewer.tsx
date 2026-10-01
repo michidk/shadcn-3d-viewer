@@ -4,8 +4,6 @@ import {
   CameraControlsImpl,
   Center,
   Environment,
-  GizmoHelper,
-  GizmoViewcube,
   OrthographicCamera,
   Grid,
   Lightformer,
@@ -72,7 +70,8 @@ import type { GLTFLoader } from "three-stdlib";
 import { clone } from "three/addons/utils/SkeletonUtils.js";
 
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Button } from "@/components/ui/button";
+import { ViewerControlButton as Button, ViewerUiProvider, type ViewerUiComponents } from "./viewer-ui";
+import { ModelInspector } from "./model-inspector";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -80,7 +79,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { cn } from "@/lib/utils";
-import { ViewHelper } from "./view-helper";
+import { ViewCube, type ViewCubePosition } from "./view-cube";
 import "./model-viewer.css";
 
 export type ViewerMode = "orbit" | "split" | "firstPerson";
@@ -103,6 +102,7 @@ export type ViewerProgress = {
 };
 
 export interface ModelViewerProps {
+  components?: Partial<ViewerUiComponents>;
   src?: string;
   alt?: string;
   className?: string;
@@ -124,6 +124,8 @@ export interface ModelViewerProps {
   showOrientation?: boolean;
   viewCube?: ViewerViewCube | false;
   defaultViewCube?: ViewerViewCube | false;
+  viewCubePosition?: ViewCubePosition;
+  viewCubeMargin?: [number, number];
   onViewCubeChange?: (value: ViewerViewCube | false) => void;
   projection?: "perspective" | "orthographic";
   defaultProjection?: "perspective" | "orthographic";
@@ -207,6 +209,7 @@ class ViewerErrorBoundary extends Component<
 }
 
 export function ModelViewer({
+  components,
   src,
   alt = "3D model",
   className,
@@ -228,6 +231,8 @@ export function ModelViewer({
   showOrientation = showUi,
   viewCube: controlledViewCube,
   defaultViewCube = "asset-studio",
+  viewCubePosition = "top-right",
+  viewCubeMargin,
   onViewCubeChange,
   projection: controlledProjection,
   defaultProjection = "perspective",
@@ -450,7 +455,7 @@ export function ModelViewer({
   }
 
   return (
-    <div
+    <ViewerUiProvider components={components}><div
       ref={viewerRef}
       className={cn("model-viewer", showUi && "has-ui", lighting === "night" && "is-night", isExpanded && "is-expanded", className)}
       style={{ height }}
@@ -506,6 +511,9 @@ export function ModelViewer({
                     autoRotateSpeed={autoRotateSpeed}
                     showOrientation={index === 0 && showOrientation && mode !== "split"}
                     viewCube={viewCube}
+                    viewCubePosition={viewCubePosition}
+                    viewCubeMargin={viewCubeMargin}
+                    toolbarVisible={showUi}
                     projection={projection}
                     onInspect={index === 0 ? reportInspection : undefined}
                     selectedMesh={selectedMesh}
@@ -604,21 +612,15 @@ export function ModelViewer({
               ? pointerLockAvailable
                 ? locked ? "WASD to fly · Space up · Shift down · Esc to release" : "Click the scene to look · WASD to fly"
                 : "Drag to look · WASD to fly · Space / Shift vertically"
-              : mode === "split" ? "Front · Right · Back · Left — drag any view to orbit" : "Drag to orbit · Scroll to zoom")}
+              : mode === "split" ? "Fixed views · Drag to pan · Scroll to zoom" : "Drag to orbit · Scroll to zoom")}
           </div>
           <Button type="button" size="icon-sm" variant="ghost" className="viewer-fullscreen" aria-label={isFullscreen || isExpanded ? "Exit fullscreen" : "Enter fullscreen"} title={isFullscreen || isExpanded ? "Exit fullscreen" : "Enter fullscreen"} onClick={() => void toggleFullscreen()}>
             {isFullscreen || isExpanded ? <Minimize2 /> : <Maximize2 />}
           </Button>
         </>
       )}
-      {inspectorOpen && inspection && <aside className="viewer-inspector" aria-label="Model inspector">
-        <div className="viewer-inspector-heading">Model inspector<Button size="sm" variant="ghost" onClick={() => setInspectorOpen(false)}>Close</Button></div>
-        <p>{inspection.triangles.toLocaleString()} triangles · {inspection.materials} materials · {inspection.textures} textures</p>
-        <p>Dimensions (model units): {inspection.dimensions.map(value => Number(value.toPrecision(4))).join(" × ")}</p>
-        <Button size="sm" variant="ghost" onClick={() => setSelectedMesh(null)}>Clear selection</Button>
-        <ul aria-label="Scene hierarchy">{inspection.nodes.map(node => <li key={node.id} style={{ paddingLeft: node.depth * 12 }}><button type="button" disabled={!node.mesh} aria-pressed={selectedMesh === node.id} onClick={() => setSelectedMesh(node.id)}>{node.name} <small>{node.type}</small></button></li>)}</ul>
-      </aside>}
-    </div>
+      {inspectorOpen && inspection && <ModelInspector inspection={inspection} selectedMesh={selectedMesh} onSelectMesh={setSelectedMesh} onClose={() => setInspectorOpen(false)} />}
+    </div></ViewerUiProvider>
   );
 }
 
@@ -752,6 +754,9 @@ function ViewerScene({
   autoRotateSpeed,
   showOrientation,
   viewCube,
+  viewCubePosition,
+  viewCubeMargin,
+  toolbarVisible,
   projection,
   onInspect,
   selectedMesh,
@@ -785,6 +790,9 @@ function ViewerScene({
   autoRotateSpeed: number;
   showOrientation: boolean;
   viewCube: ViewerViewCube | false;
+  viewCubePosition: ViewCubePosition;
+  viewCubeMargin?: [number, number];
+  toolbarVisible: boolean;
   projection: "perspective" | "orthographic";
   onInspect?: (value: ModelInspection) => void;
   selectedMesh: string | null;
@@ -806,6 +814,8 @@ function ViewerScene({
   onLockChange?: (locked: boolean) => void;
 }) {
   const contentRef = useRef<Group | null>(null);
+  const paneWidth = useThree(state => state.size.width);
+  const cubeMargin: [number, number] = viewCubeMargin ?? [64, toolbarVisible && paneWidth <= 680 && viewCubePosition.startsWith("top-") ? 148 : 64];
   const [fitVersion, setFitVersion] = useState(0);
   const handleCentered = useCallback(() => setFitVersion((value) => value + 1), []);
   const background = lighting === "day" ? "#e7e9e4" : "#111a22";
@@ -849,8 +859,8 @@ function ViewerScene({
         </>
       ) : (
         <>
-          <CameraRig paneSelector={paneSelector} objectRef={contentRef} fitVersion={fitVersion} preset={cameraPreset} resetToken={resetToken} autoRotate={autoRotate} autoRotateSpeed={autoRotateSpeed} onCameraChange={onCameraChange} />
-          {showOrientation && viewCube && <GizmoHelper renderPriority={2} alignment="bottom-right" margin={[64, 105]}>{viewCube === "drei" ? <GizmoViewcube /> : <ViewHelper />}</GizmoHelper>}
+          <CameraRig fixed={Boolean(face)} paneSelector={paneSelector} objectRef={contentRef} fitVersion={fitVersion} preset={cameraPreset} resetToken={resetToken} autoRotate={autoRotate} autoRotateSpeed={autoRotateSpeed} onCameraChange={onCameraChange} />
+          {showOrientation && viewCube && <ViewCube variant={viewCube} position={viewCubePosition} margin={cubeMargin} renderPriority={2} />}
         </>
       )}
     </>
@@ -990,7 +1000,8 @@ function ViewerMaterial({ shading, color = "#a7aaa5" }: { shading: ViewerShading
   return <meshStandardMaterial color={color} roughness={shading === "solid" ? 0.82 : 0.68} metalness={0} />;
 }
 
-function CameraRig({ objectRef, fitVersion, preset, resetToken, autoRotate, autoRotateSpeed, onCameraChange, paneSelector }: {
+function CameraRig({ objectRef, fitVersion, preset, resetToken, autoRotate, autoRotateSpeed, onCameraChange, paneSelector, fixed }: {
+  fixed: boolean;
   paneSelector: string;
   objectRef: RefObject<Group | null>;
   fitVersion: number;
@@ -1034,7 +1045,17 @@ function CameraRig({ objectRef, fitVersion, preset, resetToken, autoRotate, auto
     onCameraChange({ position: position.toArray(), target: target.toArray() });
   }
 
-  return <CameraControls ref={controls} domElement={document.querySelector<HTMLElement>(paneSelector) ?? undefined} regress makeDefault smoothTime={0.25} dollyToCursor onRest={reportCamera} />;
+  const actions = CameraControlsImpl.ACTION;
+  const orthographic = "isOrthographicCamera" in camera;
+  return <CameraControls
+    ref={controls}
+    domElement={document.querySelector<HTMLElement>(paneSelector) ?? undefined}
+    regress makeDefault smoothTime={0.25} dollyToCursor onRest={reportCamera}
+    azimuthRotateSpeed={fixed ? 0 : 1}
+    polarRotateSpeed={fixed ? 0 : 1}
+    mouseButtons={{ left: fixed ? actions.TRUCK : actions.ROTATE, right: actions.TRUCK, middle: orthographic ? actions.ZOOM : actions.DOLLY, wheel: orthographic ? actions.ZOOM : actions.DOLLY }}
+    touches={{ one: fixed ? actions.TOUCH_TRUCK : actions.TOUCH_ROTATE, two: orthographic ? actions.TOUCH_ZOOM_TRUCK : actions.TOUCH_DOLLY_TRUCK, three: actions.TOUCH_TRUCK }}
+  />;
 }
 
 function FitStaticCamera({ objectRef, fitVersion, preset, resetToken }: { objectRef: RefObject<Group | null>; fitVersion: number; preset: ViewerCameraPreset; resetToken: number }) {

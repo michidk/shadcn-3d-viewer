@@ -21,9 +21,22 @@
       "registryDependencies": [
         "alert",
         "button",
+        "tooltip",
         "dropdown-menu"
       ],
       "files": [
+        {
+          "path": "src/components/ui/model-viewer/model-inspector.tsx",
+          "type": "registry:ui"
+        },
+        {
+          "path": "src/components/ui/model-viewer/viewer-ui.tsx",
+          "type": "registry:ui"
+        },
+        {
+          "path": "src/components/ui/model-viewer/view-cube.tsx",
+          "type": "registry:ui"
+        },
         {
           "path": "src/components/ui/model-viewer/model-inspection.ts",
           "type": "registry:ui"
