@@ -1,3 +1,5 @@
+"use client";
+
 import { GizmoHelper, GizmoViewcube } from "@react-three/drei";
 import type { ComponentProps } from "react";
 import { ViewHelper } from "./view-helper";

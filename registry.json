@@ -26,6 +26,10 @@
       ],
       "files": [
         {
+          "path": "src/components/ui/model-viewer/model-viewer-toolbar.tsx",
+          "type": "registry:ui"
+        },
+        {
           "path": "src/components/ui/model-viewer/model-inspector.tsx",
           "type": "registry:ui"
         },

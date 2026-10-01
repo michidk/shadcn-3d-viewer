@@ -128,6 +128,56 @@ Controls include accessible tooltips by default. Replace either implementation w
 
 `ModelInspector` is separately exported with searchable/collapsible hierarchy, metric cards, dimensions, and selection state. Pass `inspection`, `selectedMesh`, `onSelectMesh`, optional `onClose`, `className`, and optional `components`. Use `ViewerUiProvider` to share overrides across composed controls. The inspector includes its stylesheet; override `className`/CSS for custom placement.
 
+### Compose your own toolbar
+
+The default viewer remains a one-component drop-in. For a smaller toolbar, pass your own composition and connect it to the controlled viewer props:
+
+```tsx
+import { useState } from "react";
+import { Grid2X2 } from "lucide-react";
+import {
+  ModelViewer,
+  ModelViewerToolbar,
+  ModelViewerToolbarGroup,
+  ModelViewerToolbarButton,
+} from "@/components/ui/model-viewer";
+
+export function AssetPreview() {
+  const [grid, setGrid] = useState(false);
+
+  return (
+    <ModelViewer
+      className="rounded-xl shadow-none"
+      showGrid={grid}
+      onGridChange={setGrid}
+      toolbar={
+        <ModelViewerToolbar aria-label="Preview controls">
+          <ModelViewerToolbarGroup aria-label="Display">
+            <ModelViewerToolbarButton
+              label="Show grid"
+              active={grid}
+              onClick={() => setGrid(!grid)}
+            >
+              <Grid2X2 />
+            </ModelViewerToolbarButton>
+          </ModelViewerToolbarGroup>
+        </ModelViewerToolbar>
+      }
+    />
+  );
+}
+```
+
+`toolbar={null}` hides only the main toolbar; `showUi={false}` hides all built-in controls. `ModelViewerControls` and `ModelViewerAnimationControls` export the ready-made controlled toolbars. Arrow Left/Right and Home/End move focus between toolbar buttons; Tab retains normal browser navigation.
+
+DOM-facing components accept native props, React 19 refs, `className`, and `style`. `ModelViewer` forwards these to its root `div` (its `onLoad`/`onError` remain model lifecycle callbacks), and renders `children` as additional DOM overlays, not R3F scene children. Use positioned children with a z-index to place additional UI above the canvas.
+
+Stable `data-slot` attributes include `model-viewer`, `model-viewer-toolbar`, `model-viewer-toolbar-group`, `model-viewer-toolbar-button`, `model-viewer-animation-controls`, `model-inspector`, and `model-inspector-node`. The root exposes `data-state="loading|ready|error"`; toggle buttons expose `data-state="on|off"`.
+
+Styles live in Tailwind's `components` layer, so utility classes can override them. UI surfaces use shadcn semantic tokens; day/night lighting changes the 3D scene independently of the host application's theme. Default height is 620px; a height utility can override it unless an explicit `height` or inline `style.height` is supplied.
+
+`ViewerControlButton` is also exported. Its optional `tooltip` prop accepts custom content or `false` to hide it. Controls default to `type="button"`, so placing a viewer inside a form does not submit it. A shared tooltip provider coordinates hover delays; standalone controls provide their own fallback.
+
 Omitting `animation` automatically selects the first clip; passing `animation={null}` explicitly disables clip selection. Playback starts paused. Clip selection resets when replacing an uncontrolled model, and pause/resume preserves playback position. Respecting reduced motion suppresses playback and auto-rotation; use `respectReducedMotion={false}` only when your application explicitly requests motion.
 
 The inspector reports source-model units and unique material/texture resources. Select a mesh in the hierarchy or click it in the scene to highlight it. Animated framing uses a sampled envelope (17 poses per clip); unusually fast or procedural motion may extend beyond that envelope. Reset view includes the current pose in its bounds.

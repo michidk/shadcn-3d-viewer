@@ -1,9 +1,25 @@
 export { ModelViewer } from "./model-viewer";
+export {
+  ModelViewerToolbar,
+  ModelViewerToolbarGroup,
+  ModelViewerToolbarButton,
+  ModelViewerControls,
+  ModelViewerAnimationControls,
+} from "./model-viewer-toolbar";
+export type {
+  ModelViewerToolbarButtonProps,
+  ModelViewerControlsProps,
+  ModelViewerAnimationControlsProps,
+} from "./model-viewer-toolbar";
 export { ViewCube } from "./view-cube";
 export { ModelInspector } from "./model-inspector";
 export type { ModelInspectorProps } from "./model-inspector";
-export { ViewerUiProvider } from "./viewer-ui";
-export type { ViewerUiComponents, ViewerTooltipProps } from "./viewer-ui";
+export { ViewerUiProvider, ViewerControlButton } from "./viewer-ui";
+export type {
+  ViewerUiComponents,
+  ViewerTooltipProps,
+  ViewerControlButtonProps,
+} from "./viewer-ui";
 export type { ViewCubeProps, ViewCubePosition } from "./view-cube";
 export type {
   ModelViewerProps,

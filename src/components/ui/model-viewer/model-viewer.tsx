@@ -1,3 +1,5 @@
+"use client";
+
 import {
   CameraControls,
   CameraControlsImpl,
@@ -15,39 +17,20 @@ import {
   useProgress,
 } from "@react-three/drei";
 import { Canvas, createPortal, useFrame, useThree, type ComputeFunction } from "@react-three/fiber";
-import {
-  Camera,
-  Box,
-  ListTree,
-  Check,
-  ChevronDown,
-  Copy,
-  Download,
-  Footprints,
-  Gauge,
-  Grid2X2,
-  LayoutGrid,
-  Maximize2,
-  Minimize2,
-  Moon,
-  Pause,
-  Play,
-  Rotate3D,
-  RotateCcw,
-  ScanSearch,
-  Sun,
-} from "lucide-react";
+import { Maximize2, Minimize2 } from "lucide-react";
 import {
   Component,
   Suspense,
   useCallback,
   useEffect,
   useId,
+  useImperativeHandle,
   useLayoutEffect,
   useMemo,
   useRef,
   useState,
   type CSSProperties,
+  type ComponentProps,
   type RefObject,
   type ReactNode,
 } from "react";
@@ -72,12 +55,7 @@ import { clone } from "three/addons/utils/SkeletonUtils.js";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { ViewerControlButton as Button, ViewerUiProvider, type ViewerUiComponents } from "./viewer-ui";
 import { ModelInspector } from "./model-inspector";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
+import { ModelViewerControls, ModelViewerAnimationControls } from "./model-viewer-toolbar";
 import { cn } from "@/lib/utils";
 import { ViewCube, type ViewCubePosition } from "./view-cube";
 import "./model-viewer.css";
@@ -101,7 +79,7 @@ export type ViewerProgress = {
   total: number;
 };
 
-export interface ModelViewerProps {
+export interface ModelViewerProps extends Omit<ComponentProps<"div">, "onLoad" | "onError"> {
   components?: Partial<ViewerUiComponents>;
   src?: string;
   alt?: string;
@@ -154,6 +132,8 @@ export interface ModelViewerProps {
   loadingFallback?: ReactNode | ((progress: ViewerProgress) => ReactNode);
   errorFallback?: ReactNode | ((error: Error) => ReactNode);
   overlay?: ReactNode;
+  /** Replace the default toolbar; null hides it. Controlled props wire custom controls. */
+  toolbar?: ReactNode;
   useDraco?: boolean | string;
   useMeshopt?: boolean;
   extendLoader?: (loader: GLTFLoader) => void;
@@ -177,8 +157,6 @@ const splitPanes: Pane[] = [
   { face: "back", label: "Back" },
   { face: "left", label: "Left" },
 ];
-
-const animationSpeeds = [0.5, 1, 1.5, 2];
 
 const presetVectors: Record<ViewerCameraPreset, [number, number, number]> = {
   isometric: [1.7, 1.15, 1.7],
@@ -213,7 +191,10 @@ export function ModelViewer({
   src,
   alt = "3D model",
   className,
-  height = 620,
+  style,
+  ref,
+  children,
+  height,
   mode: controlledMode,
   defaultMode = "orbit",
   onModeChange,
@@ -261,6 +242,7 @@ export function ModelViewer({
   loadingFallback,
   errorFallback,
   overlay,
+  toolbar,
   useDraco = true,
   useMeshopt = true,
   extendLoader,
@@ -269,6 +251,7 @@ export function ModelViewer({
   onPerformanceChange,
   onLoad,
   onError,
+  ...props
 }: ModelViewerProps) {
   const [mode, setMode] = useControlledState(controlledMode, defaultMode, onModeChange);
   const [viewCube, setViewCube] = useControlledState(controlledViewCube, defaultViewCube, onViewCubeChange);
@@ -288,7 +271,6 @@ export function ModelViewer({
   const [loaded, setLoaded] = useState(!src);
   const [viewerError, setViewerError] = useState(false);
   const [feedback, setFeedback] = useState<{ message: string; error: boolean } | null>(null);
-  const [captureMenuOpen, setCaptureMenuOpen] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [isExpanded, setIsExpanded] = useState(false);
   const [locked, setLocked] = useState(false);
@@ -298,6 +280,7 @@ export function ModelViewer({
   const [readyPanes, setReadyPanes] = useState<Set<number>>(() => new Set());
   const reducedMotion = useReducedMotion(respectReducedMotion);
   const viewerRef = useRef<HTMLDivElement | null>(null);
+  useImperativeHandle(ref, () => viewerRef.current!, []);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const feedbackTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const loadReported = useRef(false);
@@ -458,11 +441,14 @@ export function ModelViewer({
     <ViewerUiProvider components={components}><div
       ref={viewerRef}
       className={cn("model-viewer", showUi && "has-ui", lighting === "night" && "is-night", isExpanded && "is-expanded", className)}
-      style={{ height }}
+      style={{ height, ...style }}
+      data-slot="model-viewer"
+      data-state={viewerError ? "error" : loaded ? "ready" : "loading"}
       data-viewer-mode={mode}
       data-viewer-key={viewerKey}
       aria-label={alt}
       role="group"
+      {...props}
     >
       {poster && !loaded && <img className="viewer-poster" src={poster} alt="" aria-hidden="true" />}
       <ViewerErrorBoundary key={src ?? "demo"} fallback={errorFallback} onError={fail}>
@@ -512,7 +498,7 @@ export function ModelViewer({
                     viewCube={viewCube}
                     viewCubePosition={viewCubePosition}
                     viewCubeMargin={viewCubeMargin}
-                    toolbarVisible={showUi}
+                    toolbarVisible={showUi && toolbar !== null}
                     projection={projection}
                     onInspect={index === 0 ? reportInspection : undefined}
                     selectedMesh={selectedMesh}
@@ -541,69 +527,33 @@ export function ModelViewer({
       </ViewerErrorBoundary>
 
       {!loaded && <ViewerLoader fallback={loadingFallback} poster={Boolean(poster)} />}
-      {overlay && <div className="viewer-overlay-slot">{overlay}</div>}
+      {overlay && <div data-slot="model-viewer-overlay" className="viewer-overlay-slot">{overlay}</div>}
 
       {showUi && (
         <>
-          <div className="viewer-toolbar" role="toolbar" aria-label="3D viewer controls">
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button type="button" variant="outline" className="viewer-shading-trigger" aria-label={`Shading: ${shading}`}>
-                  {shading}<ChevronDown />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="start" sideOffset={6} className="viewer-menu">
-                {(["realistic", "solid", "normals", "wireframe"] as const).map((option) => (
-                  <DropdownMenuItem key={option} onSelect={() => setShading(option)}>
-                    <Check className={option === shading ? "is-visible" : "is-hidden"} /><span>{option}</span>
-                  </DropdownMenuItem>
-                ))}
-              </DropdownMenuContent>
-            </DropdownMenu>
-            <div className="viewer-toolbar-group" aria-label="Interaction mode">
-              <ViewerButton icon={<Rotate3D />} label="Orbit camera" active={mode === "orbit"} onClick={() => changeMode("orbit")} />
-              <ViewerButton icon={<LayoutGrid />} label="Four-view split" active={mode === "split"} onClick={() => changeMode("split")} />
-              <ViewerButton icon={<Footprints />} label="Fly camera" active={mode === "firstPerson"} onClick={() => changeMode("firstPerson")} />
-            </div>
-            <div className="viewer-toolbar-group" aria-label="Scene options">
-              <ViewerButton icon={lighting === "day" ? <Sun /> : <Moon />} label={lighting === "day" ? "Switch to night" : "Switch to day"} active={lighting === "night"} onClick={() => setLighting(lighting === "day" ? "night" : "day")} />
-              <ViewerButton icon={<Grid2X2 />} label="Show grid" active={grid} onClick={() => setGrid(!grid)} />
-              <ViewerButton icon={<ScanSearch />} label="Orthographic view" active={projection === "orthographic"} onClick={() => setProjection(projection === "orthographic" ? "perspective" : "orthographic")} />
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild><Button type="button" size="icon-sm" variant="ghost" aria-label="View cube options"><Box /></Button></DropdownMenuTrigger>
-                <DropdownMenuContent className="viewer-menu">
-                  {([false, "drei", "asset-studio"] as const).map((value) => <DropdownMenuItem key={String(value)} onSelect={() => setViewCube(value)}><Check className={viewCube === value ? "is-visible" : "is-hidden"} />{value === false ? "Off" : value === "drei" ? "Drei cube" : "Asset Studio"}</DropdownMenuItem>)}
-                </DropdownMenuContent>
-              </DropdownMenu>
-              <ViewerButton icon={<ListTree />} label="Inspect model" active={inspectorOpen} onClick={() => setInspectorOpen(!inspectorOpen)} />
-              <ViewerButton icon={<RotateCcw />} label="Reset view" onClick={() => setResetToken((value) => value + 1)} />
-              <DropdownMenu open={captureMenuOpen} onOpenChange={setCaptureMenuOpen}>
-                <DropdownMenuTrigger asChild>
-                  <Button type="button" size="icon-sm" variant={captureMenuOpen ? "secondary" : "ghost"} aria-label="Screenshot options" title="Screenshot options" disabled={!loaded || viewerError}><Camera /></Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" sideOffset={8} className="viewer-capture-menu">
-                  <div className="viewer-capture-title">Capture view <span>PNG</span></div>
-                  <DropdownMenuItem onSelect={() => void capture("copy")}><Copy /> Copy to clipboard</DropdownMenuItem>
-                  <DropdownMenuItem onSelect={() => void capture("download")}><Download /> Download image</DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
-            </div>
-          </div>
+          {toolbar === undefined ? (
+            <ModelViewerControls
+              mode={mode} onModeChange={changeMode}
+              shading={shading} onShadingChange={setShading}
+              lighting={lighting} onLightingChange={setLighting}
+              grid={grid} onGridChange={setGrid}
+              projection={projection} onProjectionChange={setProjection}
+              viewCube={viewCube} onViewCubeChange={setViewCube}
+              inspectorOpen={inspectorOpen} onInspectorChange={setInspectorOpen}
+              onReset={() => setResetToken(value => value + 1)}
+              captureDisabled={!loaded || viewerError}
+              onCapture={action => void capture(action)}
+            />
+          ) : toolbar}
 
           {showAnimationControls && animationNames.length > 0 && (
-            <div className="viewer-animation-controls" role="toolbar" aria-label="Animation controls">
-              <ViewerButton icon={animationPlaying ? <Pause /> : <Play />} label={animationPlaying ? "Pause animation" : "Play animation"} active={animationPlaying} onClick={() => setAnimationPlaying(!animationPlaying)} />
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button type="button" size="sm" variant="ghost" className="viewer-animation-name">{effectiveAnimation ?? "No animation"}<ChevronDown /></Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="start" sideOffset={6} className="viewer-animation-menu">
-                  {animationNames.map((name) => <DropdownMenuItem key={name} onSelect={() => setAnimation(name)}><Check className={name === effectiveAnimation ? "is-visible" : "is-hidden"} />{name}</DropdownMenuItem>)}
-                </DropdownMenuContent>
-              </DropdownMenu>
-              <ViewerButton icon={<RotateCcw />} label="Restart animation" onClick={() => setAnimationResetToken((value) => value + 1)} />
-              <Button type="button" size="icon-sm" variant="ghost" aria-label={`Animation speed ${animationSpeed}×`} title={`Animation speed ${animationSpeed}×`} onClick={() => setAnimationSpeed(animationSpeeds[(animationSpeeds.indexOf(animationSpeed) + 1) % animationSpeeds.length] ?? 1)}><Gauge /><span className="viewer-speed-label">{animationSpeed}×</span></Button>
-            </div>
+            <ModelViewerAnimationControls
+              clips={animationNames}
+              animation={effectiveAnimation} onAnimationChange={setAnimation}
+              playing={animationPlaying} onPlayingChange={setAnimationPlaying}
+              speed={animationSpeed} onSpeedChange={setAnimationSpeed}
+              onRestart={() => setAnimationResetToken(value => value + 1)}
+            />
           )}
 
           <div className={cn("viewer-help", feedback?.error && "is-error")} role={feedback?.error ? "alert" : "status"}>
@@ -619,12 +569,9 @@ export function ModelViewer({
         </>
       )}
       {inspectorOpen && inspection && <ModelInspector inspection={inspection} selectedMesh={selectedMesh} onSelectMesh={setSelectedMesh} onClose={() => setInspectorOpen(false)} />}
+      {children}
     </div></ViewerUiProvider>
   );
-}
-
-function ViewerButton({ icon, label, active, onClick }: { icon: ReactNode; label: string; active?: boolean; onClick: () => void }) {
-  return <Button type="button" size="icon-sm" variant={active ? "secondary" : "ghost"} aria-label={label} title={label} aria-pressed={active} onClick={onClick}>{icon}</Button>;
 }
 
 function ViewerLoader({ fallback, poster }: { fallback?: ModelViewerProps["loadingFallback"]; poster: boolean }) {
@@ -648,21 +595,34 @@ function ScissorView({ track, index, clearColor, children }: {
   const [size, setSize] = useState({ width: 1, height: 1, top: 0, left: 0 });
 
   useLayoutEffect(() => {
-    const element = track.current;
-    if (!element) return;
+    let frame = 0;
+    let observer: ResizeObserver | undefined;
     const measure = () => {
+      const element = track.current;
+      if (!element) return;
       const rect = element.getBoundingClientRect();
       setSize((current) => current.width === rect.width && current.height === rect.height && current.top === rect.top && current.left === rect.left
         ? current
         : { width: rect.width, height: rect.height, top: rect.top, left: rect.left });
     };
-    measure();
-    const observer = new ResizeObserver(measure);
-    observer.observe(element);
+    // Canvas and its DOM tracks commit in separate React roots. The R3F
+    // layout effect can run before the DOM ref has been attached.
+    const observeTrack = () => {
+      const element = track.current;
+      if (!element) {
+        frame = requestAnimationFrame(observeTrack);
+        return;
+      }
+      measure();
+      observer = new ResizeObserver(measure);
+      observer.observe(element);
+    };
+    observeTrack();
     window.addEventListener("scroll", measure, true);
     window.addEventListener("resize", measure);
     return () => {
-      observer.disconnect();
+      cancelAnimationFrame(frame);
+      observer?.disconnect();
       window.removeEventListener("scroll", measure, true);
       window.removeEventListener("resize", measure);
     };
@@ -684,7 +644,7 @@ function ScissorView({ track, index, clearColor, children }: {
   }, [track]);
 
   return createPortal(
-    <ScissorRenderer track={track} index={index} clearColor={clearColor}>{children}</ScissorRenderer>,
+    <ScissorRenderer track={track} size={size} index={index} clearColor={clearColor}>{children}</ScissorRenderer>,
     scene,
     { events: { compute, priority: index }, size },
   );
@@ -702,12 +662,21 @@ function RedrawAfterResize() {
   return null;
 }
 
-function ScissorRenderer({ track, index, clearColor, children }: {
+function ScissorRenderer({ track, size, index, clearColor, children }: {
   track: RefObject<HTMLDivElement | null>;
+  size: { width: number; height: number; top: number; left: number };
   index: number;
   clearColor: string;
   children: ReactNode;
 }) {
+  const set = useThree(state => state.set);
+  useLayoutEffect(() => {
+    // R3F portals refresh injected props when the parent store changes, not
+    // necessarily when the track is measured. Keep this pane's size current
+    // without depending on unrelated root renders or camera interactions.
+    set({ size });
+  }, [set, size]);
+
   useFrame((state) => {
     const element = track.current;
     if (!element) return;

@@ -83,6 +83,7 @@ test("grid stays visible around an animated model on desktop and phone", async (
     await page.waitForTimeout(200);
     expect(await canvasImage(page)).not.toBe(visibleGrid);
     await page.getByRole("button", { name: "Show grid", exact: true }).click();
+    await expect(page.getByRole("button", { name: "Show grid", exact: true })).toHaveAttribute("aria-pressed", "true");
     const grid = await page.evaluate(`(async () => {
       const { _roots } = await import('/node_modules/.vite/deps/@react-three_fiber.js');
       const state = [..._roots.values()][0].store.getState();
@@ -171,12 +172,13 @@ test("split panes pan independently without changing their fixed directions", as
     const state = [..._roots.values()][0].store.getState();
     return state.internal.subscribers.filter(s => s.priority > 0).map(s => {
       const { camera } = s.store.getState();
-      return { quaternion: camera.quaternion.toArray(), position: camera.position.toArray(), zoom: camera.zoom };
+      return { quaternion: camera.quaternion.toArray(), position: camera.position.toArray(), zoom: camera.zoom, aspect: camera.aspect };
     });
   })()`);
   const beforeDirections = await directions();
   const panes = page.locator(".viewer-view");
   const first = (await panes.nth(0).boundingBox())!;
+  expect(beforeDirections[0].aspect).toBeCloseTo(first.width / first.height, 5);
   const beforeFirst = await page.screenshot({ clip: first });
   await page.mouse.move(first.x + first.width / 2, first.y + first.height / 2);
   await page.mouse.down();
@@ -337,4 +339,58 @@ test("standalone inspector accepts custom button and tooltip implementations", a
   await expect(inspector).toHaveAttribute("data-selected", "0");
   await inspector.getByRole("button", { name: "Close inspector" }).click();
   await expect(inspector).toHaveAttribute("data-closed", "true");
+});
+
+test("shadcn composition forwards props and refs and supports controlled custom toolbars", async ({ page }) => {
+  await ready(page);
+  await page.evaluate(`(async () => {
+    const { default: React } = await import('/node_modules/.vite/deps/react.js');
+    const { default: ReactDOM } = await import('/node_modules/.vite/deps/react-dom_client.js');
+    const { ModelViewer, ModelViewerToolbar, ModelViewerToolbarGroup, ModelViewerToolbarButton } = await import('/src/components/ui/model-viewer/index.ts');
+    const h = React.createElement;
+    const host = document.createElement('div');
+    host.id = 'composition-test';
+    host.style.cssText = 'position:fixed;inset:0;z-index:999;background:white;padding:16px';
+    document.body.append(host);
+    function Example() {
+      const [grid, setGrid] = React.useState(false);
+      return h('form', { onSubmit: e => { e.preventDefault(); host.dataset.submitted = 'true'; } },
+        h(ModelViewer, {
+          id: 'composed-viewer',
+          ref: element => { host.dataset.refAssigned = String(element?.id === 'composed-viewer'); },
+          className: 'rounded-none shadow-none',
+          style: { height: 400 },
+          'aria-label': 'Custom preview',
+          showGrid: grid,
+          onGridChange: setGrid,
+          showOrientation: false,
+          toolbar: h(ModelViewerToolbar, { 'aria-label': 'Custom controls' },
+            h(ModelViewerToolbarGroup, { 'aria-label': 'Display options' },
+              h(ModelViewerToolbarButton, { label: 'Custom grid', active: grid, onClick: () => setGrid(!grid), tooltip: 'Toggle reference lines' }, 'G'),
+              h(ModelViewerToolbarButton, { label: 'Second action', tooltip: false }, 'S'))),
+        }, h('span', { 'data-testid': 'custom-child' }, 'Additional overlay')));
+    }
+    ReactDOM.createRoot(host).render(h(Example));
+  })()`);
+  const host = page.locator("#composition-test");
+  const viewer = host.getByRole("group", { name: "Custom preview", exact: true });
+  await expect(viewer).toHaveAttribute("data-slot", "model-viewer");
+  await expect(host).toHaveAttribute("data-ref-assigned", "true");
+  await expect(viewer).toHaveCSS("border-radius", "0px");
+  await expect(viewer).toHaveCSS("--tw-shadow", "0 0 #0000");
+  await expect(viewer).toHaveCSS("height", "400px");
+  await expect(host.getByTestId("custom-child")).toHaveText("Additional overlay");
+  await expect(host.getByRole("toolbar", { name: "3D viewer controls" })).toHaveCount(0);
+  const grid = host.getByRole("button", { name: "Custom grid", exact: true });
+  await grid.click();
+  await expect(grid).toHaveAttribute("data-state", "on");
+  await expect(grid).toHaveAttribute("aria-pressed", "true");
+  await expect(host).not.toHaveAttribute("data-submitted");
+  await grid.focus();
+  await page.keyboard.press("ArrowRight");
+  await expect(host.getByRole("button", { name: "Second action" })).toBeFocused();
+  await page.keyboard.press("Home");
+  await expect(grid).toBeFocused();
+  await grid.hover();
+  await expect(page.getByRole("tooltip")).toHaveText("Toggle reference lines");
 });
