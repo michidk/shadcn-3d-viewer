@@ -176,7 +176,7 @@
     gap: 8px;
     background: var(--background);
     color: var(--popover-foreground);
-    font-size: 11px;
+    font-size: 14px;
   }
   .viewer-loader.has-poster {
     background: color-mix(in srgb, var(--background) 72%, transparent);
@@ -190,14 +190,11 @@
     text-overflow: ellipsis;
     white-space: nowrap;
   }
-  .viewer-loader-cube {
-    width: 68px;
-    aspect-ratio: 1;
-    border: 1px solid var(--border);
-    border-radius: var(--radius);
-    background: var(--muted);
-    transform: rotate(12deg);
-    animation: viewer-pulse 1.8s ease-in-out infinite;
+  .viewer-loader-spinner {
+    width: 24px;
+    height: 24px;
+    color: var(--muted-foreground);
+    animation: viewer-spin 1s linear infinite;
   }
   .viewer-error-wrap {
     position: absolute;
@@ -207,10 +204,9 @@
     place-items: center;
     padding: 24px;
   }
-  @keyframes viewer-pulse {
-    50% {
-      opacity: 0.45;
-      transform: rotate(18deg) scale(0.94);
+  @keyframes viewer-spin {
+    to {
+      transform: rotate(360deg);
     }
   }
   @container viewer (max-width: 680px) {
@@ -506,7 +502,7 @@
     }
   }
   @media (prefers-reduced-motion: reduce) {
-    .viewer-loader-cube {
+    .viewer-loader-spinner {
       animation: none;
     }
   }

@@ -82,7 +82,11 @@ export interface ModelViewerProps extends Omit<
   loopAnimation?: boolean;
   environment?: boolean;
   poster?: string;
+  /** Display the current asset filename in the default loader. Defaults to false. */
+  showFileName?: boolean;
+  /** Replace loading content. Pass null to hide the loading overlay. */
   loadingFallback?: ReactNode | ((progress: ViewerProgress) => ReactNode);
+  /** Replace error content. Pass null to hide the error overlay. */
   errorFallback?: ReactNode | ((error: Error) => ReactNode);
   overlay?: ReactNode;
   /** Replace the default toolbar; null hides it. Custom controls can use useModelViewer(). */

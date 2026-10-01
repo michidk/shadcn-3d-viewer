@@ -59,7 +59,8 @@ import {
 import type { GLTFLoader } from "three-stdlib";
 import { clone } from "three/addons/utils/SkeletonUtils.js";
 
-import { Alert, AlertDescription } from "@/components/ui/alert";
+import { FileWarning, LoaderCircle } from "lucide-react";
+import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
 import { cn } from "@/lib/utils";
 import { ViewCube, type ViewCubePosition } from "./view-cube";
 import "./model-viewer.css";
@@ -108,12 +109,17 @@ class ViewerErrorBoundary extends Component<
       typeof this.props.fallback === "function"
         ? this.props.fallback(this.state.error)
         : this.props.fallback;
+    if (this.props.fallback !== undefined && custom == null) return null;
     return (
       <div className="viewer-error-wrap">
-        {custom ?? (
-          <Alert variant="destructive">
+        {this.props.fallback !== undefined ? (
+          custom
+        ) : (
+          <Alert className="max-w-sm p-5">
+            <FileWarning className="text-muted-foreground" aria-hidden="true" />
+            <AlertTitle>Unable to load model</AlertTitle>
             <AlertDescription>
-              Could not display this model: {this.state.error.message}
+              Check that the model is available and is a valid GLTF or GLB file.
             </AlertDescription>
           </Alert>
         )}
@@ -157,6 +163,7 @@ export function ModelViewerScene({
     environment,
     poster,
     loadingFallback,
+    showFileName,
     errorFallback,
     useDraco,
     useMeshopt,
@@ -307,7 +314,11 @@ export function ModelViewerScene({
       </ViewerErrorBoundary>
 
       {!loaded && (
-        <ViewerLoader fallback={loadingFallback} poster={Boolean(poster)} />
+        <ViewerLoader
+          fallback={loadingFallback}
+          poster={Boolean(poster)}
+          showFileName={showFileName}
+        />
       )}
 
       {children}
@@ -318,24 +329,29 @@ export function ModelViewerScene({
 function ViewerLoader({
   fallback,
   poster,
+  showFileName,
 }: {
   fallback?: ModelViewerProps["loadingFallback"];
   poster: boolean;
+  showFileName: boolean;
 }) {
   const { active, progress, item, loaded, total } = useProgress();
   const data = { active, progress, item, loaded, total };
   const custom = typeof fallback === "function" ? fallback(data) : fallback;
+  if (fallback !== undefined && custom == null) return null;
   return (
     <div
       className={cn("viewer-loader", poster && "has-poster")}
       role="status"
       aria-live="polite"
     >
-      {custom ?? (
+      {fallback !== undefined ? (
+        custom
+      ) : (
         <>
-          <div className="viewer-loader-cube" />
-          <span>{Math.round(progress)}%</span>
-          <small>{item ? fileName(item) : "Preparing model"}</small>
+          <LoaderCircle className="viewer-loader-spinner" aria-hidden="true" />
+          <span>Loading model…</span>
+          {showFileName && item && <small>{fileName(item)}</small>}
         </>
       )}
     </div>
@@ -1268,5 +1284,5 @@ function FirstPersonMovement({
 }
 
 function fileName(path: string) {
-  return path.split(/[\\/]/).pop()?.split("?")[0] || path;
+  return path.split(/[?#]/)[0].split(/[\\/]/).pop() || "Model asset";
 }

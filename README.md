@@ -42,7 +42,7 @@ bun run storybook:build  # static site in storybook-static/
 bun run storybook:test   # smoke tests against a running Storybook
 ```
 
-The 16 examples cover the interactive playground, fixed four-view layout, Drei cube, night lighting, the bundled animated robot, model inspection, minimal embeds, error handling, custom toolbars, compound viewer parts, Base UI `render` composition, compatibility button/tooltip overrides, styled overlays, and standalone inspector states. Viewer toolbar changes and Storybook Controls stay in sync. Docs pages render one live viewer at a time to stay within browser WebGL limits.
+The 19 examples cover the interactive playground, fixed four-view layout, Drei cube, night lighting, the bundled animated robot, model inspection, minimal embeds, loading/error customization, opt-in filenames, hidden feedback, custom toolbars, compound viewer parts, Base UI `render` composition, compatibility button/tooltip overrides, styled overlays, and standalone inspector states. Viewer toolbar changes and Storybook Controls stay in sync. Docs pages render one live viewer at a time to stay within browser WebGL limits.
 
 Storybook shares `src/theme.css` with the demo but does not load the demo page layout. All model assets are served locally from `public/`, including in the static build. The error story deliberately requests a missing model.
 
@@ -116,8 +116,19 @@ Omit `src` to render the built-in material study. Use `showUi={false}` for a cle
 | `animationSpeed` | `number` | `1` |
 | `environment` | `boolean` | `true` |
 | `poster` | image URL | none |
-| `loadingFallback` | node or progress renderer | built-in progress |
-| `errorFallback` | node or error renderer | built-in alert |
+| `showFileName` | `boolean` | `false` (default loader only) |
+| `loadingFallback` | node or progress renderer | spinner and loading label |
+| `errorFallback` | node or error renderer | concise error card |
+
+Loading filenames are hidden unless `showFileName` is enabled. This affects built-in loading UI only, not network requests or custom renderers. Custom loading renderers receive `{ active, progress, item, loaded, total }`; progress describes loader items, not byte-accurate transfer progress. The default error card omits raw technical details; use `onError` for logging or `errorFallback` to render them yourself. Pass `null` (or return `null`) to hide either overlay.
+
+```tsx
+<ModelViewer
+  src="/models/chair.glb"
+  loadingFallback={<MySpinner />}
+  errorFallback={() => <p role="alert">Preview unavailable.</p>}
+/>
+```
 
 `mode`, `lighting`, `shading`, `showGrid`, `viewCube`, `projection`, camera, and animation props are controlled when supplied. Use their corresponding `default*` props for uncontrolled initial values. Change callbacks report toolbar interactions. In particular, use `onViewCubeChange` and `onProjectionChange` when controlling these options externally.
 

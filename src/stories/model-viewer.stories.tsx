@@ -29,6 +29,7 @@ const meta = {
         "viewCube",
         "viewCubePosition",
         "showUi",
+        "showFileName",
         "autoRotate",
       ],
     },
@@ -142,7 +143,33 @@ export const ModelInspection: Story = {
 };
 
 export const MinimalEmbed: Story = {
-  args: { height: 320, showUi: false, showOrientation: true, viewCube: "drei" },
+  args: { height: 320, showUi: false, viewCube: false },
+};
+
+export const CustomFeedback: Story = {
+  parameters: {
+    docs: { description: { story: "Custom loading and error renderers. Throttle the network to inspect loading; set src to a missing model to inspect the custom error." } },
+  },
+  args: {
+    src: "/models/robot-expressive.glb",
+    loadingFallback: () => <span className="text-sm text-muted-foreground">Preparing your preview…</span>,
+    errorFallback: () => <p role="alert" className="text-sm text-muted-foreground">Preview unavailable. Choose another model.</p>,
+  },
+};
+
+export const LoadingFileName: Story = {
+  args: { src: "/models/robot-expressive.glb", showFileName: true },
+  parameters: {
+    docs: { description: { story: "Opt in to the current asset filename. Throttle the network to inspect loading; filenames are hidden by default." } },
+  },
+};
+
+export const HiddenFeedback: Story = {
+  args: {
+    src: "/models/intentional-missing-model.glb",
+    loadingFallback: null,
+    errorFallback: null,
+  },
 };
 
 export const ErrorState: Story = {

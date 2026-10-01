@@ -43,7 +43,7 @@ test("storybook indexes all examples and the playground controls stay interactiv
     Object.values(index.entries).filter(
       (entry) => (entry as { type: string }).type === "story",
     ),
-  ).toHaveLength(16);
+  ).toHaveLength(19);
   await openStory(page, "viewer-model-viewer--playground");
   await expect(page.locator("canvas")).toBeVisible();
   const grid = page.getByRole("button", { name: "Show grid", exact: true });
@@ -94,11 +94,63 @@ test("custom toolbar and inspector examples support their controlled state", asy
 test("error story shows a recoverable model error", async ({ page }) => {
   await openStory(page, "viewer-model-viewer--error-state");
   await expect(page.getByRole("alert")).toContainText(
-    "Could not display this model",
+    "Unable to load model",
   );
+  await expect(page.getByRole("alert")).not.toContainText("intentional-missing-model");
   await expect(
     page.getByRole("button", { name: "Screenshot options" }),
   ).toBeDisabled();
+});
+
+for (const example of ["animated-model", "loading-file-name", "custom-feedback", "hidden-feedback"]) {
+  test(`${example} loading feedback follows its props`, async ({ page }) => {
+    let release!: () => void;
+    const blocked = new Promise<void>((resolve) => { release = resolve; });
+    await page.route("**/models/*.glb", async (route) => {
+      await blocked;
+      await route.abort();
+    });
+    try {
+      await openStory(page, `viewer-model-viewer--${example}`);
+      await expect(page.locator('[data-slot="model-viewer"]')).toHaveAttribute("data-state", "loading");
+      const loader = page.locator(".viewer-loader");
+      if (example === "hidden-feedback") {
+        await expect(loader).toHaveCount(0);
+      } else if (example === "custom-feedback") {
+        await expect(loader).toHaveText("Preparing your preview…");
+        await expect(loader.locator("svg")).toHaveCount(0);
+      } else {
+        await expect(loader).toContainText("Loading model…");
+        await expect(loader.locator(".viewer-loader-spinner")).toBeVisible();
+        if (example === "loading-file-name") {
+          await expect(loader).toContainText("robot-expressive.glb");
+        } else {
+          await expect(loader).not.toContainText("robot-expressive.glb");
+        }
+        await page.emulateMedia({ reducedMotion: "reduce" });
+        await expect(loader.locator("svg")).toHaveCSS("animation-name", "none");
+        for (const width of [1280, 390]) {
+          await page.setViewportSize({ width, height: 800 });
+          await page.screenshot({ path: `test-results/${example}-${width}.png` });
+        }
+      }
+    } finally {
+      release();
+    }
+    await expect(page.locator('[data-slot="model-viewer"]')).toHaveAttribute("data-state", "error");
+    if (example === "hidden-feedback") {
+      await expect(page.locator(".viewer-error-wrap")).toHaveCount(0);
+    } else if (example === "custom-feedback") {
+      await expect(page.getByRole("alert")).toHaveText("Preview unavailable. Choose another model.");
+    }
+  });
+}
+
+test("minimal embed has no orientation helper or toolbar", async ({ page }) => {
+  await openStory(page, "viewer-model-viewer--minimal-embed");
+  await expect(page.locator('[data-slot="model-viewer"]')).toHaveAttribute("data-state", "ready");
+  await expect(page.getByRole("toolbar")).toHaveCount(0);
+  await page.screenshot({ path: "test-results/minimal-embed.png" });
 });
 
 for (const theme of ["light", "dark"]) {
