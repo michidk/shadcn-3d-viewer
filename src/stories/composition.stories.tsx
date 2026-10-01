@@ -1,12 +1,18 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { useState } from "react";
 import { Grid2X2, ScanSearch } from "lucide-react";
 import {
   ModelViewer,
+  ModelViewerRoot,
+  ModelViewerScene,
+  ModelViewerDefaultToolbar,
+  ModelViewerAnimationBar,
+  ModelViewerInspector,
+  ModelViewerStatus,
+  ModelViewerFullscreen,
+  useModelViewer,
   ModelViewerToolbar,
   ModelViewerToolbarButton,
   ModelViewerToolbarGroup,
-  type ModelViewerProps,
   type ViewerUiComponents,
 } from "@/components/ui/model-viewer";
 import { Button } from "@/components/ui/button";
@@ -16,45 +22,31 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 
-function CustomToolbarExample(args: ModelViewerProps) {
-  const [grid, setGrid] = useState(false);
-  const [projection, setProjection] = useState<"perspective" | "orthographic">(
-    "perspective",
-  );
+function CompactToolbar() {
+  const { showGrid, setShowGrid, projection, setProjection } = useModelViewer();
   return (
-    <ModelViewer
-      {...args}
-      showGrid={grid}
-      projection={projection}
-      onGridChange={setGrid}
-      onProjectionChange={setProjection}
-      toolbar={
-        <ModelViewerToolbar aria-label="Custom display controls">
-          <ModelViewerToolbarGroup aria-label="Display">
-            <ModelViewerToolbarButton
-              label="Show grid"
-              active={grid}
-              onClick={() => setGrid(!grid)}
-            >
-              <Grid2X2 />
-            </ModelViewerToolbarButton>
-            <ModelViewerToolbarButton
-              label="Orthographic view"
-              active={projection === "orthographic"}
-              onClick={() =>
-                setProjection(
-                  projection === "orthographic"
-                    ? "perspective"
-                    : "orthographic",
-                )
-              }
-            >
-              <ScanSearch />
-            </ModelViewerToolbarButton>
-          </ModelViewerToolbarGroup>
-        </ModelViewerToolbar>
-      }
-    />
+    <ModelViewerToolbar aria-label="Custom display controls">
+      <ModelViewerToolbarGroup aria-label="Display">
+        <ModelViewerToolbarButton
+          label="Show grid"
+          active={showGrid}
+          onClick={() => setShowGrid(!showGrid)}
+        >
+          <Grid2X2 />
+        </ModelViewerToolbarButton>
+        <ModelViewerToolbarButton
+          label="Orthographic view"
+          active={projection === "orthographic"}
+          onClick={() =>
+            setProjection(
+              projection === "orthographic" ? "perspective" : "orthographic",
+            )
+          }
+        >
+          <ScanSearch />
+        </ModelViewerToolbarButton>
+      </ModelViewerToolbarGroup>
+    </ModelViewerToolbar>
   );
 }
 
@@ -88,7 +80,7 @@ const meta = {
     docs: {
       description: {
         component:
-          "Compose a small toolbar with controlled viewer props, or replace the button and tooltip implementations without forking the scene renderer.",
+          "Compose viewer parts and access the nearest root with useModelViewer. Local shadcn primitives and Base UI render are the primary customization path; component overrides remain a compatibility escape hatch.",
       },
     },
   },
@@ -98,7 +90,53 @@ export default meta;
 type Story = StoryObj<typeof meta>;
 
 export const CustomToolbar: Story = {
-  render: (args) => <CustomToolbarExample {...args} />,
+  render: (args) => <ModelViewer {...args} toolbar={<CompactToolbar />} />,
+};
+
+export const CompoundViewer: Story = {
+  render: ({ height }) => (
+    <ModelViewerRoot
+      height={height}
+      src="/models/robot-expressive.glb"
+      defaultAnimation="Walking"
+    >
+      <ModelViewerScene />
+      <ModelViewerDefaultToolbar />
+      <ModelViewerAnimationBar />
+      <ModelViewerInspector />
+      <ModelViewerStatus />
+      <ModelViewerFullscreen />
+    </ModelViewerRoot>
+  ),
+};
+
+function RenderToolbar() {
+  const viewer = useModelViewer();
+  return (
+    <ModelViewerToolbar aria-label="Render composition controls">
+      <ModelViewerToolbarGroup>
+        <ModelViewerToolbarButton
+          label="Show grid"
+          size="default"
+          active={viewer.showGrid}
+          onClick={() => viewer.setShowGrid(!viewer.showGrid)}
+          render={<button data-custom-render="grid" className="rounded-full" />}
+        >
+          <Grid2X2 /> Grid
+        </ModelViewerToolbarButton>
+      </ModelViewerToolbarGroup>
+    </ModelViewerToolbar>
+  );
+}
+
+export const RenderComposition: Story = {
+  render: ({ height }) => (
+    <ModelViewerRoot height={height}>
+      <ModelViewerScene />
+      <RenderToolbar />
+      <ModelViewerStatus />
+    </ModelViewerRoot>
+  ),
 };
 
 export const CustomButtonAndTooltip: Story = {

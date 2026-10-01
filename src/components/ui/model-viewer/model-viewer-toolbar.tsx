@@ -1,10 +1,16 @@
 "use client";
 
-import { useState, type ComponentProps, type ReactNode } from "react";
+import {
+  useImperativeHandle,
+  useLayoutEffect,
+  useRef,
+  useState,
+  type ComponentProps,
+  type ReactNode,
+} from "react";
 import {
   Box,
   Camera,
-  Check,
   ChevronDown,
   Copy,
   Download,
@@ -26,9 +32,12 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuRadioGroup,
+  DropdownMenuRadioItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { ViewerControlButton as Button } from "./viewer-ui";
+import { useOptionalViewerRuntime } from "./model-viewer-context";
 import type {
   ViewerMode,
   ViewerLighting,
@@ -37,17 +46,58 @@ import type {
 } from "./model-viewer";
 import "./model-viewer.css";
 
+const shadingLabels: Record<ViewerShading, string> = {
+  realistic: "Realistic",
+  solid: "Solid",
+  normals: "Normals",
+  wireframe: "Wireframe",
+};
+
 export function ModelViewerToolbar({
   className,
   onKeyDown,
+  ref,
+  placement = "top",
   ...props
-}: ComponentProps<"div">) {
+}: ComponentProps<"div"> & { placement?: "top" | "animation" | "static" }) {
+  const elementRef = useRef<HTMLDivElement>(null);
+  useImperativeHandle(ref, () => elementRef.current!, []);
+  const runtime = useOptionalViewerRuntime();
+  const reportToolbar = runtime?.reportToolbar;
+  const viewerRef = runtime?.viewerRef;
+  useLayoutEffect(() => {
+    const element = elementRef.current;
+    if (!element || !reportToolbar || !viewerRef || placement !== "top") return;
+    const measure = () => {
+      const root = viewerRef.current;
+      if (!root) return;
+      const rect = element.getBoundingClientRect();
+      reportToolbar(
+        element,
+        Math.ceil(rect.bottom - root.getBoundingClientRect().top + 12),
+      );
+    };
+    const observer = new ResizeObserver(measure);
+    observer.observe(element);
+    if (viewerRef.current) observer.observe(viewerRef.current);
+    measure();
+    return () => {
+      observer.disconnect();
+      reportToolbar(element, null);
+    };
+  }, [reportToolbar, viewerRef, placement, className, props.style]);
   return (
     <div
+      ref={elementRef}
       data-slot="model-viewer-toolbar"
       role="toolbar"
       aria-label="3D viewer controls"
-      className={cn("viewer-toolbar", className)}
+      className={cn(
+        "viewer-toolbar",
+        placement === "top" && "viewer-toolbar-top",
+        placement === "animation" && "viewer-animation-controls",
+        className,
+      )}
       {...props}
       onKeyDown={(event) => {
         onKeyDown?.(event);
@@ -95,7 +145,10 @@ export function ModelViewerToolbarGroup({
     <div
       data-slot="model-viewer-toolbar-group"
       role="group"
-      className={cn("viewer-toolbar-group", className)}
+      className={cn(
+        "viewer-toolbar-group rounded-lg border bg-popover p-1 text-popover-foreground",
+        className,
+      )}
       {...props}
     />
   );
@@ -130,7 +183,10 @@ export function ModelViewerToolbarButton({
   );
 }
 
-export type ModelViewerControlsProps = ComponentProps<"div"> & {
+export type ModelViewerControlsProps = Omit<
+  ComponentProps<"div">,
+  "onReset"
+> & {
   mode: ViewerMode;
   onModeChange: (mode: ViewerMode) => void;
   shading: ViewerShading;
@@ -174,41 +230,47 @@ export function ModelViewerControls({
   const [captureMenuOpen, setCaptureMenuOpen] = useState(false);
   return (
     <ModelViewerToolbar {...props}>
-      <DropdownMenu>
-        <DropdownMenuTrigger
-          render={
-            <Button
-              type="button"
-              variant="outline"
-              size="lg"
-              className="viewer-shading-trigger bg-popover dark:bg-popover"
-              aria-label={`Shading: ${shading}`}
-            >
-              {shading}
-              <ChevronDown />
-            </Button>
-          }
-        />
-        <DropdownMenuContent
-          align="start"
-          sideOffset={6}
-          className="viewer-menu"
-        >
-          {(["realistic", "solid", "normals", "wireframe"] as const).map(
-            (option) => (
-              <DropdownMenuItem
-                key={option}
-                onClick={() => onShadingChange(option)}
+      <ModelViewerToolbarGroup aria-label="Shading">
+        <DropdownMenu>
+          <DropdownMenuTrigger
+            render={
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                className="viewer-shading-trigger"
+                aria-label={`Shading: ${shading}`}
               >
-                <Check
-                  className={option === shading ? "is-visible" : "is-hidden"}
-                />
-                <span>{option}</span>
-              </DropdownMenuItem>
-            ),
-          )}
-        </DropdownMenuContent>
-      </DropdownMenu>
+                {shadingLabels[shading]}
+                <ChevronDown />
+              </Button>
+            }
+          />
+          <DropdownMenuContent
+            align="start"
+            sideOffset={6}
+            className="min-w-40"
+          >
+            <DropdownMenuRadioGroup
+              aria-label="Shading"
+              value={shading}
+              onValueChange={onShadingChange}
+            >
+              {(["realistic", "solid", "normals", "wireframe"] as const).map(
+                (option) => (
+                  <DropdownMenuRadioItem
+                    key={option}
+                    value={option}
+                    closeOnClick
+                  >
+                    {shadingLabels[option]}
+                  </DropdownMenuRadioItem>
+                ),
+              )}
+            </DropdownMenuRadioGroup>
+          </DropdownMenuContent>
+        </DropdownMenu>
+      </ModelViewerToolbarGroup>
       <ModelViewerToolbarGroup aria-label="Interaction mode">
         <ModelViewerToolbarButton
           icon={<Rotate3D />}
@@ -265,22 +327,26 @@ export function ModelViewerControls({
               </Button>
             }
           />
-          <DropdownMenuContent className="viewer-menu">
-            {([false, "drei", "asset-studio"] as const).map((value) => (
-              <DropdownMenuItem
-                key={String(value)}
-                onClick={() => onViewCubeChange(value)}
-              >
-                <Check
-                  className={viewCube === value ? "is-visible" : "is-hidden"}
-                />
-                {value === false
-                  ? "Off"
-                  : value === "drei"
-                    ? "Drei cube"
-                    : "Asset Studio"}
-              </DropdownMenuItem>
-            ))}
+          <DropdownMenuContent className="min-w-40">
+            <DropdownMenuRadioGroup
+              aria-label="View cube"
+              value={viewCube}
+              onValueChange={onViewCubeChange}
+            >
+              {([false, "drei", "asset-studio"] as const).map((value) => (
+                <DropdownMenuRadioItem
+                  key={String(value)}
+                  value={value}
+                  closeOnClick
+                >
+                  {value === false
+                    ? "Off"
+                    : value === "drei"
+                      ? "Drei cube"
+                      : "Asset Studio"}
+                </DropdownMenuRadioItem>
+              ))}
+            </DropdownMenuRadioGroup>
           </DropdownMenuContent>
         </DropdownMenu>
         <ModelViewerToolbarButton
@@ -309,13 +375,9 @@ export function ModelViewerControls({
               </Button>
             }
           />
-          <DropdownMenuContent
-            align="end"
-            sideOffset={8}
-            className="viewer-capture-menu"
-          >
-            <div className="viewer-capture-title">
-              Capture view <span>PNG</span>
+          <DropdownMenuContent align="end" sideOffset={8} className="min-w-52">
+            <div className="flex items-center justify-between border-b px-2 py-1.5 text-xs font-medium">
+              Capture view <span className="text-muted-foreground">PNG</span>
             </div>
             <DropdownMenuItem onClick={() => void onCapture("copy")}>
               <Copy /> Copy to clipboard
@@ -357,9 +419,13 @@ export function ModelViewerAnimationControls({
 }: ModelViewerAnimationControlsProps) {
   return (
     <ModelViewerToolbar
+      placement="animation"
       data-slot="model-viewer-animation-controls"
       aria-label="Animation controls"
-      className={cn("viewer-animation-controls", className)}
+      className={cn(
+        "rounded-lg border bg-popover p-1 text-popover-foreground",
+        className,
+      )}
       {...props}
     >
       <ModelViewerToolbarButton
@@ -382,22 +448,18 @@ export function ModelViewerAnimationControls({
             </Button>
           }
         />
-        <DropdownMenuContent
-          align="start"
-          sideOffset={6}
-          className="viewer-animation-menu"
-        >
-          {clips.map((name) => (
-            <DropdownMenuItem
-              key={name}
-              onClick={() => onAnimationChange(name)}
-            >
-              <Check
-                className={name === animation ? "is-visible" : "is-hidden"}
-              />
-              {name}
-            </DropdownMenuItem>
-          ))}
+        <DropdownMenuContent align="start" sideOffset={6} className="min-w-52">
+          <DropdownMenuRadioGroup
+            aria-label="Animation clip"
+            value={animation}
+            onValueChange={onAnimationChange}
+          >
+            {clips.map((name) => (
+              <DropdownMenuRadioItem key={name} value={name} closeOnClick>
+                {name}
+              </DropdownMenuRadioItem>
+            ))}
+          </DropdownMenuRadioGroup>
         </DropdownMenuContent>
       </DropdownMenu>
       <ModelViewerToolbarButton
@@ -409,7 +471,6 @@ export function ModelViewerAnimationControls({
         type="button"
         size="sm"
         variant="ghost"
-        className="viewer-animation-speed"
         aria-label={`Animation speed ${speed}×`}
         title={`Animation speed ${speed}×`}
         onClick={() =>
@@ -421,7 +482,7 @@ export function ModelViewerAnimationControls({
         }
       >
         <Gauge />
-        <span className="viewer-speed-label">{speed}×</span>
+        <span className="tabular-nums">{speed}×</span>
       </Button>
     </ModelViewerToolbar>
   );

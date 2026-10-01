@@ -3,6 +3,7 @@
 
 @layer components {
   .model-viewer {
+    --viewer-scene-border: #d4d4d4;
     container-type: inline-size;
     container-name: viewer;
     position: relative;
@@ -17,6 +18,7 @@
     color: var(--foreground);
   }
   .model-viewer.is-night {
+    --viewer-scene-border: #404040;
     background: #171717;
   }
   .model-viewer canvas {
@@ -34,6 +36,10 @@
     position: fixed;
     inset: 0;
     z-index: 100;
+  }
+  .viewer-stage {
+    position: absolute;
+    inset: 0;
   }
   .viewer-canvas {
     position: absolute !important;
@@ -68,14 +74,14 @@
     grid-template-columns: repeat(2, minmax(0, 1fr));
     grid-template-rows: repeat(2, minmax(0, 1fr));
   }
-  .model-viewer[data-viewer-mode="split"].has-ui .viewer-scenes {
-    top: 60px;
+  .model-viewer[data-viewer-mode="split"] .viewer-scenes {
+    top: var(--viewer-toolbar-offset, 0px);
   }
   .model-viewer[data-viewer-mode="split"] .viewer-scene:nth-child(even) {
-    border-left: 1px solid var(--border);
+    border-left: 1px solid var(--viewer-scene-border);
   }
   .model-viewer[data-viewer-mode="split"] .viewer-scene:nth-child(n + 3) {
-    border-top: 1px solid var(--border);
+    border-top: 1px solid var(--viewer-scene-border);
   }
   .viewer-pane-label {
     position: absolute;
@@ -91,7 +97,6 @@
     font-weight: 500;
     pointer-events: none;
   }
-  .viewer-toolbar,
   .viewer-help,
   .viewer-fullscreen,
   .viewer-animation-controls,
@@ -100,6 +105,14 @@
     z-index: 3;
   }
   .viewer-toolbar {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+  .viewer-toolbar-top {
+    position: absolute;
+    z-index: 3;
     top: 14px;
     left: 14px;
     display: flex;
@@ -113,61 +126,8 @@
     display: flex;
     align-items: center;
     gap: 2px;
-    padding: 4px;
-    border: 1px solid var(--border);
-    border-radius: var(--radius);
-    background: var(--popover);
-    color: var(--popover-foreground);
-    box-shadow: 0 1px 3px rgb(0 0 0 / 0.1);
   }
-  .viewer-toolbar svg,
-  .viewer-animation-controls svg {
-    width: 16px;
-    height: 16px;
-  }
-  .viewer-shading-trigger {
-    height: 38px;
-    min-width: 112px;
-    justify-content: space-between;
-    padding-inline: 11px;
-    border-color: var(--border);
-    background: var(--popover);
-    color: var(--popover-foreground);
-    box-shadow: 0 1px 3px rgb(0 0 0 / 0.1);
-    font-size: 14px;
-    font-weight: 500;
-    text-transform: capitalize;
-  }
-  .viewer-menu {
-    min-width: 150px;
-  }
-  .viewer-menu [data-slot="dropdown-menu-item"] {
-    text-transform: capitalize;
-  }
-  .viewer-menu .is-hidden,
-  .viewer-animation-menu .is-hidden {
-    visibility: hidden;
-  }
-  .viewer-capture-menu,
-  .viewer-animation-menu {
-    min-width: 200px;
-  }
-  .viewer-capture-title {
-    display: flex;
-    justify-content: space-between;
-    gap: 12px;
-    padding: 7px 9px 9px;
-    margin-bottom: 3px;
-    border-bottom: 1px solid var(--border);
-    color: var(--foreground);
-    font-size: 12px;
-    font-weight: 500;
-  }
-  .viewer-capture-title span {
-    color: var(--muted-foreground);
-    font-size: 10px;
-    font-weight: 500;
-  }
+
   .viewer-animation-controls {
     left: 14px;
     bottom: 52px;
@@ -181,36 +141,18 @@
     text-overflow: ellipsis;
     white-space: nowrap;
   }
-  .viewer-speed-label {
-    font-size: 11px;
-    font-variant-numeric: tabular-nums;
-  }
-  .viewer-animation-speed {
-    gap: 4px;
-  }
+
   .viewer-help {
     bottom: 14px;
     left: 14px;
     max-width: calc(100% - 76px);
-    padding: 7px 10px;
-    border: 1px solid var(--border);
-    border-radius: calc(var(--radius) - 2px);
-    background: var(--popover);
-    color: var(--popover-foreground);
-    font-size: 11px;
-    line-height: 1.3;
+
     pointer-events: none;
   }
-  .viewer-help.is-error {
-    color: var(--destructive);
-  }
+
   .viewer-fullscreen {
     right: 14px;
     bottom: 14px;
-    border: 1px solid var(--border);
-    background: var(--popover);
-    color: var(--popover-foreground);
-    box-shadow: 0 1px 3px rgb(0 0 0 / 0.1);
   }
   .viewer-overlay-slot {
     inset: 0;
@@ -272,37 +214,20 @@
     }
   }
   @container viewer (max-width: 680px) {
-    .model-viewer[data-viewer-mode="split"].has-ui .viewer-scenes {
-      top: 108px;
-    }
-    .viewer-toolbar {
+    .viewer-toolbar-top {
       top: 9px;
       left: 9px;
       gap: 4px;
       max-width: calc(100% - 18px);
     }
-    .viewer-toolbar-group {
-      padding: 2px;
-    }
-    .viewer-toolbar:not(.viewer-animation-controls) button {
-      width: 30px;
-      height: 30px;
-    }
-    .viewer-toolbar .viewer-shading-trigger {
-      width: 100px;
-      min-width: 100px;
-      padding-inline: 8px;
-    }
+
     .viewer-animation-controls {
       top: auto;
       bottom: 50px;
       left: 9px;
       max-width: calc(100% - 18px);
-      padding: 2px;
     }
-    .viewer-animation-controls button {
-      height: 30px;
-    }
+
     .viewer-animation-name {
       max-width: 128px;
     }
@@ -324,9 +249,11 @@
     position: absolute;
     z-index: 4;
     left: 14px;
-    top: 70px;
+    top: max(14px, var(--viewer-toolbar-offset, 0px));
     width: min(330px, calc(100% - 28px));
-    max-height: calc(100% - 170px);
+    max-height: calc(
+      100% - max(14px, var(--viewer-toolbar-offset, 0px)) - 80px
+    );
     display: flex;
     flex-direction: column;
     overflow: hidden;
@@ -334,7 +261,9 @@
     border-radius: var(--radius);
     background: var(--popover);
     color: var(--popover-foreground);
-    box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+    box-shadow:
+      0 4px 6px -1px rgb(0 0 0 / 0.1),
+      0 2px 4px -2px rgb(0 0 0 / 0.1);
     font-size: 11px;
   }
   .inspector-header {
@@ -494,40 +423,22 @@
     background: var(--secondary);
     box-shadow: inset 2px 0 var(--primary);
   }
-  .inspector-expand {
-    width: 22px;
-    height: 26px;
-    padding: 0;
-  }
+
   .inspector-spacer {
-    width: 22px;
+    width: 1.75rem;
     flex-shrink: 0;
   }
   .inspector-node {
     flex: 1 1 0%;
     min-width: 0;
-    height: 30px;
     justify-content: flex-start;
-    gap: 7px;
-    padding: 4px;
-    font-size: 11px;
-    font-weight: 500;
   }
-  .inspector-node:disabled {
-    opacity: 0.65;
-  }
+
   .inspector-node > span {
     overflow: hidden;
     text-overflow: ellipsis;
   }
-  .inspector-node small {
-    margin-left: auto;
-    padding: 2px 4px;
-    font-size: 8px;
-    color: var(--muted-foreground);
-    background: color-mix(in srgb, var(--muted) 60%, transparent);
-    border-radius: 3px;
-  }
+
   .inspector-selection {
     display: flex;
     align-items: center;
@@ -567,8 +478,9 @@
   }
   @container viewer (max-width: 680px) {
     .viewer-inspector {
-      top: 98px;
-      max-height: calc(100% - 155px);
+      max-height: calc(
+        100% - max(9px, var(--viewer-toolbar-offset, 0px)) - 64px
+      );
     }
     .inspector-header {
       padding: 10px 12px;

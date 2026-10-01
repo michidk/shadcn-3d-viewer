@@ -2,7 +2,7 @@
 
 A source-owned shadcn component for viewing GLB models with React Three Fiber. It is adapted from Asset Studio's production model viewer and presented in a standalone Vite demo.
 
-The UI uses shadcn's **Base UI / Nova** primitives (`@base-ui/react`) and the standard neutral theme. Buttons, menus, and tooltips use Base UI's `render` composition API, not Radix's `asChild`. Theme tokens live in `src/theme.css`; add `dark` to the document root for dark mode. The 3D scene's day/night lighting remains independent of the UI theme.
+The demo uses shadcn's **Base UI / Nova** primitives (`@base-ui/react`) and the standard neutral theme. The installed viewer uses your project's local primitives and existing theme; Nova and neutral are not requirements. Buttons, menus, and tooltips use Base UI's `render` composition API, not Radix's `asChild`. Theme tokens live in `src/theme.css`; add `dark` to the document root for dark mode. The 3D scene's day/night lighting remains independent of the UI theme.
 
 ## Features
 
@@ -42,7 +42,7 @@ bun run storybook:build  # static site in storybook-static/
 bun run storybook:test   # smoke tests against a running Storybook
 ```
 
-The 14 examples cover the interactive playground, fixed four-view layout, Drei cube, night lighting, the bundled animated robot, model inspection, minimal embeds, error handling, custom toolbars, custom button/tooltip implementations, styled overlays, and standalone inspector states. Viewer toolbar changes and Storybook Controls stay in sync. Docs pages render one live viewer at a time to stay within browser WebGL limits.
+The 16 examples cover the interactive playground, fixed four-view layout, Drei cube, night lighting, the bundled animated robot, model inspection, minimal embeds, error handling, custom toolbars, compound viewer parts, Base UI `render` composition, compatibility button/tooltip overrides, styled overlays, and standalone inspector states. Viewer toolbar changes and Storybook Controls stay in sync. Docs pages render one live viewer at a time to stay within browser WebGL limits.
 
 Storybook shares `src/theme.css` with the demo but does not load the demo page layout. All model assets are served locally from `public/`, including in the static build. The error story deliberately requests a missing model.
 
@@ -59,7 +59,7 @@ bun run registry:build
 bunx shadcn@latest add ./public/r/model-viewer.json
 ```
 
-Use a Base UI shadcn project (this repository uses `"style": "base-nova"` in `components.json`). The registry item installs its React Three Fiber dependencies and the shadcn `alert`, `button`, `tooltip`, and `dropdown-menu` primitives. Radix versions of these controls are not interchangeable with the Base UI composition API.
+Use a Base UI shadcn project with the button `variant`/`size`, tooltip `render`, and dropdown radio APIs (the demo uses `"style": "base-nova"` in `components.json`). Any compatible Base UI shadcn style and palette can be used. The registry item installs its React Three Fiber dependencies and the shadcn `alert`, `button`, `tooltip`, and `dropdown-menu` primitives. Radix versions of these controls are not interchangeable with the Base UI composition API. Installation contains only viewer sources and references to your local primitives: it does **not** install `src/theme.css`, set CSS variables, overwrite `components.json`, or select a palette. Do not overwrite your customized primitives when the shadcn CLI prompts.
 
 Or copy `src/components/ui/model-viewer/` into an existing shadcn project and install:
 
@@ -134,7 +134,9 @@ The toolbar offers one orthographic toggle; direction changes are available thro
 
 Standalone `ViewCube` defaults to render priority 1. When composing with a custom renderer, use a later priority (the viewer uses 2). The four split panes keep fixed directions; dragging pans and scrolling zooms without rotating them.
 
-### Bring your own UI
+### Compatibility component overrides
+
+Prefer editing your local shadcn primitives, composing the exported parts, and using Base UI's `render` prop. The optional `components` API remains available for existing consumers and application-wide overrides; it is not required to match your theme.
 
 Controls include accessible button labels and visual tooltips by default, following Base UI's tooltip guidance. Do not put essential instructions only in a tooltip. Replace either implementation without changing the viewer:
 
@@ -146,53 +148,88 @@ Controls include accessible button labels and visual tooltips by default, follow
 
 `ModelInspector` is separately exported with searchable/collapsible hierarchy, metric cards, dimensions, and selection state. Pass `inspection`, `selectedMesh`, `onSelectMesh`, optional `onClose`, `className`, and optional `components`. Use `ViewerUiProvider` to share overrides across composed controls. The inspector includes its stylesheet; override `className`/CSS for custom placement.
 
-### Compose your own toolbar
+### Compose viewer parts
 
-The default viewer remains a one-component drop-in. For a smaller toolbar, pass your own composition and connect it to the controlled viewer props:
+`ModelViewer` is a preset, not a separate implementation. Build your own arrangement from the same parts:
 
 ```tsx
-import { useState } from "react";
+import {
+  ModelViewerRoot,
+  ModelViewerScene,
+  ModelViewerDefaultToolbar,
+  ModelViewerAnimationBar,
+  ModelViewerInspector,
+  ModelViewerStatus,
+  ModelViewerFullscreen,
+} from "@/components/ui/model-viewer";
+
+<ModelViewerRoot src="/models/chair.glb" height={640}>
+  <ModelViewerScene />
+  <ModelViewerDefaultToolbar />
+  <ModelViewerAnimationBar />
+  <ModelViewerInspector />
+  <ModelViewerStatus />
+  <ModelViewerFullscreen />
+</ModelViewerRoot>
+```
+
+The root owns state and the containing DOM element. It renders **no Canvas or controls automatically**. Mount exactly one `ModelViewerScene` inside each root; mount or omit the other parts as needed. The scene owns model loading, error/loading fallbacks, and the renderer. `ModelViewerAnimationBar` appears only when clips are available; `ModelViewerInspector` appears when opened and inspection data is ready.
+
+`ModelViewerRoot` takes the viewer's scene and controlled/default state props, native DOM props, and refs. The preset-only props `toolbar`, `overlay`, and `showAnimationControls` are replaced by children in a compound composition. `showUi` on the root controls pane labels and the default orientation/capture configuration; it does not hide explicitly mounted children.
+
+### Build controls with shared state
+
+`useModelViewer()` returns state and actions for the nearest root (including the root inside the preset). No callback plumbing is needed:
+
+```tsx
 import { Grid2X2 } from "lucide-react";
 import {
   ModelViewer,
   ModelViewerToolbar,
   ModelViewerToolbarGroup,
   ModelViewerToolbarButton,
+  useModelViewer,
 } from "@/components/ui/model-viewer";
 
-export function AssetPreview() {
-  const [grid, setGrid] = useState(false);
+function CompactToolbar() {
+  const { showGrid, setShowGrid } = useModelViewer();
 
   return (
-    <ModelViewer
-      className="rounded-xl shadow-none"
-      showGrid={grid}
-      onGridChange={setGrid}
-      toolbar={
-        <ModelViewerToolbar aria-label="Preview controls">
-          <ModelViewerToolbarGroup aria-label="Display">
-            <ModelViewerToolbarButton
-              label="Show grid"
-              active={grid}
-              onClick={() => setGrid(!grid)}
-            >
-              <Grid2X2 />
-            </ModelViewerToolbarButton>
-          </ModelViewerToolbarGroup>
-        </ModelViewerToolbar>
-      }
-    />
+    <ModelViewerToolbar aria-label="Preview controls">
+      <ModelViewerToolbarGroup aria-label="Display">
+        <ModelViewerToolbarButton
+          label="Show grid"
+          active={showGrid}
+          onClick={() => setShowGrid(!showGrid)}
+          render={<button className="rounded-full" />}
+        >
+          <Grid2X2 />
+        </ModelViewerToolbarButton>
+      </ModelViewerToolbarGroup>
+    </ModelViewerToolbar>
   );
 }
+
+<ModelViewer toolbar={<CompactToolbar />} />
 ```
+
+`render` changes the rendered element while preserving Base UI's refs, handlers, and accessibility attributes. Custom React components supplied to `render` must forward those props to their DOM element. Use `className`, `variant`, and `size` for styling without replacing an element.
+
+The hook exposes mode, lighting, shading, grid, projection, cube, camera preset, animation, inspector, and selection state with corresponding setters; `resetView`, `restartAnimation`, `capture`, and `toggleFullscreen`; plus `status`, `canCapture`, `feedback`, and `reducedMotion`. `status` is `idle` without a scene, otherwise `loading | ready | error`. Each root is independent. Using the hook or connected parts outside a root throws a descriptive error.
+
+Controlled props stay controlled: a hook action reports the change callback, but the UI changes only when the owner supplies the new value. Use `inspectorOpen` / `onInspectorOpenChange` or `defaultInspectorOpen` for new code; legacy `showInspector` remains supported.
+
+Toolbar layout measures mounted top toolbars, including wraps and custom button sizes, to reserve room in split views. Use `placement="static"` for a toolbar that should not reserve top space. Primitive button sizing and menu styling are not overridden by viewer CSS.
 
 `toolbar={null}` hides only the main toolbar; `showUi={false}` hides all built-in controls. `ModelViewerControls` and `ModelViewerAnimationControls` export the ready-made controlled toolbars. Arrow Left/Right and Home/End move focus between toolbar buttons; Tab retains normal browser navigation.
 
 DOM-facing components accept native props, React 19 refs, `className`, and `style`. `ModelViewer` forwards these to its root `div` (its `onLoad`/`onError` remain model lifecycle callbacks), and renders `children` as additional DOM overlays, not R3F scene children. Use positioned children with a z-index to place additional UI above the canvas.
 
-Stable `data-slot` attributes include `model-viewer`, `model-viewer-toolbar`, `model-viewer-toolbar-group`, `model-viewer-toolbar-button`, `model-viewer-animation-controls`, `model-inspector`, and `model-inspector-node`. The root exposes `data-state="loading|ready|error"`; toggle buttons expose `data-state="on|off"`.
+Additional compound slots are `model-viewer-scene`, `model-viewer-status`, `model-viewer-fullscreen`, and `model-viewer-overlay`. Shading, view-cube, and animation selections use semantic menu radio groups with `aria-checked`.
 
-Styles live in Tailwind's `components` layer, so utility classes can override them. UI surfaces use shadcn semantic tokens; day/night lighting changes the 3D scene independently of the host application's theme. Default height is 620px; a height utility can override it unless an explicit `height` or inline `style.height` is supplied.
+Stable `data-slot` attributes include `model-viewer`, `model-viewer-toolbar`, `model-viewer-toolbar-group`, `model-viewer-toolbar-button`, `model-viewer-animation-controls`, `model-inspector`, and `model-inspector-node`. The root exposes `data-state="idle|loading|ready|error"`; toggle buttons expose `data-state="on|off"`.
+
+Styles live in Tailwind's `components` layer, so utility classes can override them. UI surfaces use shadcn semantic tokens; day/night lighting changes the 3D scene independently of the host application's theme. The grid uses neutral grays in both lighting modes. Width fills the parent by default; constrain it with a parent such as `<div className="mx-auto max-w-5xl">` when a full-width workspace is not wanted. Default height is 620px; a height utility can override it unless an explicit `height` or inline `style.height` is supplied.
 
 `ViewerControlButton` is also exported. Its optional `tooltip` prop accepts custom content or `false` to hide it. Controls default to `type="button"`, so placing a viewer inside a form does not submit it. A shared tooltip provider coordinates hover delays; standalone controls provide their own fallback.
 

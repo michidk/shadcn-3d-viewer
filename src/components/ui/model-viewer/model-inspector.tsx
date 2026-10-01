@@ -164,7 +164,6 @@ export function ModelInspector({
                   <Button
                     size="icon-sm"
                     variant="ghost"
-                    className="inspector-expand h-[26px] w-[22px] p-0"
                     aria-label={`${collapsed.has(node.id) ? "Expand" : "Collapse"} ${node.name}`}
                     aria-expanded={!collapsed.has(node.id)}
                     onClick={() => toggle(node.id)}
@@ -181,7 +180,7 @@ export function ModelInspector({
                 <Button
                   variant="ghost"
                   size="sm"
-                  className="inspector-node h-[30px] min-w-0 flex-1 justify-start gap-[7px] p-1 text-[11px]"
+                  className="inspector-node min-w-0 flex-1 justify-start"
                   disabled={!node.mesh}
                   aria-pressed={
                     node.mesh ? selectedMesh === node.id : undefined
@@ -190,7 +189,9 @@ export function ModelInspector({
                 >
                   {node.mesh ? <Box size={13} /> : <Layers size={13} />}
                   <span>{node.name}</span>
-                  <small>{node.mesh ? "Mesh" : node.type}</small>
+                  <small className="ml-auto rounded-sm bg-muted px-1 text-xs text-muted-foreground">
+                    {node.mesh ? "Mesh" : node.type}
+                  </small>
                 </Button>
               </li>
             );

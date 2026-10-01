@@ -62,7 +62,7 @@ async function ready(page: Page) {
 }
 async function cube(page: Page, name: string) {
   await page.getByRole("button", { name: "View cube options", exact: true }).click();
-  await page.getByRole("menuitem", { name, exact: true }).click();
+  await page.getByRole("menuitemradio", { name, exact: true }).click();
 }
 async function canvasImage(page: Page) {
   return page.locator("canvas").evaluate((canvas: HTMLCanvasElement) => canvas.toDataURL());
@@ -131,6 +131,33 @@ test("camera movement does not trigger pixelated canvas regression", async ({ pa
     expect(sample.performance).toBe(1);
     expect(sample.dpr).toBeGreaterThanOrEqual(1);
     expect(sample.rendering).not.toBe("pixelated");
+  }
+});
+
+test("grid colors are neutral grays in both lighting modes", async ({ page }) => {
+  await ready(page);
+  await page.getByRole("button", { name: "Show grid", exact: true }).click();
+  for (const lighting of ["day", "night"]) {
+    if (lighting === "night") await page.getByRole("button", { name: "Switch to night" }).click();
+    const colors = await page.evaluate(`(async () => {
+      const { _roots } = await import('/node_modules/.vite/deps/@react-three_fiber.js');
+      const state = [..._roots.values()][0].store.getState();
+      const pane = state.internal.subscribers.find(s => s.priority === 1).store.getState();
+      let result;
+      pane.scene.traverse(object => {
+        const uniforms = object.material?.uniforms;
+        if (uniforms?.cellColor && uniforms?.sectionColor) {
+          result = [uniforms.cellColor.value.toArray(), uniforms.sectionColor.value.toArray()];
+        }
+      });
+      return result;
+    })()`);
+    expect(colors).toHaveLength(2);
+    for (const [red, green, blue] of colors) {
+      expect(red).toBeCloseTo(green, 8);
+      expect(green).toBeCloseTo(blue, 8);
+      expect(red).toBeGreaterThan(0);
+    }
   }
 });
 
@@ -206,7 +233,7 @@ test("skinned model animates, pauses, resumes, switches clips and resets on repl
   await expect(page.locator(".viewer-loader")).toHaveCount(0);
   await cube(page, "Off");
   await page.locator(".viewer-animation-name").click();
-  await page.getByRole("menuitem", { name: "Walking", exact: true }).click();
+  await page.getByRole("menuitemradio", { name: "Walking", exact: true }).click();
   await page.getByRole("button", { name: "Play animation", exact: true }).click();
   await page.waitForTimeout(300);
   const playing = await canvasImage(page);
@@ -393,4 +420,92 @@ test("shadcn composition forwards props and refs and supports controlled custom 
   await expect(grid).toBeFocused();
   await grid.hover();
   await expect(page.locator('[data-slot="tooltip-content"][data-open]')).toHaveText("Toggle reference lines");
+});
+
+test("compound roots isolate state, respect controlled updates and mount scenes explicitly", async ({ page }) => {
+  await ready(page);
+  await page.evaluate(`(async () => {
+    const { default: React } = await import('/node_modules/.vite/deps/react.js');
+    const { default: ReactDOM } = await import('/node_modules/.vite/deps/react-dom_client.js');
+    const { createRoot } = ReactDOM;
+    const { ModelViewerRoot, ModelViewerScene, ModelViewerDefaultToolbar, ModelViewerToolbar, ModelViewerToolbarGroup, ModelViewerToolbarButton, useModelViewer } = await import('/src/components/ui/model-viewer/index.ts');
+    const h = React.createElement;
+    const host = document.createElement('div');
+    host.id = 'compound-test';
+    host.style.cssText = 'position:fixed;inset:0;z-index:999;background:white;padding:16px;overflow:auto';
+    document.body.append(host);
+    function CustomActions() {
+      const viewer = useModelViewer();
+      return h(ModelViewerToolbar, { 'aria-label': 'Shared custom controls', className: 'top-20' },
+        h(ModelViewerToolbarGroup, null,
+          h(ModelViewerToolbarButton, { label: 'Shared grid', active: viewer.showGrid, onClick: () => viewer.setShowGrid(!viewer.showGrid),
+            render: h('button', { 'data-rendered-control': 'grid' }),
+            ref: element => host.dataset.renderRef = String(element?.dataset.renderedControl === 'grid') }, 'G')));
+    }
+    function Example() {
+      const [mode, setMode] = React.useState('orbit');
+      const [scene, setScene] = React.useState(false);
+      return h(React.Fragment, null,
+        h('button', { onClick: () => setMode(host.dataset.requested) }, 'Accept mode'),
+        h('button', { onClick: () => setScene(!scene) }, 'Toggle scene'),
+        h('div', { style: { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 } },
+          h(ModelViewerRoot, { id: 'first-root', height: 400, mode, showOrientation: false,
+            ref: element => host.dataset.rootRef = String(element?.id === 'first-root'),
+            onModeChange: value => { host.dataset.requested = value; host.dataset.requests = String(Number(host.dataset.requests || 0) + 1); } },
+            scene && h(ModelViewerScene, { ref: element => host.dataset.sceneRef = String(!!element) }),
+            h(ModelViewerDefaultToolbar),
+            h(CustomActions)),
+          h(ModelViewerRoot, { id: 'second-root', height: 400 }, h(ModelViewerDefaultToolbar))));
+    }
+    createRoot(host).render(h(Example));
+  })()`);
+  const host = page.locator("#compound-test");
+  const first = host.locator("#first-root");
+  const second = host.locator("#second-root");
+  await expect(host).toHaveAttribute("data-root-ref", "true");
+  await expect(host).toHaveAttribute("data-render-ref", "true");
+  await expect(host.locator("canvas")).toHaveCount(0);
+  await expect(first).toHaveAttribute("data-state", "idle");
+  await expect(first.getByRole("button", { name: "Screenshot options" })).toBeDisabled();
+
+  await first.getByRole("button", { name: "Shared grid" }).click();
+  await expect(first.getByRole("button", { name: "Show grid", exact: true })).toHaveAttribute("aria-pressed", "true");
+  await expect(second.getByRole("button", { name: "Show grid", exact: true })).toHaveAttribute("aria-pressed", "false");
+  await first.getByRole("button", { name: "Four-view split" }).click();
+  await expect(host).toHaveAttribute("data-requested", "split");
+  await expect(first).toHaveAttribute("data-viewer-mode", "orbit");
+  await host.getByRole("button", { name: "Accept mode" }).click();
+  await expect(first).toHaveAttribute("data-viewer-mode", "split");
+  await expect(second).toHaveAttribute("data-viewer-mode", "orbit");
+  await expect(host).toHaveAttribute("data-requests", "1");
+
+  await host.getByRole("button", { name: "Toggle scene" }).click();
+  await expect(first.locator("canvas")).toBeVisible();
+  await expect(first).toHaveAttribute("data-state", "ready");
+  await expect(host).toHaveAttribute("data-scene-ref", "true");
+  await expect(first.locator(".viewer-view")).toHaveCount(4);
+  await expect(first.getByRole("button", { name: "Screenshot options" })).toBeEnabled();
+  const toolbar = await first.getByRole("toolbar", { name: "Shared custom controls" }).boundingBox();
+  const pane = await first.locator(".viewer-view").first().boundingBox();
+  expect(pane!.y).toBeGreaterThanOrEqual(toolbar!.y + toolbar!.height);
+
+  await host.getByRole("button", { name: "Toggle scene" }).click();
+  await expect(first.locator("canvas")).toHaveCount(0);
+  await expect(first).toHaveAttribute("data-state", "idle");
+  await expect(first.getByRole("button", { name: "Screenshot options" })).toBeDisabled();
+});
+
+test("registry installs only viewer sources and leaves host styling untouched", async () => {
+  const registry = JSON.parse(await readFile("registry.json", "utf8"));
+  const item = registry.items[0];
+  expect(item.registryDependencies).toEqual(["alert", "button", "tooltip", "dropdown-menu"]);
+  expect(item.cssVars).toBeUndefined();
+  expect(item.css).toBeUndefined();
+  expect(item.files.length).toBeGreaterThan(9);
+  for (const file of item.files) {
+    expect(file.path).toMatch(/^src\/components\/ui\/model-viewer\//);
+    const source = await readFile(file.path, "utf8");
+    expect(source).not.toMatch(/(?:import|@import).*theme\.css/);
+    expect(source).not.toMatch(/:root\s*\{|--primary\s*:/);
+  }
 });

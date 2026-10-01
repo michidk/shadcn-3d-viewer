@@ -1,4 +1,17 @@
 export { ModelViewer } from "./model-viewer";
+export { ModelViewerRoot } from "./model-viewer-root";
+export { ModelViewerScene } from "./model-viewer-scene";
+export { useModelViewer } from "./model-viewer-context";
+export {
+  ModelViewerDefaultToolbar,
+  ModelViewerAnimationBar,
+  ModelViewerInspector,
+  ModelViewerStatus,
+  ModelViewerFullscreen,
+  ModelViewerOverlay,
+} from "./model-viewer-parts";
+export type { ModelViewerInspectorProps } from "./model-viewer-parts";
+export type { ModelViewerRootProps, ModelViewerState } from "./model-viewer-types";
 export {
   ModelViewerToolbar,
   ModelViewerToolbarGroup,

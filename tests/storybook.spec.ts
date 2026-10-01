@@ -43,7 +43,7 @@ test("storybook indexes all examples and the playground controls stay interactiv
     Object.values(index.entries).filter(
       (entry) => (entry as { type: string }).type === "story",
     ),
-  ).toHaveLength(14);
+  ).toHaveLength(16);
   await openStory(page, "viewer-model-viewer--playground");
   await expect(page.locator("canvas")).toBeVisible();
   const grid = page.getByRole("button", { name: "Show grid", exact: true });
@@ -120,14 +120,25 @@ for (const theme of ["light", "dark"]) {
     const menu = page.getByRole("menu");
     await expect(menu).toBeVisible();
     await expect(
-      page.getByRole("menuitem", { name: "realistic", exact: true }),
+      page.getByRole("menuitemradio", { name: "Realistic", exact: true }),
     ).toBeFocused();
+    await expect(
+      page.getByRole("menuitemradio", { name: "Realistic", exact: true }),
+    ).toHaveAttribute("aria-checked", "true");
+    await expect(
+      page.getByRole("menuitemradio", { name: "Solid", exact: true }),
+    ).toHaveAttribute("aria-checked", "false");
     await page.keyboard.press("ArrowDown");
     await page.keyboard.press("Enter");
     await expect(menu).not.toBeVisible();
     await expect(
       page.getByRole("button", { name: "Shading: solid" }),
     ).toBeFocused();
+    await page.keyboard.press("ArrowDown");
+    await expect(
+      page.getByRole("menuitemradio", { name: "Solid", exact: true }),
+    ).toHaveAttribute("aria-checked", "true");
+    await page.keyboard.press("Escape");
 
     const cube = page.getByRole("button", { name: "View cube options" });
     await cube.click();
@@ -167,8 +178,66 @@ test("custom Base UI buttons and tooltips compose with menu triggers", async ({
     page.locator('[data-slot="tooltip-content"][data-open]'),
   ).toHaveText("View cube options");
   await cube.click();
-  await page.getByRole("menuitem", { name: "Drei cube", exact: true }).click();
+  await expect(
+    page.getByRole("menuitemradio", { name: "Asset Studio", exact: true }),
+  ).toHaveAttribute("aria-checked", "true");
+  await page
+    .getByRole("menuitemradio", { name: "Drei cube", exact: true })
+    .click();
   await expect(page.getByRole("menu")).not.toBeVisible();
   await expect(cube).toBeFocused();
   await expect(page.locator("button button")).toHaveCount(0);
+});
+
+test("compound parts render an animated scene and share inspector state", async ({
+  page,
+}) => {
+  await openStory(page, "composition-custom-controls--compound-viewer");
+  await expect(
+    page.locator('[data-slot="model-viewer-scene"] canvas'),
+  ).toBeVisible();
+  await expect(
+    page.getByRole("toolbar", { name: "Animation controls" }),
+  ).toBeVisible();
+  await page.locator(".viewer-animation-name").click();
+  await expect(
+    page.getByRole("menuitemradio", { name: "Walking", exact: true }),
+  ).toHaveAttribute("aria-checked", "true");
+  await page
+    .getByRole("menuitemradio", { name: "Running", exact: true })
+    .click();
+  await expect(page.locator(".viewer-animation-name")).toContainText("Running");
+  await expect(page.getByRole("menu")).not.toBeVisible();
+  await page
+    .getByRole("button", { name: "Inspect model", exact: true })
+    .click();
+  await expect(
+    page.getByRole("complementary", { name: "Model inspector" }),
+  ).toBeVisible();
+  await page
+    .getByRole("button", { name: "Close inspector", exact: true })
+    .click();
+  await expect(
+    page.getByRole("button", { name: "Inspect model", exact: true }),
+  ).toHaveAttribute("aria-pressed", "false");
+});
+
+test("render composition preserves state, refs, native props and button sizing", async ({
+  page,
+}) => {
+  await openStory(page, "composition-custom-controls--render-composition");
+  const grid = page.getByRole("button", { name: "Show grid", exact: true });
+  await expect(grid).toHaveAttribute("data-custom-render", "grid");
+  await expect(grid).toHaveClass(/rounded-full/);
+  for (const width of [1280, 390]) {
+    await page.setViewportSize({ width, height: 844 });
+    // Default shadcn/Nova button height; viewer CSS must not shrink it.
+    await expect(grid).toHaveCSS("height", "32px");
+    await grid.click();
+    await expect(grid).toHaveAttribute(
+      "aria-pressed",
+      width === 1280 ? "true" : "false",
+    );
+    await expect(page.locator("button button")).toHaveCount(0);
+  }
 });

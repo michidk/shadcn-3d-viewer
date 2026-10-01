@@ -7,7 +7,7 @@
       "name": "model-viewer",
       "type": "registry:ui",
       "title": "3D Model Viewer",
-      "description": "An interactive GLB viewer with orbit, split, fly, shading, screenshot, and fullscreen controls.",
+      "description": "A composable React Three Fiber viewer with shared state, optional controls, inspection, animation, and fixed split views. Uses the host Base UI shadcn primitives and theme.",
       "dependencies": [
         "@react-three/drei",
         "@react-three/fiber",
@@ -59,6 +59,30 @@
         },
         {
           "path": "src/components/ui/model-viewer/index.ts",
+          "type": "registry:ui"
+        },
+        {
+          "path": "src/components/ui/model-viewer/model-viewer-root.tsx",
+          "type": "registry:ui"
+        },
+        {
+          "path": "src/components/ui/model-viewer/model-viewer-scene.tsx",
+          "type": "registry:ui"
+        },
+        {
+          "path": "src/components/ui/model-viewer/model-viewer-parts.tsx",
+          "type": "registry:ui"
+        },
+        {
+          "path": "src/components/ui/model-viewer/model-viewer-context.ts",
+          "type": "registry:ui"
+        },
+        {
+          "path": "src/components/ui/model-viewer/model-viewer-types.ts",
+          "type": "registry:ui"
+        },
+        {
+          "path": "src/components/ui/model-viewer/use-model-viewer-runtime.ts",
           "type": "registry:ui"
         }
       ]
