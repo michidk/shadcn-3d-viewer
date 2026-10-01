@@ -12,7 +12,8 @@
         "@react-three/drei",
         "@react-three/fiber",
         "lucide-react",
-        "three"
+        "three",
+        "three-stdlib"
       ],
       "devDependencies": [
         "@types/three"

@@ -13,7 +13,6 @@ const usageCode = [
   "  src=\"/models/chair.glb\"",
   "  height={640}",
   "  lighting=\"day\"",
-  "  showGround",
   "  showOrientation",
   "/>",
 ].join("\n");
@@ -31,7 +30,7 @@ export default function App() {
   }, []);
 
   function openFile(file?: File) {
-    if (!file || !/\.(glb|gltf)$/i.test(file.name)) return;
+    if (!file || !/\.glb$/i.test(file.name)) return;
     setModel((current) => {
       if (current) URL.revokeObjectURL(current.url);
       return { name: file.name, url: URL.createObjectURL(file) };
@@ -67,7 +66,7 @@ export default function App() {
         <section className="hero">
           <div className="eyebrow"><span /> Source-owned 3D</div>
           <h1>A composed model viewer<br /><em>for your interface.</em></h1>
-          <p className="lede">A shadcn component for inspecting GLB assets with orbit, four-view, fly camera, shading, lighting, screenshots, and fullscreen controls.</p>
+          <p className="lede">A shadcn component for inspecting GLB assets with orbit, four-view, fly camera, animation playback, studio lighting, screenshots, and fullscreen controls.</p>
           <div className="install-command">
             <code>{installCommand}</code>
             <Button type="button" variant="ghost" size="icon-sm" onClick={() => void copyCommand()} aria-label="Copy install command">
@@ -85,7 +84,7 @@ export default function App() {
             <div className="file-actions">
               {model && <Button type="button" variant="ghost" size="sm" onClick={clearModel}><X /> Clear</Button>}
               <Button type="button" variant="outline" size="sm" onClick={() => fileInput.current?.click()}><Upload /> Open model</Button>
-              <input ref={fileInput} className="sr-only" type="file" accept=".glb,.gltf,model/gltf-binary,model/gltf+json" onChange={(event) => openFile(event.target.files?.[0])} />
+              <input ref={fileInput} className="sr-only" type="file" accept=".glb,model/gltf-binary" onChange={(event) => openFile(event.target.files?.[0])} />
             </div>
           </div>
           <div
@@ -96,7 +95,7 @@ export default function App() {
             onDrop={(event) => { event.preventDefault(); setDragging(false); openFile(event.dataTransfer.files[0]); }}
           >
             <ModelViewer src={model?.url} alt={model?.name ?? "Abstract sample objects"} showCubes={!model} />
-            {dragging && <div className="drop-overlay"><Upload /><span>Drop GLB or glTF to inspect</span></div>}
+            {dragging && <div className="drop-overlay"><Upload /><span>Drop a GLB to inspect</span></div>}
           </div>
           <p className="local-note">Models stay in your browser. Drop a local GLB onto the viewer to try your own asset.</p>
         </section>
