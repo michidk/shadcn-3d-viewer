@@ -100,6 +100,39 @@ test("grid stays visible around an animated model on desktop and phone", async (
   }
 });
 
+test("camera movement does not trigger pixelated canvas regression", async ({ page }) => {
+  await ready(page);
+  await cube(page, "Drei cube");
+  await page.evaluate(`(async () => {
+    const { _roots } = await import('/node_modules/.vite/deps/@react-three_fiber.js');
+    const store = [..._roots.values()][0].store;
+    window.viewerQualitySamples = [];
+    window.viewerQualityTimer = setInterval(() => {
+      const state = store.getState();
+      window.viewerQualitySamples.push({
+        performance: state.performance.current,
+        dpr: state.viewport.dpr,
+        rendering: getComputedStyle(state.gl.domElement).imageRendering,
+      });
+    }, 16);
+  })()`);
+  const pane = (await page.locator(".viewer-view").boundingBox())!;
+  await page.mouse.move(pane.x + pane.width / 2, pane.y + pane.height / 2);
+  await page.mouse.down();
+  await page.mouse.move(pane.x + pane.width / 2 + 150, pane.y + pane.height / 2 + 60, { steps: 30 });
+  await page.mouse.up();
+  await page.waitForTimeout(500);
+  await page.mouse.click(pane.x + pane.width - 84, pane.y + 76);
+  await page.waitForTimeout(500);
+  const samples = await page.evaluate(`(() => { clearInterval(window.viewerQualityTimer); return window.viewerQualitySamples; })()`);
+  expect(samples.length).toBeGreaterThan(10);
+  for (const sample of samples) {
+    expect(sample.performance).toBe(1);
+    expect(sample.dpr).toBeGreaterThanOrEqual(1);
+    expect(sample.rendering).not.toBe("pixelated");
+  }
+});
+
 test("orthographic toggle replaces presets and both view helpers render", async ({ page }) => {
   await ready(page);
   await expect(page.getByRole("button", { name: /Camera view:/ })).toHaveCount(0);

@@ -1,5 +1,4 @@
 import {
-  AdaptiveDpr,
   CameraControls,
   CameraControlsImpl,
   Center,
@@ -486,9 +485,8 @@ export function ModelViewer({
           eventSource={viewerRef}
           onCreated={({ gl }) => { canvasRef.current = gl.domElement; gl.setClearAlpha(0); }}
         >
-          <AdaptiveDpr pixelated />
           <RedrawAfterResize />
-          <PerformanceMonitor onChange={({ factor }) => { setQuality(0.75 + factor * 1.25); onPerformanceChange?.(factor); }} />
+          <PerformanceMonitor onChange={({ factor }) => { setQuality(1 + factor); onPerformanceChange?.(factor); }} />
           {panes.map((pane, index) => {
             const paneKey = `${viewerKey}-pane-${index}`;
             return (
@@ -1056,7 +1054,7 @@ function CameraRig({ objectRef, fitVersion, preset, resetToken, autoRotate, auto
   return <CameraControls
     ref={controls}
     domElement={document.querySelector<HTMLElement>(paneSelector) ?? undefined}
-    regress makeDefault smoothTime={0.25} dollyToCursor onRest={reportCamera}
+    makeDefault smoothTime={0.25} dollyToCursor onRest={reportCamera}
     azimuthRotateSpeed={fixed ? 0 : 1}
     polarRotateSpeed={fixed ? 0 : 1}
     mouseButtons={{ left: fixed ? actions.TRUCK : actions.ROTATE, right: actions.TRUCK, middle: orthographic ? actions.ZOOM : actions.DOLLY, wheel: orthographic ? actions.ZOOM : actions.DOLLY }}

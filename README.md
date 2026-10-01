@@ -14,7 +14,7 @@ A source-owned shadcn component for viewing GLB models with React Three Fiber. I
 - Clipboard and downloadable PNG captures
 - Fullscreen with an in-page fallback
 - Loading progress, posters, custom fallbacks, and error states
-- Adaptive pixel ratio, reduced-motion support, and demand-driven rendering
+- Performance-based pixel ratio (1–2×, without pixelated drag mode), reduced-motion support, and demand-driven rendering
 - Draco, Meshopt, and custom loader configuration
 - Optional UI-free mode for cards and compact previews
 - Model dimensions, triangle/material/texture counts, selectable meshes, and scene hierarchy
