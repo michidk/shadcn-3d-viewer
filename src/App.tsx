@@ -82,6 +82,7 @@ export default function App() {
               <h2 id="demo-heading">{model?.name ?? "Material study 01"}</h2>
             </div>
             <div className="file-actions">
+              <Button type="button" variant="ghost" size="sm" onClick={() => { clearModel(); setModel({ name: "Animated robot", url: "/models/robot-expressive.glb" }); }}>Try animated model</Button>
               {model && <Button type="button" variant="ghost" size="sm" onClick={clearModel}><X /> Clear</Button>}
               <Button type="button" variant="outline" size="sm" onClick={() => fileInput.current?.click()}><Upload /> Open model</Button>
               <input ref={fileInput} className="sr-only" type="file" accept=".glb,model/gltf-binary" onChange={(event) => openFile(event.target.files?.[0])} />

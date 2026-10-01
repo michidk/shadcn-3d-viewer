@@ -4,7 +4,8 @@ A source-owned shadcn component for viewing GLB models with React Three Fiber. I
 
 ## Features
 
-- Smooth camera controls, presets, bounded zoom, and an axis helper
+- Smooth camera controls, bounded zoom, and a single orthographic projection toggle
+- Optional orientation helper: Drei's labeled cube or Asset Studio's colored axes
 - Four independently orbitable front/right/back/left views sharing one WebGL renderer
 - First-person fly camera with pointer-lock and drag-look fallback
 - Realistic, solid, normal, and wireframe shading
@@ -16,6 +17,7 @@ A source-owned shadcn component for viewing GLB models with React Three Fiber. I
 - Adaptive pixel ratio, reduced-motion support, and demand-driven rendering
 - Draco, Meshopt, and custom loader configuration
 - Optional UI-free mode for cards and compact previews
+- Model dimensions, triangle/material/texture counts, selectable meshes, and scene hierarchy
 
 ## Run it
 
@@ -61,6 +63,8 @@ export function Preview() {
       height={640}
       lighting="day"
       showOrientation
+      defaultViewCube="drei"
+      defaultProjection="perspective"
       onLoad={() => console.log("ready")}
     />
   );
@@ -81,6 +85,10 @@ Omit `src` to render the built-in material study. Use `showUi={false}` for a cle
 | `showGrid` | `boolean` | `false` |
 | `showUi` | `boolean` | `true` |
 | `showOrientation` | `boolean` | follows `showUi` |
+| `viewCube` | `"drei" \| "asset-studio" \| false` | `"asset-studio"` |
+| `projection` | `"perspective" \| "orthographic"` | `"perspective"` |
+| `showInspector` | `boolean` | `false` |
+| `onInspect` | `(inspection: ModelInspection) => void` | none |
 | `autoRotate` | `boolean` | `false` |
 | `cameraPreset` | `isometric \| front \| right \| back \| left \| top \| bottom` | `isometric` |
 | `animation` | clip name or `null` | first available clip |
@@ -91,7 +99,24 @@ Omit `src` to render the built-in material study. Use `showUi={false}` for a cle
 | `loadingFallback` | node or progress renderer | built-in progress |
 | `errorFallback` | node or error renderer | built-in alert |
 
-`mode`, `lighting`, `shading`, `showGrid`, camera, and animation props are controlled when supplied. Use their corresponding `default*` props for uncontrolled initial values. Change callbacks report toolbar interactions.
+`mode`, `lighting`, `shading`, `showGrid`, `viewCube`, `projection`, camera, and animation props are controlled when supplied. Use their corresponding `default*` props for uncontrolled initial values. Change callbacks report toolbar interactions. In particular, use `onViewCubeChange` and `onProjectionChange` when controlling these options externally.
+
+The toolbar offers one orthographic toggle; direction changes are available through the orientation helper. `cameraPreset` remains available for programmatic positioning. Helpers appear in orbit mode. Set `viewCube={false}` to hide one, or explicitly set `showOrientation` to show it in a UI-free viewer.
+
+Omitting `animation` automatically selects the first clip; passing `animation={null}` explicitly disables clip selection. Playback starts paused. Clip selection resets when replacing an uncontrolled model, and pause/resume preserves playback position. Respecting reduced motion suppresses playback and auto-rotation; use `respectReducedMotion={false}` only when your application explicitly requests motion.
+
+The inspector reports source-model units and unique material/texture resources. Select a mesh in the hierarchy or click it in the scene to highlight it. Animated framing uses a sampled envelope (17 poses per clip); unusually fast or procedural motion may extend beyond that envelope. Reset view includes the current pose in its bounds.
+
+## Regression checks
+
+The included CC0 robot fixture exercises skinned animation and multiple clips. Start the demo, then run:
+
+```sh
+bunx playwright install --with-deps chromium
+VIEWER_TEST_URL=http://localhost:5173 bun run test
+```
+
+The suite covers extreme model scales, framing, shared-resource statistics, the real animated fixture, pane isolation, both helpers, the orthographic toggle, fly fallback, playback and replacement, and phone layout. For an existing Docker Chrome, set `VIEWER_TEST_CDP=http://127.0.0.1:9223` and a `VIEWER_TEST_URL` reachable from that container.
 
 ## Notes
 

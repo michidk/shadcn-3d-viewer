@@ -81,7 +81,8 @@ footer { width: min(1280px, calc(100% - 64px)); display: flex; justify-content: 
   .hero { padding: 72px 0 54px; }
   h1 { font-size: clamp(3.1rem, 15vw, 5rem); }
   .viewer-demo { padding: 14px; border-radius: 16px; }
-  .demo-heading { align-items: flex-start; }
+  .demo-heading { align-items: flex-start; flex-wrap: wrap; gap: 12px; }
+  .file-actions { flex-wrap: wrap; }
   .demo-heading h2 { max-width: 210px; overflow: hidden; font-size: 23px; text-overflow: ellipsis; white-space: nowrap; }
   .file-actions [data-slot="button"] { padding-inline: 10px; }
   .model-viewer { height: 560px !important; }
@@ -93,4 +94,3 @@ footer { width: min(1280px, calc(100% - 64px)); display: flex; justify-content: 
   footer { margin-top: 64px; }
 }
 @media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
-

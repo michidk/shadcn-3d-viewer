@@ -6,5 +6,7 @@ export type {
   ViewerLighting,
   ViewerMode,
   ViewerProgress,
+  ViewerViewCube,
   ViewerShading,
 } from "./model-viewer";
+export type { ModelInspection } from "./model-inspection";

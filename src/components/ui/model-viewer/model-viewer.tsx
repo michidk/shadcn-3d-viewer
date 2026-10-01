@@ -3,9 +3,10 @@ import {
   CameraControls,
   CameraControlsImpl,
   Center,
-  Clone,
   Environment,
   GizmoHelper,
+  GizmoViewcube,
+  OrthographicCamera,
   Grid,
   Lightformer,
   PerformanceMonitor,
@@ -19,6 +20,8 @@ import {
 import { Canvas, createPortal, useFrame, useThree, type ComputeFunction } from "@react-three/fiber";
 import {
   Camera,
+  Box,
+  ListTree,
   Check,
   ChevronDown,
   Copy,
@@ -44,6 +47,7 @@ import {
   useEffect,
   useId,
   useLayoutEffect,
+  useMemo,
   useRef,
   useState,
   type CSSProperties,
@@ -51,18 +55,21 @@ import {
   type ReactNode,
 } from "react";
 import {
-  Box3,
   LoopOnce,
   LoopRepeat,
-  MathUtils,
+  MeshStandardMaterial,
+  MeshBasicMaterial,
+  MeshNormalMaterial,
+  type Mesh,
   Scene,
-  Sphere,
   Vector3,
   type Group,
-  type Object3D,
   type PerspectiveCamera as ThreePerspectiveCamera,
+  type OrthographicCamera as ThreeOrthographicCamera,
 } from "three";
+import { inspectModel, frameBounds, prepareAnimationBounds, type ModelInspection } from "./model-inspection";
 import type { GLTFLoader } from "three-stdlib";
+import { clone } from "three/addons/utils/SkeletonUtils.js";
 
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
@@ -79,6 +86,7 @@ import "./model-viewer.css";
 export type ViewerMode = "orbit" | "split" | "firstPerson";
 export type ViewerLighting = "day" | "night";
 export type ViewerShading = "realistic" | "solid" | "normals" | "wireframe";
+export type ViewerViewCube = "drei" | "asset-studio";
 export type ViewerCameraPreset = "isometric" | "front" | "right" | "back" | "left" | "top" | "bottom";
 
 export type ViewerCameraState = {
@@ -114,6 +122,14 @@ export interface ModelViewerProps {
   showCubes?: boolean;
   showUi?: boolean;
   showOrientation?: boolean;
+  viewCube?: ViewerViewCube | false;
+  defaultViewCube?: ViewerViewCube | false;
+  onViewCubeChange?: (value: ViewerViewCube | false) => void;
+  projection?: "perspective" | "orthographic";
+  defaultProjection?: "perspective" | "orthographic";
+  onProjectionChange?: (projection: "perspective" | "orthographic") => void;
+  showInspector?: boolean;
+  onInspect?: (inspection: ModelInspection) => void;
   showAnimationControls?: boolean;
   autoRotate?: boolean;
   autoRotateSpeed?: number;
@@ -160,7 +176,6 @@ const splitPanes: Pane[] = [
   { face: "left", label: "Left" },
 ];
 
-const cameraPresets: ViewerCameraPreset[] = ["isometric", "front", "right", "back", "left", "top", "bottom"];
 const animationSpeeds = [0.5, 1, 1.5, 2];
 
 const presetVectors: Record<ViewerCameraPreset, [number, number, number]> = {
@@ -211,6 +226,14 @@ export function ModelViewer({
   showCubes: requestedCubes,
   showUi = true,
   showOrientation = showUi,
+  viewCube: controlledViewCube,
+  defaultViewCube = "asset-studio",
+  onViewCubeChange,
+  projection: controlledProjection,
+  defaultProjection = "perspective",
+  onProjectionChange,
+  showInspector = false,
+  onInspect,
   showAnimationControls = true,
   autoRotate = false,
   autoRotateSpeed = 0.15,
@@ -243,10 +266,16 @@ export function ModelViewer({
   onError,
 }: ModelViewerProps) {
   const [mode, setMode] = useControlledState(controlledMode, defaultMode, onModeChange);
+  const [viewCube, setViewCube] = useControlledState(controlledViewCube, defaultViewCube, onViewCubeChange);
+  const [projection, setProjection] = useControlledState(controlledProjection, defaultProjection, onProjectionChange);
+  const [inspectorOpen, setInspectorOpen] = useState(showInspector);
+  const [inspection, setInspection] = useState<ModelInspection | null>(null);
+  const [selectedMesh, setSelectedMesh] = useState<string | null>(null);
+  const [quality, setQuality] = useState(1.5);
   const [lighting, setLighting] = useControlledState(controlledLighting, defaultLighting, onLightingChange);
   const [shading, setShading] = useControlledState(controlledShading, defaultShading, onShadingChange);
   const [grid, setGrid] = useControlledState(controlledGrid, defaultShowGrid, onGridChange);
-  const [cameraPreset, setCameraPreset] = useControlledState(controlledCameraPreset, defaultCameraPreset, onCameraPresetChange);
+  const [cameraPreset] = useControlledState(controlledCameraPreset, defaultCameraPreset, onCameraPresetChange);
   const [animation, setAnimation] = useControlledState<string | null>(controlledAnimation, defaultAnimation, onAnimationChange);
   const [animationPlaying, setAnimationPlaying] = useControlledState(controlledAnimationPlaying, defaultAnimationPlaying, onAnimationPlayingChange);
   const [animationSpeed, setAnimationSpeed] = useControlledState(controlledAnimationSpeed, defaultAnimationSpeed, onAnimationSpeedChange);
@@ -303,9 +332,24 @@ export function ModelViewer({
     }
   }, [expectedPanes, onLoad, readyPanes]);
 
+  const effectiveAnimation = controlledAnimation === null ? null
+    : animationNames.includes(animation ?? "") ? animation
+    : controlledAnimation === undefined ? animationNames[0] ?? null : animation;
   useEffect(() => {
-    if (!animation && animationNames.length > 0) setAnimation(animationNames[0]);
-  }, [animation, animationNames, setAnimation]);
+    if (controlledAnimation === undefined) setAnimation(defaultAnimation);
+  }, [src, defaultAnimation, controlledAnimation, setAnimation]);
+
+  useEffect(() => { setInspectorOpen(showInspector); }, [showInspector]);
+  useEffect(() => { setSelectedMesh(null); setInspection(null); }, [src]);
+  useEffect(() => {
+    const rejectLock = () => { setPointerLockAvailable(false); setLocked(false); };
+    document.addEventListener("pointerlockerror", rejectLock);
+    return () => document.removeEventListener("pointerlockerror", rejectLock);
+  }, []);
+  const reportInspection = useCallback((value: ModelInspection) => {
+    setInspection(value);
+    onInspect?.(value);
+  }, [onInspect]);
 
   useEffect(() => {
     const update = () => {
@@ -430,14 +474,15 @@ export function ModelViewer({
         </div>
         <Canvas
           className="viewer-canvas"
-          dpr={[1, 2]}
-          frameloop={mode === "split" || effectiveAutoRotate || effectiveAnimationPlaying ? "always" : "demand"}
+          dpr={quality}
+          frameloop={effectiveAutoRotate || (effectiveAnimationPlaying && Boolean(effectiveAnimation)) ? "always" : "demand"}
           gl={{ antialias: true, alpha: true, preserveDrawingBuffer: showUi, powerPreference: "high-performance" }}
           eventSource={viewerRef}
           onCreated={({ gl }) => { canvasRef.current = gl.domElement; gl.setClearAlpha(0); }}
         >
           <AdaptiveDpr pixelated />
-          <PerformanceMonitor onChange={({ factor }) => onPerformanceChange?.(factor)} />
+          <RedrawAfterResize />
+          <PerformanceMonitor onChange={({ factor }) => { setQuality(0.75 + factor * 1.25); onPerformanceChange?.(factor); }} />
           {panes.map((pane, index) => {
             const paneKey = `${viewerKey}-pane-${index}`;
             return (
@@ -460,10 +505,15 @@ export function ModelViewer({
                     autoRotate={index === 0 && effectiveAutoRotate}
                     autoRotateSpeed={autoRotateSpeed}
                     showOrientation={index === 0 && showOrientation && mode !== "split"}
+                    viewCube={viewCube}
+                    projection={projection}
+                    onInspect={index === 0 ? reportInspection : undefined}
+                    selectedMesh={selectedMesh}
+                    onSelectMesh={setSelectedMesh}
                     pointerLockAvailable={pointerLockAvailable}
                     paneSelector={`[data-viewer-pane="${paneKey}"]`}
                     environment={environment}
-                    animation={animation}
+                    animation={effectiveAnimation}
                     animationPlaying={effectiveAnimationPlaying}
                     animationSpeed={animationSpeed}
                     animationResetToken={animationResetToken}
@@ -511,7 +561,14 @@ export function ModelViewer({
             <div className="viewer-toolbar-group" aria-label="Scene options">
               <ViewerButton icon={lighting === "day" ? <Sun /> : <Moon />} label={lighting === "day" ? "Switch to night" : "Switch to day"} active={lighting === "night"} onClick={() => setLighting(lighting === "day" ? "night" : "day")} />
               <ViewerButton icon={<Grid2X2 />} label="Show grid" active={grid} onClick={() => setGrid(!grid)} />
-              <CameraPresetMenu value={cameraPreset} disabled={mode !== "orbit"} onChange={setCameraPreset} />
+              <ViewerButton icon={<ScanSearch />} label="Orthographic view" active={projection === "orthographic"} onClick={() => setProjection(projection === "orthographic" ? "perspective" : "orthographic")} />
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild><Button type="button" size="icon-sm" variant="ghost" aria-label="View cube options"><Box /></Button></DropdownMenuTrigger>
+                <DropdownMenuContent className="viewer-menu">
+                  {([false, "drei", "asset-studio"] as const).map((value) => <DropdownMenuItem key={String(value)} onSelect={() => setViewCube(value)}><Check className={viewCube === value ? "is-visible" : "is-hidden"} />{value === false ? "Off" : value === "drei" ? "Drei cube" : "Asset Studio"}</DropdownMenuItem>)}
+                </DropdownMenuContent>
+              </DropdownMenu>
+              <ViewerButton icon={<ListTree />} label="Inspect model" active={inspectorOpen} onClick={() => setInspectorOpen(!inspectorOpen)} />
               <ViewerButton icon={<RotateCcw />} label="Reset view" onClick={() => setResetToken((value) => value + 1)} />
               <DropdownMenu open={captureMenuOpen} onOpenChange={setCaptureMenuOpen}>
                 <DropdownMenuTrigger asChild>
@@ -531,10 +588,10 @@ export function ModelViewer({
               <ViewerButton icon={animationPlaying ? <Pause /> : <Play />} label={animationPlaying ? "Pause animation" : "Play animation"} active={animationPlaying} onClick={() => setAnimationPlaying(!animationPlaying)} />
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <Button type="button" size="sm" variant="ghost" className="viewer-animation-name">{animation ?? animationNames[0]}<ChevronDown /></Button>
+                  <Button type="button" size="sm" variant="ghost" className="viewer-animation-name">{effectiveAnimation ?? "No animation"}<ChevronDown /></Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="start" sideOffset={6} className="viewer-animation-menu">
-                  {animationNames.map((name) => <DropdownMenuItem key={name} onSelect={() => setAnimation(name)}><Check className={name === animation ? "is-visible" : "is-hidden"} />{name}</DropdownMenuItem>)}
+                  {animationNames.map((name) => <DropdownMenuItem key={name} onSelect={() => setAnimation(name)}><Check className={name === effectiveAnimation ? "is-visible" : "is-hidden"} />{name}</DropdownMenuItem>)}
                 </DropdownMenuContent>
               </DropdownMenu>
               <ViewerButton icon={<RotateCcw />} label="Restart animation" onClick={() => setAnimationResetToken((value) => value + 1)} />
@@ -554,20 +611,14 @@ export function ModelViewer({
           </Button>
         </>
       )}
+      {inspectorOpen && inspection && <aside className="viewer-inspector" aria-label="Model inspector">
+        <div className="viewer-inspector-heading">Model inspector<Button size="sm" variant="ghost" onClick={() => setInspectorOpen(false)}>Close</Button></div>
+        <p>{inspection.triangles.toLocaleString()} triangles · {inspection.materials} materials · {inspection.textures} textures</p>
+        <p>Dimensions (model units): {inspection.dimensions.map(value => Number(value.toPrecision(4))).join(" × ")}</p>
+        <Button size="sm" variant="ghost" onClick={() => setSelectedMesh(null)}>Clear selection</Button>
+        <ul aria-label="Scene hierarchy">{inspection.nodes.map(node => <li key={node.id} style={{ paddingLeft: node.depth * 12 }}><button type="button" disabled={!node.mesh} aria-pressed={selectedMesh === node.id} onClick={() => setSelectedMesh(node.id)}>{node.name} <small>{node.type}</small></button></li>)}</ul>
+      </aside>}
     </div>
-  );
-}
-
-function CameraPresetMenu({ value, disabled, onChange }: { value: ViewerCameraPreset; disabled: boolean; onChange: (value: ViewerCameraPreset) => void }) {
-  return (
-    <DropdownMenu>
-      <DropdownMenuTrigger asChild>
-        <Button type="button" size="icon-sm" variant="ghost" aria-label={`Camera view: ${value}`} title={`Camera view: ${value}`} disabled={disabled}><ScanSearch /></Button>
-      </DropdownMenuTrigger>
-      <DropdownMenuContent align="end" sideOffset={8} className="viewer-menu viewer-camera-menu">
-        {cameraPresets.map((preset) => <DropdownMenuItem key={preset} onSelect={() => onChange(preset)}><Check className={preset === value ? "is-visible" : "is-hidden"} />{preset}</DropdownMenuItem>)}
-      </DropdownMenuContent>
-    </DropdownMenu>
   );
 }
 
@@ -619,6 +670,11 @@ function ScissorView({ track, index, clearColor, children }: {
   const compute = useCallback<ComputeFunction>((event, state) => {
     const rect = track.current?.getBoundingClientRect();
     if (!rect || rect.width === 0 || rect.height === 0) return;
+    if (!(event.target instanceof Node) || !track.current?.contains(event.target)) {
+      state.pointer.set(10000, 10000);
+      state.raycaster.setFromCamera(state.pointer, state.camera);
+      return;
+    }
     state.pointer.set(
       ((event.clientX - rect.left) / rect.width) * 2 - 1,
       -((event.clientY - rect.top) / rect.height) * 2 + 1,
@@ -631,6 +687,18 @@ function ScissorView({ track, index, clearColor, children }: {
     scene,
     { events: { compute, priority: index }, size },
   );
+}
+
+function RedrawAfterResize() {
+  const dpr = useThree(state => state.viewport.dpr);
+  const size = useThree(state => state.size);
+  const invalidate = useThree(state => state.invalidate);
+  useEffect(() => {
+    // Changing pixel ratio clears WebGL's drawing buffer, even when the scene is idle.
+    const frame = requestAnimationFrame(() => invalidate());
+    return () => cancelAnimationFrame(frame);
+  }, [dpr, size.width, size.height, invalidate]);
+  return null;
 }
 
 function ScissorRenderer({ track, index, clearColor, children }: {
@@ -683,6 +751,11 @@ function ViewerScene({
   autoRotate,
   autoRotateSpeed,
   showOrientation,
+  viewCube,
+  projection,
+  onInspect,
+  selectedMesh,
+  onSelectMesh,
   pointerLockAvailable,
   paneSelector,
   environment,
@@ -711,6 +784,11 @@ function ViewerScene({
   autoRotate: boolean;
   autoRotateSpeed: number;
   showOrientation: boolean;
+  viewCube: ViewerViewCube | false;
+  projection: "perspective" | "orthographic";
+  onInspect?: (value: ModelInspection) => void;
+  selectedMesh: string | null;
+  onSelectMesh: (id: string | null) => void;
   pointerLockAvailable: boolean;
   paneSelector: string;
   environment: boolean;
@@ -734,9 +812,8 @@ function ViewerScene({
 
   return (
     <>
-      <PerspectiveCamera makeDefault position={presetVectors[cameraPreset].map((value) => value * 3) as [number, number, number]} fov={42} near={0.01} far={1000} />
+      {projection === "orthographic" ? <OrthographicCamera makeDefault position={[3, 3, 3]} near={0.001} far={1000} /> : <PerspectiveCamera makeDefault position={[3, 3, 3]} fov={42} near={0.01} far={1000} />}
       <color attach="background" args={[background]} />
-      <fog attach="fog" args={[background, 24, 90]} />
       <ambientLight intensity={lighting === "day" ? 0.48 : 0.3} />
       <directionalLight position={[5, 9, 6]} intensity={lighting === "day" ? 1.7 : 1.05} color={lighting === "day" ? "#fff7e6" : "#bdd5ff"} />
       <directionalLight position={[-4, 4, -6]} intensity={lighting === "day" ? 0.45 : 1.4} color={lighting === "day" ? "#dcebdc" : "#688db3"} />
@@ -758,6 +835,9 @@ function ViewerScene({
             extendLoader={extendLoader}
             onReady={onReady}
             onAnimations={onAnimations}
+            onInspect={onInspect}
+            selectedMesh={selectedMesh}
+            onSelectMesh={onSelectMesh}
           />
         </Center>
       </Suspense>
@@ -769,8 +849,8 @@ function ViewerScene({
         </>
       ) : (
         <>
-          <CameraRig objectRef={contentRef} fitVersion={fitVersion} preset={cameraPreset} resetToken={resetToken} autoRotate={autoRotate} autoRotateSpeed={autoRotateSpeed} onCameraChange={onCameraChange} />
-          {showOrientation && <GizmoHelper alignment="top-right" margin={[58, 58]}><ViewHelper /></GizmoHelper>}
+          <CameraRig paneSelector={paneSelector} objectRef={contentRef} fitVersion={fitVersion} preset={cameraPreset} resetToken={resetToken} autoRotate={autoRotate} autoRotateSpeed={autoRotateSpeed} onCameraChange={onCameraChange} />
+          {showOrientation && viewCube && <GizmoHelper renderPriority={2} alignment="bottom-right" margin={[64, 105]}>{viewCube === "drei" ? <GizmoViewcube /> : <ViewHelper />}</GizmoHelper>}
         </>
       )}
     </>
@@ -788,7 +868,10 @@ function StudioEnvironment({ lighting }: { lighting: ViewerLighting }) {
   );
 }
 
-function SceneObject({ src, cubes, shading, animation, animationPlaying, animationSpeed, animationResetToken, loopAnimation, useDraco, useMeshopt, extendLoader, onReady, onAnimations }: {
+function SceneObject({ src, cubes, shading, animation, animationPlaying, animationSpeed, animationResetToken, loopAnimation, useDraco, useMeshopt, extendLoader, onReady, onAnimations, onInspect, selectedMesh, onSelectMesh }: {
+  onInspect?: (value: ModelInspection) => void;
+  selectedMesh: string | null;
+  onSelectMesh: (id: string | null) => void;
   src?: string;
   cubes: boolean;
   shading: ViewerShading;
@@ -803,6 +886,8 @@ function SceneObject({ src, cubes, shading, animation, animationPlaying, animati
   onReady: () => void;
   onAnimations: (names: string[]) => void;
 }) {
+  const group = useRef<Group>(null);
+  useEffect(() => { if (group.current) onInspect?.(inspectModel(group.current)); }, [src, cubes, onInspect]);
   useEffect(() => {
     if (!src) {
       onAnimations([]);
@@ -810,20 +895,22 @@ function SceneObject({ src, cubes, shading, animation, animationPlaying, animati
     }
   }, [src, onAnimations, onReady]);
   return (
-    <group>
-      {src && <LoadedModel src={src} shading={shading} animation={animation} animationPlaying={animationPlaying} animationSpeed={animationSpeed} animationResetToken={animationResetToken} loopAnimation={loopAnimation} useDraco={useDraco} useMeshopt={useMeshopt} extendLoader={extendLoader} onReady={onReady} onAnimations={onAnimations} />}
+    <group ref={group} onClick={(event) => { event.stopPropagation(); onSelectMesh(event.object.userData.viewerNodeId ?? null); }}>
+      {src && <LoadedModel src={src} shading={shading} animation={animation} animationPlaying={animationPlaying} animationSpeed={animationSpeed} animationResetToken={animationResetToken} loopAnimation={loopAnimation} useDraco={useDraco} useMeshopt={useMeshopt} extendLoader={extendLoader} onReady={onReady} onAnimations={onAnimations} selectedMesh={selectedMesh} onSelectMesh={onSelectMesh} />}
       {cubes && (
         <>
-          <mesh castShadow position={[-1.25, 0.45, 0]} rotation={[0, 0.25, 0.08]}><boxGeometry args={[0.9, 0.9, 0.9]} /><ViewerMaterial shading={shading} color="#b3c899" /></mesh>
-          <mesh castShadow position={[1.05, 0.55, -0.55]} rotation={[0, -0.35, 0]}><dodecahedronGeometry args={[0.55, 0]} /><ViewerMaterial shading={shading} color="#d19a78" /></mesh>
-          <mesh castShadow position={[0.15, 0.42, 1]}><sphereGeometry args={[0.42, 48, 48]} /><ViewerMaterial shading={shading} color="#7fa7a7" /></mesh>
+          <mesh name="Cube" position={[-1.25, 0.45, 0]} rotation={[0, 0.25, 0.08]}><boxGeometry args={[0.9, 0.9, 0.9]} /><ViewerMaterial shading={selectedMesh === "0/0" ? "solid" : shading} color={selectedMesh === "0/0" ? "#e9c56a" : "#b3c899"} /></mesh>
+          <mesh name="Dodecahedron" position={[1.05, 0.55, -0.55]} rotation={[0, -0.35, 0]}><dodecahedronGeometry args={[0.55, 0]} /><ViewerMaterial shading={selectedMesh === "0/1" ? "solid" : shading} color={selectedMesh === "0/1" ? "#e9c56a" : "#d19a78"} /></mesh>
+          <mesh name="Sphere" position={[0.15, 0.42, 1]}><sphereGeometry args={[0.42, 48, 48]} /><ViewerMaterial shading={selectedMesh === "0/2" ? "solid" : shading} color={selectedMesh === "0/2" ? "#e9c56a" : "#7fa7a7"} /></mesh>
         </>
       )}
     </group>
   );
 }
 
-function LoadedModel({ src, shading, animation, animationPlaying, animationSpeed, animationResetToken, loopAnimation, useDraco, useMeshopt, extendLoader, onReady, onAnimations }: {
+function LoadedModel({ src, shading, animation, animationPlaying, animationSpeed, animationResetToken, loopAnimation, useDraco, useMeshopt, extendLoader, onReady, onAnimations, selectedMesh, onSelectMesh }: {
+  selectedMesh: string | null;
+  onSelectMesh: (id: string | null) => void;
   src: string;
   shading: ViewerShading;
   animation: string | null;
@@ -838,9 +925,33 @@ function LoadedModel({ src, shading, animation, animationPlaying, animationSpeed
   onAnimations: (names: string[]) => void;
 }) {
   const gltf = useGLTF(src, useDraco, useMeshopt, extendLoader);
-  const root = useRef<Group | null>(null);
-  const { actions, names } = useAnimations(gltf.animations, root);
+  prepareAnimationBounds(gltf.scene, gltf.animations);
+  const model = useMemo(() => {
+    const result = clone(gltf.scene);
+    result.updateMatrixWorld(true);
+    return result;
+  }, [gltf.scene]);
+  const { actions, names } = useAnimations(gltf.animations, model);
   const activeAction = animation ? actions[animation] : undefined;
+  const playback = useRef({ animationPlaying, animationSpeed });
+  playback.current = { animationPlaying, animationSpeed };
+  useEffect(() => {
+    const restore: (() => void)[] = [];
+    model.traverse(object => {
+      const mesh = object as Mesh;
+      if (!mesh.isMesh) return;
+      const selected = object.userData.viewerNodeId === selectedMesh;
+      if (!selected && shading === "realistic") return;
+      const original = mesh.material;
+      const material = selected ? new MeshStandardMaterial({ color: "#e9c56a", emissive: "#a36d15", emissiveIntensity: 0.35 })
+        : shading === "normals" ? new MeshNormalMaterial()
+        : shading === "wireframe" ? new MeshBasicMaterial({ color: "#34483f", wireframe: true })
+        : new MeshStandardMaterial({ color: "#a7aaa5", roughness: 0.82 });
+      mesh.material = material;
+      restore.push(() => { mesh.material = original; material.dispose(); });
+    });
+    return () => restore.forEach(reset => reset());
+  }, [model, selectedMesh, shading]);
 
   useEffect(() => {
     onAnimations(names);
@@ -853,6 +964,8 @@ function LoadedModel({ src, shading, animation, animationPlaying, animationSpeed
     activeAction.clampWhenFinished = !loopAnimation;
     activeAction.setLoop(loopAnimation ? LoopRepeat : LoopOnce, loopAnimation ? Infinity : 1);
     activeAction.play();
+    activeAction.paused = !playback.current.animationPlaying;
+    activeAction.setEffectiveTimeScale(playback.current.animationSpeed);
     return () => { activeAction.stop(); };
   }, [activeAction, animation, loopAnimation]);
 
@@ -865,10 +978,10 @@ function LoadedModel({ src, shading, animation, animationPlaying, animationSpeed
   useEffect(() => {
     if (!activeAction || animationResetToken === 0) return;
     activeAction.reset().play();
-    activeAction.paused = !animationPlaying;
-  }, [activeAction, animationPlaying, animationResetToken]);
+    activeAction.paused = !playback.current.animationPlaying;
+  }, [activeAction, animationResetToken]);
 
-  return <group ref={root}><Clone object={gltf.scene} castShadow inject={shading === "realistic" ? undefined : (object) => "material" in object ? <ViewerMaterial shading={shading} /> : null} /></group>;
+  return <primitive object={model} onClick={(event: import("@react-three/fiber").ThreeEvent<MouseEvent>) => { event.stopPropagation(); onSelectMesh(event.object.userData.viewerNodeId ?? null); }} />;
 }
 
 function ViewerMaterial({ shading, color = "#a7aaa5" }: { shading: ViewerShading; color?: string }) {
@@ -877,7 +990,8 @@ function ViewerMaterial({ shading, color = "#a7aaa5" }: { shading: ViewerShading
   return <meshStandardMaterial color={color} roughness={shading === "solid" ? 0.82 : 0.68} metalness={0} />;
 }
 
-function CameraRig({ objectRef, fitVersion, preset, resetToken, autoRotate, autoRotateSpeed, onCameraChange }: {
+function CameraRig({ objectRef, fitVersion, preset, resetToken, autoRotate, autoRotateSpeed, onCameraChange, paneSelector }: {
+  paneSelector: string;
   objectRef: RefObject<Group | null>;
   fitVersion: number;
   preset: ViewerCameraPreset;
@@ -887,23 +1001,24 @@ function CameraRig({ objectRef, fitVersion, preset, resetToken, autoRotate, auto
   onCameraChange?: (state: ViewerCameraState) => void;
 }) {
   const controls = useRef<CameraControlsImpl | null>(null);
-  const camera = useThree((state) => state.camera as ThreePerspectiveCamera);
+  const camera = useThree((state) => state.camera as ThreePerspectiveCamera | ThreeOrthographicCamera);
   const size = useThree((state) => state.size);
 
   const frameObject = useCallback((transition: boolean) => {
     const object = objectRef.current;
     if (!object || !controls.current) return;
-    const { center, radius } = objectBounds(object);
+    const { center, radius, distance, near, far } = frameBounds(object, size.width / size.height, "fov" in camera ? camera.fov : 42);
+    camera.near = near;
+    camera.far = far;
+    camera.updateProjectionMatrix();
+    if ("isOrthographicCamera" in camera) void controls.current.zoomTo(Math.min(size.width, size.height) / (radius * 2.3), false);
     const direction = new Vector3(...presetVectors[preset]).normalize();
-    const verticalDistance = radius / Math.sin(MathUtils.degToRad(camera.fov / 2));
-    const horizontalDistance = verticalDistance / Math.max(camera.aspect, 0.55);
-    const distance = Math.max(verticalDistance, horizontalDistance) * 1.15;
     const position = center.clone().add(direction.multiplyScalar(distance));
-    controls.current.minDistance = Math.max(radius * 0.3, 0.05);
-    controls.current.maxDistance = Math.max(radius * 10, 2);
+    controls.current.minDistance = radius * 0.05;
+    controls.current.maxDistance = distance * 10;
     void controls.current.setLookAt(position.x, position.y, position.z, center.x, center.y, center.z, transition);
     if (!transition) controls.current.saveState();
-  }, [camera.aspect, camera.fov, objectRef, preset]);
+  }, [camera, objectRef, preset, size.width, size.height]);
 
   useEffect(() => { frameObject(false); }, [fitVersion, frameObject, size.width, size.height]);
   useEffect(() => { if (resetToken > 0) frameObject(true); }, [resetToken, frameObject]);
@@ -919,21 +1034,21 @@ function CameraRig({ objectRef, fitVersion, preset, resetToken, autoRotate, auto
     onCameraChange({ position: position.toArray(), target: target.toArray() });
   }
 
-  return <CameraControls ref={controls} makeDefault smoothTime={0.25} dollyToCursor onControlEnd={reportCamera} />;
+  return <CameraControls ref={controls} domElement={document.querySelector<HTMLElement>(paneSelector) ?? undefined} regress makeDefault smoothTime={0.25} dollyToCursor onRest={reportCamera} />;
 }
 
 function FitStaticCamera({ objectRef, fitVersion, preset, resetToken }: { objectRef: RefObject<Group | null>; fitVersion: number; preset: ViewerCameraPreset; resetToken: number }) {
-  const camera = useThree((state) => state.camera as ThreePerspectiveCamera);
+  const camera = useThree((state) => state.camera as ThreePerspectiveCamera | ThreeOrthographicCamera);
   const size = useThree((state) => state.size);
   useEffect(() => {
     const object = objectRef.current;
     if (!object) return;
-    const { center, radius } = objectBounds(object);
+    const { center, radius, distance, near, far } = frameBounds(object, size.width / size.height, "fov" in camera ? camera.fov : 42);
     const direction = new Vector3(...presetVectors[preset]).normalize();
-    const distance = radius / Math.sin(MathUtils.degToRad(camera.fov / 2)) * 1.15;
     camera.position.copy(center).add(direction.multiplyScalar(distance));
-    camera.near = Math.max(distance / 100, 0.001);
-    camera.far = Math.max(distance * 100, 100);
+    camera.near = near;
+    camera.far = far;
+    if ("isOrthographicCamera" in camera) camera.zoom = Math.min(size.width, size.height) / (radius * 2.3);
     camera.lookAt(center);
     camera.updateProjectionMatrix();
   }, [camera, fitVersion, objectRef, preset, resetToken, size.width, size.height]);
@@ -941,7 +1056,7 @@ function FitStaticCamera({ objectRef, fitVersion, preset, resetToken }: { object
 }
 
 function DragLook({ selector }: { selector: string }) {
-  const { camera } = useThree();
+  const { camera, invalidate } = useThree();
   useEffect(() => {
     const target = document.querySelector<HTMLElement>(selector);
     if (!target) return;
@@ -953,6 +1068,7 @@ function DragLook({ selector }: { selector: string }) {
       if (!dragging) return;
       camera.rotation.y -= event.movementX * 0.002;
       camera.rotation.x = Math.max(-Math.PI / 2 + 0.05, Math.min(Math.PI / 2 - 0.05, camera.rotation.x - event.movementY * 0.002));
+      invalidate();
     };
     const up = (event: globalThis.PointerEvent) => { dragging = false; if (target.hasPointerCapture(event.pointerId)) target.releasePointerCapture(event.pointerId); };
     target.addEventListener("pointerdown", down);
@@ -965,19 +1081,21 @@ function DragLook({ selector }: { selector: string }) {
       target.removeEventListener("pointerup", up);
       target.removeEventListener("pointercancel", up);
     };
-  }, [camera, selector]);
+  }, [camera, invalidate, selector]);
   return null;
 }
 
 function FirstPersonMovement({ requirePointerLock, selector }: { requirePointerLock: boolean; selector: string }) {
-  const { camera } = useThree();
+  const { camera, gl, invalidate } = useThree();
   const pressed = useRef(new Set<string>());
   useEffect(() => {
     const target = document.querySelector<HTMLElement>(selector);
     const down = (event: KeyboardEvent) => {
       if ((event.target as HTMLElement)?.closest("input, textarea, select, [contenteditable]")) return;
       if (!requirePointerLock && event.target !== target) return;
+      if (requirePointerLock && document.pointerLockElement !== gl.domElement) return;
       pressed.current.add(event.code);
+      invalidate();
       if ((document.pointerLockElement || !requirePointerLock) && (event.code.startsWith("Arrow") || event.code === "Space")) event.preventDefault();
     };
     const up = (event: KeyboardEvent) => pressed.current.delete(event.code);
@@ -990,10 +1108,10 @@ function FirstPersonMovement({ requirePointerLock, selector }: { requirePointerL
       window.removeEventListener("keyup", up);
       window.removeEventListener("blur", blur);
     };
-  }, [requirePointerLock, selector]);
+  }, [requirePointerLock, selector, gl, invalidate]);
   useFrame((_, delta) => {
     const target = document.querySelector<HTMLElement>(selector);
-    if (requirePointerLock ? !document.pointerLockElement : document.activeElement !== target) return;
+    if (requirePointerLock ? document.pointerLockElement !== gl.domElement : document.activeElement !== target) return;
     const speed = Math.min(delta, 0.05) * 2.2;
     const keys = pressed.current;
     const forward = Number(keys.has("KeyW") || keys.has("ArrowUp")) - Number(keys.has("KeyS") || keys.has("ArrowDown"));
@@ -1004,6 +1122,7 @@ function FirstPersonMovement({ requirePointerLock, selector }: { requirePointerL
     camera.translateZ(-forward * speed * scale);
     camera.translateX(sideways * speed * scale);
     camera.position.y += vertical * speed * scale;
+    invalidate();
   });
   return null;
 }
@@ -1029,12 +1148,6 @@ function useReducedMotion(enabled: boolean) {
     return () => query.removeEventListener("change", update);
   }, [enabled]);
   return reduced;
-}
-
-function objectBounds(object: Object3D) {
-  const box = new Box3().setFromObject(object);
-  const sphere = box.getBoundingSphere(new Sphere());
-  return { center: sphere.center, radius: Math.max(sphere.radius, 0.1) };
 }
 
 function fileName(path: string) {

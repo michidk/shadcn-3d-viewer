@@ -25,6 +25,10 @@
       ],
       "files": [
         {
+          "path": "src/components/ui/model-viewer/model-inspection.ts",
+          "type": "registry:ui"
+        },
+        {
           "path": "src/components/ui/model-viewer/model-viewer.tsx",
           "type": "registry:ui"
         },
