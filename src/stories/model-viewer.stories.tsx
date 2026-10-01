@@ -30,6 +30,8 @@ const meta = {
         "viewCubePosition",
         "showUi",
         "showFileName",
+        "showRetry",
+        "pauseWhenHidden",
         "autoRotate",
       ],
     },
@@ -51,6 +53,7 @@ const meta = {
       options: ["top-right", "top-left", "bottom-right", "bottom-left"],
     },
     height: { control: { type: "range", min: 320, max: 800, step: 20 } },
+    pauseWhenHidden: { control: "boolean" },
   },
   args: {
     height: 520,
@@ -61,6 +64,7 @@ const meta = {
     viewCube: "asset-studio",
     showGrid: false,
     showUi: true,
+    pauseWhenHidden: true,
     onLoad: fn(),
     onError: fn(),
   },
@@ -182,4 +186,21 @@ export const ErrorState: Story = {
       },
     },
   },
+};
+
+export const RetryError: Story = {
+  args: { src: "/models/retry-example.glb", showRetry: true },
+  parameters: {
+    docs: { description: { story: "Retry clears the loader cache and requests the same URL again. A permanently missing file will still fail; the host must replace invalid or expired URLs." } },
+  },
+};
+
+export const OffscreenPlayback: Story = {
+  args: {
+    src: "/models/robot-expressive.glb",
+    animation: "Walking",
+    animationPlaying: true,
+    respectReducedMotion: false,
+  },
+  decorators: [(Story) => <><Story /><div style={{ height: "120vh" }}><p className="p-4 text-sm text-muted-foreground">Scroll the viewer completely out of view, then return. Playback resumes without changing the play/pause setting.</p></div></>],
 };

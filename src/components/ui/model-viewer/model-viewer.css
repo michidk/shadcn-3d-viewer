@@ -154,6 +154,19 @@
     right: 14px;
     top: 14px;
   }
+  .viewer-orientation-controls {
+    position: absolute;
+    top: max(54px, var(--viewer-toolbar-offset, 0px));
+    right: 14px;
+    z-index: 4;
+  }
+  .viewer-orientation-controls:not(:focus-within):not(:has([data-popup-open])) {
+    clip-path: inset(50%);
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    white-space: nowrap;
+  }
   .viewer-overlay-slot {
     inset: 0;
     pointer-events: none;

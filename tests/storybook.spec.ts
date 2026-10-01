@@ -20,6 +20,152 @@ async function openStory(page: Page, id: string) {
   await page.goto(`/iframe.html?id=${id}&viewMode=story`);
 }
 
+for (const [story, label] of [
+  ["viewer-model-viewer--retry-error", "Retry loading model"],
+  ["composition-custom-controls--custom-recovery", "Try again"],
+]) {
+  test(`${story} clears a cached failure and recovers`, async ({ page }) => {
+    let attempts = 0;
+    await page.route("**/models/retry-example.glb", (route) => {
+      attempts++;
+      return attempts < 3
+        ? route.fulfill({ status: 503, body: "Temporary failure" })
+        : route.fulfill({ path: "public/models/robot-expressive.glb", contentType: "model/gltf-binary" });
+    });
+    await openStory(page, story);
+    const root = page.locator('[data-slot="model-viewer"]');
+    await expect(root).toHaveAttribute("data-state", "error");
+    if (story === "viewer-model-viewer--retry-error") {
+      for (const width of [1280, 390]) {
+        await page.setViewportSize({ width, height: 800 });
+        await page.screenshot({ path: `test-results/retry-${width}.png` });
+      }
+    }
+    await page.getByRole("button", { name: label }).click();
+    await expect.poll(() => attempts).toBe(2);
+    await expect(root).toHaveAttribute("data-state", "error");
+    await page.getByRole("button", { name: label }).click();
+    await expect(root).toHaveAttribute("data-state", "ready");
+    expect(attempts).toBe(3);
+    await expect(page.getByRole("toolbar", { name: "Animation controls" })).toBeVisible();
+    await expect(page.getByRole("button", { name: "Screenshot options" })).toBeEnabled();
+    await expect(page.getByRole("alert")).toHaveCount(0);
+  });
+}
+
+test("offscreen and hidden-tab viewers stop drawing and resume without changing playback intent", async ({ page }) => {
+  await page.addInitScript(() => {
+    const counters = window as Window & { viewerDraws: number };
+    counters.viewerDraws = 0;
+    const original = WebGL2RenderingContext.prototype.drawElements;
+    WebGL2RenderingContext.prototype.drawElements = function (...args) {
+      counters.viewerDraws++;
+      return original.apply(this, args);
+    };
+  });
+  await openStory(page, "viewer-model-viewer--offscreen-playback");
+  const root = page.locator('[data-slot="model-viewer"]');
+  await expect(root).toHaveAttribute("data-state", "ready", { timeout: 30000 });
+  const draws = () => page.evaluate(() => (window as Window & { viewerDraws: number }).viewerDraws);
+  await expect.poll(draws).toBeGreaterThan(0);
+  await page.evaluate(() => window.scrollTo(0, document.body.scrollHeight));
+  await expect(root).toHaveAttribute("data-rendering", "paused");
+  await page.waitForTimeout(200);
+  const before = await draws();
+  await page.waitForTimeout(400);
+  expect(await draws()).toBe(before);
+  await page.evaluate(() => window.scrollTo(0, 0));
+  await expect(root).toHaveAttribute("data-rendering", "active");
+  await expect.poll(draws).toBeGreaterThan(before);
+  await expect(page.getByRole("button", { name: "Pause animation", exact: true })).toBeVisible();
+  await page.evaluate(() => {
+    Object.defineProperty(document, "visibilityState", { configurable: true, get: () => "hidden" });
+    document.dispatchEvent(new Event("visibilitychange"));
+  });
+  await expect(root).toHaveAttribute("data-rendering", "paused");
+  await page.waitForTimeout(200);
+  const hidden = await draws();
+  await page.waitForTimeout(400);
+  expect(await draws()).toBe(hidden);
+  await page.evaluate(() => {
+    Object.defineProperty(document, "visibilityState", { configurable: true, get: () => "visible" });
+    document.dispatchEvent(new Event("visibilitychange"));
+  });
+  await expect.poll(draws).toBeGreaterThan(hidden);
+  await page.getByRole("button", { name: "Pause animation", exact: true }).click();
+  await page.evaluate(() => window.scrollTo(0, document.body.scrollHeight));
+  await expect(root).toHaveAttribute("data-rendering", "paused");
+  await page.evaluate(() => window.scrollTo(0, 0));
+  await expect(page.getByRole("button", { name: "Play animation", exact: true })).toBeVisible();
+});
+
+for (const story of ["playground", "drei-view-cube"]) {
+  test(`${story} orientation works with keyboard alone`, async ({ page }) => {
+    await openStory(page, `viewer-model-viewer--${story}`);
+    await expect(page.locator('[data-slot="model-viewer"]')).toHaveAttribute("data-state", "ready");
+    const orient = page.getByRole("button", { name: "Orient view", exact: true });
+    // Tab through the real focus order, not a programmatic focus shortcut.
+    for (let i = 0; i < 25 && !(await orient.evaluate((node) => node === document.activeElement)); i++) {
+      await page.keyboard.press("Tab");
+    }
+    await expect(orient).toBeFocused();
+    await expect(orient).toHaveCSS("height", "28px");
+    const rect = await orient.boundingBox();
+    expect(rect!.width).toBeGreaterThan(30);
+    const canvas = page.locator("canvas");
+    const before = await canvas.evaluate((node: HTMLCanvasElement) => node.toDataURL());
+    await page.keyboard.press("Enter");
+    await expect(page.getByRole("menuitem", { name: "Front view", exact: true })).toBeFocused();
+    expect((await orient.boundingBox())!.width).toBeGreaterThan(30);
+    await page.screenshot({ path: `test-results/orientation-${story}.png` });
+    await page.keyboard.press("Enter");
+    await expect(page.getByRole("menu")).toHaveCount(0);
+    await expect(orient).toBeFocused();
+    await expect.poll(() => canvas.evaluate((node: HTMLCanvasElement) => node.toDataURL())).not.toBe(before);
+    await page.keyboard.press("ArrowDown");
+    await page.keyboard.press("End");
+    await expect(page.getByRole("menuitem", { name: "Isometric view" })).toBeFocused();
+    await page.setViewportSize({ width: 390, height: 800 });
+    await expect.poll(async () => {
+      const menu = (await page.getByRole("menu").boundingBox())!;
+      return menu.x >= 0 && menu.x + menu.width <= 390;
+    }).toBe(true);
+    await page.screenshot({ path: `test-results/orientation-${story}-phone.png` });
+    await page.keyboard.press("Escape");
+    await expect(orient).toBeFocused();
+  });
+}
+
+test("lazy entry does not request the renderer until opened", async ({ page }) => {
+  const rendererRequests: string[] = [];
+  page.on("request", (request) => {
+    if (/\/model-viewer\/model-viewer(?:-scene)?\.tsx/.test(request.url())) rendererRequests.push(request.url());
+  });
+  await openStory(page, "viewer-lazy-viewer--on-demand");
+  await expect(page.getByRole("button", { name: "Open viewer" })).toBeVisible();
+  expect(rendererRequests).toHaveLength(0);
+  await expect(page.locator("canvas")).toHaveCount(0);
+  await page.getByRole("button", { name: "Open viewer" }).click();
+  await expect(page.locator('[data-slot="model-viewer"]')).toHaveAttribute("data-state", "ready");
+  expect(rendererRequests.length).toBeGreaterThan(0);
+  await page.getByRole("button", { name: "Close viewer" }).click();
+  await expect(page.locator("canvas")).toHaveCount(0);
+});
+
+test("offscreen suspension can be disabled", async ({ page }) => {
+  await page.goto("/iframe.html?id=viewer-model-viewer--offscreen-playback&viewMode=story&args=pauseWhenHidden:!false");
+  const root = page.locator('[data-slot="model-viewer"]');
+  await expect(root).toHaveAttribute("data-state", "ready", { timeout: 30000 });
+  await page.evaluate(() => window.scrollTo(0, document.body.scrollHeight));
+  await page.waitForTimeout(300);
+  await expect(root).toHaveAttribute("data-rendering", "active");
+  await page.evaluate(() => {
+    Object.defineProperty(document, "visibilityState", { configurable: true, get: () => "hidden" });
+    document.dispatchEvent(new Event("visibilitychange"));
+  });
+  await expect(root).toHaveAttribute("data-rendering", "active");
+});
+
 test("Storybook manager and docs render the live viewer", async ({ page }) => {
   await page.goto("/?path=/story/viewer-model-viewer--playground");
   const preview = page.frameLocator("#storybook-preview-iframe");
@@ -43,7 +189,7 @@ test("storybook indexes all examples and the playground controls stay interactiv
     Object.values(index.entries).filter(
       (entry) => (entry as { type: string }).type === "story",
     ),
-  ).toHaveLength(19);
+  ).toHaveLength(23);
   await openStory(page, "viewer-model-viewer--playground");
   await expect(page.locator("canvas")).toBeVisible();
   const grid = page.getByRole("button", { name: "Show grid", exact: true });
@@ -51,6 +197,7 @@ test("storybook indexes all examples and the playground controls stay interactiv
   await expect(grid).toHaveAttribute("aria-pressed", "true");
   await page.getByRole("button", { name: "Four-view split" }).click();
   await expect(page.locator(".viewer-view")).toHaveCount(4);
+  await expect(page.getByRole("button", { name: "Orient view", exact: true })).toHaveCount(0);
 });
 
 test("animated example loads the bundled model and plays", async ({ page }) => {
@@ -119,6 +266,7 @@ test("error story shows a recoverable model error", async ({ page }) => {
     "Unable to load model",
   );
   await expect(page.getByRole("alert")).not.toContainText("intentional-missing-model");
+  await expect(page.getByRole("button", { name: "Retry loading model" })).toHaveCount(0);
   await expect(
     page.getByRole("button", { name: "Screenshot options" }),
   ).toBeDisabled();
@@ -172,6 +320,7 @@ test("minimal embed has no orientation helper or toolbar", async ({ page }) => {
   await openStory(page, "viewer-model-viewer--minimal-embed");
   await expect(page.locator('[data-slot="model-viewer"]')).toHaveAttribute("data-state", "ready");
   await expect(page.getByRole("toolbar")).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "Orient view", exact: true })).toHaveCount(0);
   await page.screenshot({ path: "test-results/minimal-embed.png" });
 });
 

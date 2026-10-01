@@ -1,6 +1,7 @@
 export { ModelViewer } from "./model-viewer";
 export { ModelViewerRoot } from "./model-viewer-root";
 export { ModelViewerScene } from "./model-viewer-scene";
+export { ModelViewerOrientationControls } from "./model-viewer-orientation";
 export { useModelViewer } from "./model-viewer-context";
 export {
   ModelViewerDefaultToolbar,

@@ -42,7 +42,7 @@ bun run storybook:build  # static site in storybook-static/
 bun run storybook:test   # smoke tests against a running Storybook
 ```
 
-The 19 examples cover the interactive playground, fixed four-view layout, Drei cube, night lighting, the bundled animated robot, model inspection, minimal embeds, loading/error customization, opt-in filenames, hidden feedback, custom toolbars, compound viewer parts, Base UI `render` composition, compatibility button/tooltip overrides, styled overlays, and standalone inspector states. Viewer toolbar changes and Storybook Controls stay in sync. Docs pages render one live viewer at a time to stay within browser WebGL limits.
+The 23 examples cover the interactive playground, fixed four-view layout, Drei cube, night lighting, the bundled animated robot, model inspection, minimal embeds, loading/error customization, opt-in filenames, hidden feedback, retry and custom recovery, offscreen playback, on-demand loading, custom toolbars, compound viewer parts, Base UI `render` composition, compatibility button/tooltip overrides, styled overlays, and standalone inspector states. Viewer toolbar changes and Storybook Controls stay in sync. Docs pages render one live viewer at a time to stay within browser WebGL limits.
 
 Storybook shares `src/theme.css` with the demo but does not load the demo page layout. All model assets are served locally from `public/`, including in the static build. The error story deliberately requests a missing model.
 
@@ -91,6 +91,17 @@ export function Preview() {
 
 Omit `src` to render the built-in material study. Use `showUi={false}` for a clean embedded preview.
 
+### Load the renderer on demand
+
+```tsx
+import { ModelViewer } from "@/components/ui/model-viewer/lazy";
+
+// No renderer chunk is requested until this component is mounted.
+{open && <ModelViewer src="/models/chair.glb" height={420} />}
+```
+
+The dedicated `lazy` entry imports only React, styling, and the loading icon synchronously. It reserves the viewer's space and accepts `importFallback` (a React node, or `null`) while downloading the renderer. That placeholder runs before a viewer context exists; `loadingFallback` continues to handle model loading inside the root. The eager barrel remains available for compound composition; importing it elsewhere on the same page can load the renderer eagerly. JavaScript chunk-download failures propagate to your app's error boundary; model retry does not retry failed application chunks. The demo uses the lazy entry too.
+
 ### Props
 
 | Prop | Type | Default |
@@ -119,8 +130,14 @@ Omit `src` to render the built-in material study. Use `showUi={false}` for a cle
 | `showFileName` | `boolean` | `false` (default loader only) |
 | `loadingFallback` | node or progress renderer | spinner and loading label |
 | `errorFallback` | node or error renderer | concise error card |
+| `showRetry` | `boolean` | `false` |
+| `pauseWhenHidden` | `boolean` | `true` |
 
 Loading filenames are hidden unless `showFileName` is enabled. This affects built-in loading UI only, not network requests or custom renderers. Custom loading renderers receive `{ active, progress, item, loaded, total }`; progress describes loader items, not byte-accurate transfer progress. The default error card omits raw technical details; use `onError` for logging or `errorFallback` to render them yourself. Pass `null` (or return `null`) to hide either overlay.
+
+`showRetry` adds a button to the default error card. `useModelViewer().retry()` provides the same action for custom fallback components: it clears Drei's cache for the failed URL and remounts the renderer, resetting load/inspection state. Retry is manual and only acts on a failed model with a `src`; it does not fix invalid files or renew signed URLs. Replace `src` in the host app for those cases. `onError` reports every failed attempt and `onLoad` reports successful recovery.
+
+With `pauseWhenHidden`, leaving the viewport or hiding the browser tab stops the frame loop and pauses animation/auto-rotation without unmounting the model. Returning resumes from the existing pose and preserves the requested play/pause state (including controlled props); this does not emit playback-change callbacks. Network/model loading is not cancelled. Disable this option for intentional background rendering. `useModelViewer().renderingPaused` and `data-rendering="paused|active"` expose the effective suspension state. Browsers without IntersectionObserver still suspend for hidden tabs.
 
 ```tsx
 <ModelViewer
@@ -144,6 +161,8 @@ The toolbar offers one orthographic toggle; direction changes are available thro
 ```
 
 Standalone `ViewCube` defaults to render priority 1. When composing with a custom renderer, use a later priority (the viewer uses 2). The four split panes keep fixed directions; dragging pans and scrolling zooms without rotating them.
+
+Both built-in viewer cube variants have a DOM keyboard counterpart: Tab to **Orient view**, then use Enter/Space to open its direction menu, arrow keys/Home/End to navigate, Enter to select, and Escape to close. The trigger reveals itself on focus and stays visible while open. It is available whenever the cube is enabled in orbit mode, including `showUi={false}` with explicit `showOrientation`; it is absent in fixed split and fly modes. `ModelViewerScene` includes `ModelViewerOrientationControls` automatically. The exported part supports `className`/`style`; the standalone R3F `ViewCube` remains canvas-only and needs equivalent host DOM controls for keyboard access. Direction entries are actions, not radio selections, because orbiting can change the camera afterwards.
 
 ### Compatibility component overrides
 

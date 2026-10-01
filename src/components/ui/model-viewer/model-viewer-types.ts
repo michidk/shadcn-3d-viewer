@@ -88,6 +88,10 @@ export interface ModelViewerProps extends Omit<
   loadingFallback?: ReactNode | ((progress: ViewerProgress) => ReactNode);
   /** Replace error content. Pass null to hide the error overlay. */
   errorFallback?: ReactNode | ((error: Error) => ReactNode);
+  /** Opt in to a retry button in the default error state. */
+  showRetry?: boolean;
+  /** Suspend rendering while outside the viewport or in a hidden tab. */
+  pauseWhenHidden?: boolean;
   overlay?: ReactNode;
   /** Replace the default toolbar; null hides it. Custom controls can use useModelViewer(). */
   toolbar?: ReactNode;
@@ -136,6 +140,9 @@ export interface ModelViewerState {
   setAnimationSpeed: (speed: number) => void;
   restartAnimation: () => void;
   reducedMotion: boolean;
+  renderingPaused: boolean;
+  /** Retry a failed load of the current URL, clearing Drei's cached failure. */
+  retry: () => void;
   status: "idle" | "loading" | "ready" | "error";
   canCapture: boolean;
   capture: (action: "copy" | "download") => Promise<void>;

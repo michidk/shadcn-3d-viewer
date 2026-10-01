@@ -18,6 +18,7 @@ export function ModelViewerRoot(props: ModelViewerRootProps) {
           ref={viewerRef}
           data-slot="model-viewer"
           data-state={state.status}
+          data-rendering={state.renderingPaused ? "paused" : "active"}
           data-viewer-mode={state.mode}
           data-viewer-key={viewerKey}
           aria-label={runtime.alt}

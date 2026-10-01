@@ -93,6 +93,18 @@ export const CustomToolbar: Story = {
   render: (args) => <ModelViewer {...args} toolbar={<CompactToolbar />} />,
 };
 
+function RetryNotice() {
+  const { retry } = useModelViewer();
+  return <div role="alert" className="space-y-3 text-center text-sm">
+    <p>The preview could not be loaded.</p>
+    <Button onClick={retry}>Try again</Button>
+  </div>;
+}
+
+export const CustomRecovery: Story = {
+  args: { src: "/models/retry-example.glb", errorFallback: <RetryNotice /> },
+};
+
 export const CompoundViewer: Story = {
   render: ({ height }) => (
     <ModelViewerRoot

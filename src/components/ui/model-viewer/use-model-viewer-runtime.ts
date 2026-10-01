@@ -74,6 +74,8 @@ export function useModelViewerRuntime({
   showFileName = false,
   loadingFallback,
   errorFallback,
+  showRetry = false,
+  pauseWhenHidden = true,
   useDraco = true,
   useMeshopt = true,
   extendLoader,
@@ -145,6 +147,7 @@ export function useModelViewerRuntime({
   const [animationNames, setAnimationNames] = useState<string[]>([]);
   const [loaded, setLoaded] = useState(!src);
   const [viewerError, setViewerError] = useState(false);
+  const [retryToken, setRetryToken] = useState(0);
   const [feedback, setFeedback] = useState<{
     message: string;
     error: boolean;
@@ -158,6 +161,22 @@ export function useModelViewerRuntime({
   const [readyPanes, setReadyPanes] = useState<Set<number>>(() => new Set());
   const reducedMotion = useReducedMotion(respectReducedMotion);
   const viewerRef = useRef<HTMLDivElement | null>(null);
+  const [inViewport, setInViewport] = useState(true);
+  const [pageVisible, setPageVisible] = useState(true);
+  useEffect(() => {
+    const update = () => setPageVisible(document.visibilityState !== "hidden");
+    update();
+    document.addEventListener("visibilitychange", update);
+    const observer = typeof IntersectionObserver === "undefined"
+      ? null
+      : new IntersectionObserver(([entry]) => setInViewport(entry.isIntersecting));
+    if (viewerRef.current) observer?.observe(viewerRef.current);
+    return () => {
+      document.removeEventListener("visibilitychange", update);
+      observer?.disconnect();
+    };
+  }, []);
+  const renderingPaused = pauseWhenHidden && (!inViewport || !pageVisible);
   useImperativeHandle(ref, () => viewerRef.current!, []);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const feedbackTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -176,8 +195,10 @@ export function useModelViewerRuntime({
     },
     [],
   );
-  const effectiveAutoRotate = autoRotate && !reducedMotion && mode === "orbit";
-  const effectiveAnimationPlaying = animationPlaying && !reducedMotion;
+  const effectiveAutoRotate =
+    autoRotate && !reducedMotion && !renderingPaused && mode === "orbit";
+  const effectiveAnimationPlaying =
+    animationPlaying && !reducedMotion && !renderingPaused;
   const paneTracks = useRef(
     Array.from({ length: splitPanes.length }, () => ({
       current: null as HTMLDivElement | null,
@@ -315,6 +336,20 @@ export function useModelViewerRuntime({
     [onError],
   );
 
+  const retry = useCallback(() => {
+    if (!viewerError || !src) return;
+    useGLTF.clear(src);
+    setLoaded(false);
+    setViewerError(false);
+    setReadyPanes(new Set());
+    setAnimationNames([]);
+    setInspection(null);
+    setSelectedMesh(null);
+    setFeedback(null);
+    loadReported.current = false;
+    setRetryToken((value) => value + 1);
+  }, [src, viewerError]);
+
   function report(message: string, error = false) {
     setFeedback({ message, error });
     if (feedbackTimer.current) clearTimeout(feedbackTimer.current);
@@ -435,6 +470,8 @@ export function useModelViewerRuntime({
     setAnimationSpeed,
     restartAnimation: () => setAnimationResetToken((value) => value + 1),
     reducedMotion,
+    renderingPaused,
+    retry,
     status,
     canCapture: sceneMounted && loaded && !viewerError,
     capture,
@@ -479,6 +516,10 @@ export function useModelViewerRuntime({
     showFileName,
     loadingFallback,
     errorFallback,
+    showRetry,
+    retryToken,
+    retry,
+    renderingPaused,
     useDraco,
     useMeshopt,
     extendLoader,

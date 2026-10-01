@@ -62,6 +62,8 @@ import { clone } from "three/addons/utils/SkeletonUtils.js";
 import { FileWarning, LoaderCircle } from "lucide-react";
 import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
 import { cn } from "@/lib/utils";
+import { ViewerControlButton } from "./viewer-ui";
+import { ModelViewerOrientationControls } from "./model-viewer-orientation";
 import { ViewCube, type ViewCubePosition } from "./view-cube";
 import "./model-viewer.css";
 
@@ -93,6 +95,7 @@ class ViewerErrorBoundary extends Component<
     children: ReactNode;
     fallback?: ModelViewerProps["errorFallback"];
     onError?: (error: Error) => void;
+    retry?: () => void;
   },
   { error: Error | null }
 > {
@@ -119,7 +122,12 @@ class ViewerErrorBoundary extends Component<
             <FileWarning className="text-muted-foreground" aria-hidden="true" />
             <AlertTitle>Unable to load model</AlertTitle>
             <AlertDescription>
-              Check that the model is available and is a valid GLTF or GLB file.
+              <p>Check that the model is available and is a valid GLTF or GLB file.</p>
+              {this.props.retry && (
+                <ViewerControlButton variant="outline" size="sm" onClick={this.props.retry}>
+                  Retry loading model
+                </ViewerControlButton>
+              )}
             </AlertDescription>
           </Alert>
         )}
@@ -182,6 +190,10 @@ export function ModelViewerScene({
     markReady,
     reportAnimations,
     fail,
+    showRetry,
+    retry,
+    retryToken,
+    renderingPaused,
   } = useViewerRuntime();
   useEffect(() => {
     setSceneMounted(true);
@@ -201,9 +213,10 @@ export function ModelViewerScene({
         <img className="viewer-poster" src={poster} alt="" aria-hidden="true" />
       )}
       <ViewerErrorBoundary
-        key={src ?? "demo"}
+        key={`${src ?? "demo"}:${retryToken}`}
         fallback={errorFallback}
         onError={fail}
+        retry={showRetry && src ? retry : undefined}
       >
         <div className="viewer-scenes">
           {panes.map((pane, index) => {
@@ -234,10 +247,12 @@ export function ModelViewerScene({
           className="viewer-canvas"
           dpr={quality}
           frameloop={
-            effectiveAutoRotate ||
-            (effectiveAnimationPlaying && Boolean(effectiveAnimation))
-              ? "always"
-              : "demand"
+            renderingPaused
+              ? "never"
+              : effectiveAutoRotate ||
+                  (effectiveAnimationPlaying && Boolean(effectiveAnimation))
+                ? "always"
+                : "demand"
           }
           gl={{
             antialias: true,
@@ -313,6 +328,8 @@ export function ModelViewerScene({
           <Preload all />
         </Canvas>
       </ViewerErrorBoundary>
+
+      <ModelViewerOrientationControls />
 
       {!loaded && (
         <ViewerLoader

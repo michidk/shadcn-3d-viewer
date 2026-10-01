@@ -2,7 +2,7 @@ import { Box, Check, Clipboard, Github, Upload, X } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 
 import { Button } from "@/components/ui/button";
-import { ModelViewer } from "@/components/ui/model-viewer";
+import { ModelViewer } from "@/components/ui/model-viewer/lazy";
 
 const installCommand = "bunx shadcn@latest add ./public/r/model-viewer.json";
 const usageCode = [
