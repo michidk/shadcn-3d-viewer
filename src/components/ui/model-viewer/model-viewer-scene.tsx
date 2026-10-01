@@ -14,7 +14,6 @@ import {
   Preload,
   useAnimations,
   useGLTF,
-  useProgress,
 } from "@react-three/drei";
 import {
   Canvas,
@@ -177,6 +176,7 @@ export function ModelViewerScene({
     useMeshopt,
     extendLoader,
     loaded,
+    status,
     quality,
     setQuality,
     onPerformanceChange,
@@ -213,7 +213,7 @@ export function ModelViewerScene({
         <img className="viewer-poster" src={poster} alt="" aria-hidden="true" />
       )}
       <ViewerErrorBoundary
-        key={`${src ?? "demo"}:${retryToken}`}
+        key={`${src ?? "demo"}:${mode}:${retryToken}`}
         fallback={errorFallback}
         onError={fail}
         retry={showRetry && src ? retry : undefined}
@@ -331,11 +331,12 @@ export function ModelViewerScene({
 
       <ModelViewerOrientationControls />
 
-      {!loaded && (
+      {status === "loading" && (
         <ViewerLoader
           fallback={loadingFallback}
           poster={Boolean(poster)}
           showFileName={showFileName}
+          src={src}
         />
       )}
 
@@ -348,13 +349,17 @@ function ViewerLoader({
   fallback,
   poster,
   showFileName,
+  src,
 }: {
   fallback?: ModelViewerProps["loadingFallback"];
   poster: boolean;
   showFileName: boolean;
+  src?: string;
 }) {
-  const { active, progress, item, loaded, total } = useProgress();
-  const data = { active, progress, item, loaded, total };
+  // Drei's useProgress observes the global loading manager, which also tracks
+  // assets belonging to other viewer instances. This is intentionally
+  // indeterminate until this viewer's own scene reports ready or error.
+  const data = { active: true, progress: 0, item: src ?? "", loaded: 0, total: 0 };
   const custom = typeof fallback === "function" ? fallback(data) : fallback;
   if (fallback !== undefined && custom == null) return null;
   return (
@@ -369,7 +374,7 @@ function ViewerLoader({
         <>
           <LoaderCircle className="viewer-loader-spinner" aria-hidden="true" />
           <span>Loading model…</span>
-          {showFileName && item && <small>{fileName(item)}</small>}
+          {showFileName && src && <small>{fileName(src)}</small>}
         </>
       )}
     </div>

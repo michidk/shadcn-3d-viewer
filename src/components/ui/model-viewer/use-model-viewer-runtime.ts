@@ -5,10 +5,12 @@ import {
   useEffect,
   useId,
   useImperativeHandle,
+  useReducer,
   useRef,
   useState,
 } from "react";
 import type { ModelInspection } from "./model-inspection";
+import { initialViewerLifecycle, viewerLifecycleReducer } from "./model-viewer-lifecycle";
 import {
   splitPanes,
   type ModelViewerRootProps,
@@ -129,7 +131,7 @@ export function useModelViewerRuntime({
     defaultCameraPreset,
     onCameraPresetChange,
   );
-  const [animation, setAnimation] = useControlledState<string | null>(
+  const [animation, setAnimation, resetAnimation] = useControlledState<string | null>(
     controlledAnimation,
     defaultAnimation,
     onAnimationChange,
@@ -145,8 +147,9 @@ export function useModelViewerRuntime({
     onAnimationSpeedChange,
   );
   const [animationNames, setAnimationNames] = useState<string[]>([]);
-  const [loaded, setLoaded] = useState(!src);
-  const [viewerError, setViewerError] = useState(false);
+  const [lifecycle, dispatchLifecycle] = useReducer(viewerLifecycleReducer, initialViewerLifecycle);
+  const loaded = lifecycle.status === "ready" || lifecycle.status === "error";
+  const viewerError = lifecycle.status === "error";
   const [retryToken, setRetryToken] = useState(0);
   const [feedback, setFeedback] = useState<{
     message: string;
@@ -158,7 +161,6 @@ export function useModelViewerRuntime({
   const [pointerLockAvailable, setPointerLockAvailable] = useState(true);
   const [resetToken, setResetToken] = useState(0);
   const [animationResetToken, setAnimationResetToken] = useState(0);
-  const [readyPanes, setReadyPanes] = useState<Set<number>>(() => new Set());
   const reducedMotion = useReducedMotion(respectReducedMotion);
   const viewerRef = useRef<HTMLDivElement | null>(null);
   const [inViewport, setInViewport] = useState(true);
@@ -180,11 +182,21 @@ export function useModelViewerRuntime({
   useImperativeHandle(ref, () => viewerRef.current!, []);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const feedbackTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const loadReported = useRef(false);
+  const loadReportedGeneration = useRef<number | null>(null);
   const viewerKey = useId();
   const cubes = requestedCubes ?? !src;
   const expectedPanes = mode === "split" ? splitPanes.length : 1;
-  const [sceneMounted, setSceneMounted] = useState(false);
+  const [sceneMounted, setSceneMountedState] = useState(false);
+  const setSceneMounted = useCallback((mounted: boolean) => {
+    setSceneMountedState(mounted);
+    dispatchLifecycle({ type: mounted ? "mount" : "unmount" });
+    if (!mounted) {
+      setAnimationNames([]);
+      setInspection(null);
+      setSelectedMesh(null);
+      setLocked(false);
+    }
+  }, []);
   const [toolbarOffset, setToolbarOffset] = useState(0);
   const toolbarMeasurements = useRef(new Map<HTMLElement, number>());
   const reportToolbar = useCallback(
@@ -206,44 +218,24 @@ export function useModelViewerRuntime({
   ).current;
 
   useEffect(() => {
-    setLoaded(!src);
-    setViewerError(false);
+    dispatchLifecycle({ type: "reset" });
     setFeedback(null);
-    setReadyPanes(new Set());
     setAnimationNames([]);
-    loadReported.current = false;
-    return () => {
-      if (src && clearCacheOnUnmount) useGLTF.clear(src);
-    };
+    setInspection(null);
+    setSelectedMesh(null);
+    setLocked(false);
+  }, [src, mode]);
+
+  useEffect(() => () => {
+    if (src && clearCacheOnUnmount) useGLTF.clear(src);
   }, [src, clearCacheOnUnmount]);
 
   useEffect(() => {
-    setReadyPanes(new Set());
-    setLoaded(!src);
-    loadReported.current = false;
-    setLocked(false);
-  }, [mode, src]);
-
-  useEffect(() => {
-    if (sceneMounted) return;
-    setViewerError(false);
-    setLocked(false);
-    setReadyPanes(new Set());
-    setInspection(null);
-    setSelectedMesh(null);
-    setAnimationNames([]);
-    setLoaded(!src);
-    loadReported.current = false;
-  }, [sceneMounted, src]);
-
-  useEffect(() => {
-    if (readyPanes.size < expectedPanes) return;
-    setLoaded(true);
-    if (!loadReported.current) {
-      loadReported.current = true;
+    if (lifecycle.status === "ready" && loadReportedGeneration.current !== lifecycle.generation) {
+      loadReportedGeneration.current = lifecycle.generation;
       onLoad?.();
     }
-  }, [expectedPanes, onLoad, readyPanes]);
+  }, [lifecycle.status, lifecycle.generation, onLoad]);
 
   const effectiveAnimation =
     controlledAnimation === null
@@ -253,18 +245,17 @@ export function useModelViewerRuntime({
         : controlledAnimation === undefined
           ? (animationNames[0] ?? null)
           : animation;
+  const previousAnimationSrc = useRef(src);
   useEffect(() => {
-    if (controlledAnimation === undefined) setAnimation(defaultAnimation);
-  }, [src, defaultAnimation, controlledAnimation, setAnimation]);
+    if (previousAnimationSrc.current === src) return;
+    previousAnimationSrc.current = src;
+    if (controlledAnimation === undefined) resetAnimation(defaultAnimation);
+  }, [src, defaultAnimation, controlledAnimation, resetAnimation]);
 
   useEffect(() => {
     if (showInspector !== undefined && controlledInspectorOpen === undefined)
       setInspectorOpen(showInspector);
   }, [showInspector, controlledInspectorOpen, setInspectorOpen]);
-  useEffect(() => {
-    setSelectedMesh(null);
-    setInspection(null);
-  }, [src]);
   useEffect(() => {
     const rejectLock = () => {
       setPointerLockAvailable(false);
@@ -313,10 +304,8 @@ export function useModelViewerRuntime({
   }, []);
 
   const markReady = useCallback((index: number) => {
-    setReadyPanes((current) =>
-      current.has(index) ? current : new Set(current).add(index),
-    );
-  }, []);
+    dispatchLifecycle({ type: "ready", pane: index, expectedPanes });
+  }, [expectedPanes]);
 
   const reportAnimations = useCallback((names: string[]) => {
     setAnimationNames((current) =>
@@ -329,8 +318,7 @@ export function useModelViewerRuntime({
 
   const fail = useCallback(
     (error: Error) => {
-      setLoaded(true);
-      setViewerError(true);
+      dispatchLifecycle({ type: "error" });
       onError?.(error);
     },
     [onError],
@@ -339,14 +327,11 @@ export function useModelViewerRuntime({
   const retry = useCallback(() => {
     if (!viewerError || !src) return;
     useGLTF.clear(src);
-    setLoaded(false);
-    setViewerError(false);
-    setReadyPanes(new Set());
+    dispatchLifecycle({ type: "reset" });
     setAnimationNames([]);
     setInspection(null);
     setSelectedMesh(null);
     setFeedback(null);
-    loadReported.current = false;
     setRetryToken((value) => value + 1);
   }, [src, viewerError]);
 
@@ -433,13 +418,7 @@ export function useModelViewerRuntime({
     }
   }
 
-  const status = !sceneMounted
-    ? "idle"
-    : viewerError
-      ? "error"
-      : loaded
-        ? "ready"
-        : "loading";
+  const status = lifecycle.status;
   const state: ModelViewerState = {
     mode,
     setMode: changeMode,
@@ -524,6 +503,7 @@ export function useModelViewerRuntime({
     useMeshopt,
     extendLoader,
     loaded,
+    status,
     quality,
     setQuality,
     onPerformanceChange,
@@ -545,7 +525,7 @@ function useControlledState<T>(
   controlled: T | undefined,
   defaultValue: T,
   onChange?: (value: T) => void,
-): [T, (value: T) => void] {
+): [T, (value: T) => void, (value: T) => void] {
   const [internal, setInternal] = useState(defaultValue);
   const value = controlled === undefined ? internal : controlled;
   const setValue = useCallback(
@@ -555,7 +535,7 @@ function useControlledState<T>(
     },
     [controlled, onChange],
   );
-  return [value, setValue];
+  return [value, setValue, setInternal];
 }
 
 function useReducedMotion(enabled: boolean) {

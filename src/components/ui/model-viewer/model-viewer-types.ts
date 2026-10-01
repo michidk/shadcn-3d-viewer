@@ -17,6 +17,7 @@ export type ViewerCameraState = {
 };
 
 export type ViewerProgress = {
+  /** Indeterminate, viewer-scoped loading state. Counts remain zero until a per-viewer asset manager is supplied. */
   active: boolean;
   progress: number;
   item: string;

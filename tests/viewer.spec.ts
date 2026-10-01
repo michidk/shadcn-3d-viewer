@@ -495,13 +495,117 @@ test("compound roots isolate state, respect controlled updates and mount scenes 
   await expect(first.getByRole("button", { name: "Screenshot options" })).toBeDisabled();
 });
 
+test("an inline animation callback does not reset a chosen clip on parent rerender", async ({ page }) => {
+  await ready(page);
+  await page.evaluate(`(async () => {
+    const { default: React } = await import('/node_modules/.vite/deps/react.js');
+    const { default: ReactDOM } = await import('/node_modules/.vite/deps/react-dom_client.js');
+    const { ModelViewer } = await import('/src/components/ui/model-viewer/index.ts');
+    const h = React.createElement;
+    const host = document.createElement('div');
+    host.id = 'animation-rerender-test';
+    document.body.append(host);
+    function Example() {
+      const [tick, setTick] = React.useState(0);
+      return h(React.Fragment, null,
+        h('button', { onClick: () => setTick(tick + 1) }, 'Rerender parent'),
+        h('span', { id: 'render-count' }, tick),
+        h(ModelViewer, { src: '/models/robot-expressive.glb', height: 400,
+          onAnimationChange: value => { host.dataset.changes = String(Number(host.dataset.changes || 0) + 1); host.dataset.lastClip = value; } }));
+    }
+    ReactDOM.createRoot(host).render(h(Example));
+  })()`);
+  const host = page.locator("#animation-rerender-test");
+  await expect(host.locator('[data-slot="model-viewer"]')).toHaveAttribute("data-state", "ready");
+  const clip = host.locator(".viewer-animation-name");
+  await clip.click();
+  await page.getByRole("menuitemradio", { name: "Running" }).click();
+  await expect(host.locator(".viewer-animation-name")).toHaveText("Running");
+  await expect(host).toHaveAttribute("data-changes", "1");
+  await host.getByRole("button", { name: "Rerender parent" }).click();
+  await expect(host.locator("#render-count")).toHaveText("1");
+  await expect(host.locator(".viewer-animation-name")).toHaveText("Running");
+  await expect(host).toHaveAttribute("data-changes", "1");
+});
+
+test("changing mode after a load error shows an error, never a stuck loader", async ({ page }) => {
+  await ready(page);
+  await page.evaluate(`(async () => {
+    const { default: React } = await import('/node_modules/.vite/deps/react.js');
+    const { default: ReactDOM } = await import('/node_modules/.vite/deps/react-dom_client.js');
+    const { ModelViewer } = await import('/src/components/ui/model-viewer/index.ts');
+    const h = React.createElement;
+    const host = document.createElement('div');
+    host.id = 'error-mode-test';
+    document.body.append(host);
+    function Example() {
+      const [mode, setMode] = React.useState('orbit');
+      const [src, setSrc] = React.useState('/models/missing-mode-test.glb');
+      return h(React.Fragment, null,
+        h('button', { onClick: () => setMode('split') }, 'Switch mode'),
+        h('button', { onClick: () => setSrc('/models/robot-expressive.glb') }, 'Switch source'),
+        h(ModelViewer, { src, mode, height: 400, showRetry: true }));
+    }
+    ReactDOM.createRoot(host).render(h(Example));
+  })()`);
+  const host = page.locator("#error-mode-test");
+  const viewer = host.locator('[data-slot="model-viewer"]');
+  await expect(viewer).toHaveAttribute("data-state", "error");
+  await host.getByRole("button", { name: "Switch mode" }).click();
+  await expect(viewer).toHaveAttribute("data-viewer-mode", "split");
+  await expect(viewer).toHaveAttribute("data-state", "error");
+  await expect(viewer.locator(".viewer-loader")).toHaveCount(0);
+  await host.getByRole("button", { name: "Switch source" }).click();
+  await expect(viewer).toHaveAttribute("data-state", "ready");
+});
+
+test("concurrent viewers keep loading filenames and fallback data scoped to their own source", async ({ page }) => {
+  let release!: () => void;
+  const blocked = new Promise<void>((resolve) => { release = resolve; });
+  await page.route("**/models/isolated-*.glb", async (route) => {
+    await blocked;
+    await route.abort();
+  });
+  try {
+    await ready(page);
+    await page.evaluate(`(async () => {
+      const { default: React } = await import('/node_modules/.vite/deps/react.js');
+      const { default: ReactDOM } = await import('/node_modules/.vite/deps/react-dom_client.js');
+      const { ModelViewer } = await import('/src/components/ui/model-viewer/index.ts');
+      const h = React.createElement;
+      const host = document.createElement('div');
+      host.id = 'isolated-load-test';
+      document.body.append(host);
+      ReactDOM.createRoot(host).render(h(React.Fragment, null,
+        h(ModelViewer, { src: '/models/isolated-first.glb', height: 300, showFileName: true }),
+        h(ModelViewer, { src: '/models/isolated-second.glb', height: 300,
+          loadingFallback: progress => h('span', null, progress.item + '|' + progress.total) })));
+    })()`);
+    const viewers = page.locator("#isolated-load-test [data-slot='model-viewer']");
+    await expect(viewers.nth(0)).toHaveAttribute("data-state", "loading");
+    await expect(viewers.nth(1)).toHaveAttribute("data-state", "loading");
+    await expect(viewers.nth(0).locator(".viewer-loader")).toContainText("isolated-first.glb");
+    await expect(viewers.nth(0).locator(".viewer-loader")).not.toContainText("isolated-second.glb");
+    await expect(viewers.nth(1).locator(".viewer-loader")).toHaveText("/models/isolated-second.glb|0");
+  } finally {
+    release();
+  }
+});
+
 test("registry installs only viewer sources and leaves host styling untouched", async () => {
   const registry = JSON.parse(await readFile("registry.json", "utf8"));
   const item = registry.items[0];
+  const built = JSON.parse(await readFile("public/r/model-viewer.json", "utf8"));
+  expect(built.files.map((file: { path: string }) => file.path)).toEqual(
+    item.files.map((file: { path: string }) => file.path),
+  );
   expect(item.registryDependencies).toEqual(["alert", "button", "tooltip", "dropdown-menu"]);
   expect(item.cssVars).toBeUndefined();
   expect(item.css).toBeUndefined();
   expect(item.files.length).toBeGreaterThan(9);
+  expect(item.files.map((file: { path: string }) => file.path)).toContain(
+    "src/components/ui/model-viewer/model-viewer-lifecycle.ts",
+  );
   for (const file of item.files) {
     expect(file.path).toMatch(/^src\/components\/ui\/model-viewer\//);
     const source = await readFile(file.path, "utf8");

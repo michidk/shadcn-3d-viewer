@@ -86,6 +86,10 @@
           "type": "registry:ui"
         },
         {
+          "path": "src/components/ui/model-viewer/model-viewer-lifecycle.ts",
+          "type": "registry:ui"
+        },
+        {
           "path": "src/components/ui/model-viewer/model-viewer-types.ts",
           "type": "registry:ui"
         },
