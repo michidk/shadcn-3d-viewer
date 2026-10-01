@@ -62,6 +62,7 @@ import {
   Scene,
   Vector3,
   type Group,
+  type Object3D,
   type PerspectiveCamera as ThreePerspectiveCamera,
   type OrthographicCamera as ThreeOrthographicCamera,
 } from "three";
@@ -817,7 +818,12 @@ function ViewerScene({
   const paneWidth = useThree(state => state.size.width);
   const cubeMargin: [number, number] = viewCubeMargin ?? [64, toolbarVisible && paneWidth <= 680 && viewCubePosition.startsWith("top-") ? 148 : 64];
   const [fitVersion, setFitVersion] = useState(0);
-  const handleCentered = useCallback(() => setFitVersion((value) => value + 1), []);
+  const [gridScale, setGridScale] = useState(1);
+  const handleCentered = useCallback(({ container }: { container: Object3D }) => {
+    // Include the animation envelope, and keep grid density relative to the asset.
+    setGridScale(frameBounds(container, 1).radius / 2);
+    setFitVersion((value) => value + 1);
+  }, []);
   const background = lighting === "day" ? "#e7e9e4" : "#111a22";
 
   return (
@@ -828,7 +834,7 @@ function ViewerScene({
       <directionalLight position={[5, 9, 6]} intensity={lighting === "day" ? 1.7 : 1.05} color={lighting === "day" ? "#fff7e6" : "#bdd5ff"} />
       <directionalLight position={[-4, 4, -6]} intensity={lighting === "day" ? 0.45 : 1.4} color={lighting === "day" ? "#dcebdc" : "#688db3"} />
       {environment && <StudioEnvironment lighting={lighting} />}
-      {grid && <Grid infiniteGrid fadeDistance={18} fadeStrength={1.6} cellSize={0.25} sectionSize={1} cellThickness={0.45} sectionThickness={1.15} cellColor={lighting === "day" ? "#a8b5a6" : "#304651"} sectionColor={lighting === "day" ? "#708773" : "#55788b"} position={[0, 0.002, 0]} />}
+      {grid && <Grid infiniteGrid fadeFrom={0} fadeDistance={18 * gridScale} fadeStrength={1.6} cellSize={0.25 * gridScale} sectionSize={gridScale} cellThickness={0.45} sectionThickness={1.15} cellColor={lighting === "day" ? "#a8b5a6" : "#304651"} sectionColor={lighting === "day" ? "#708773" : "#55788b"} position={[0, 0.002 * gridScale, 0]} />}
       <Suspense fallback={null}>
         <Center ref={contentRef} top precise onCentered={handleCentered}>
           <SceneObject

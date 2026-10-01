@@ -68,6 +68,38 @@ async function canvasImage(page: Page) {
   return page.locator("canvas").evaluate((canvas: HTMLCanvasElement) => canvas.toDataURL());
 }
 
+test("grid stays visible around an animated model on desktop and phone", async ({ page }) => {
+  await ready(page);
+  await cube(page, "Off");
+  await page.getByRole("button", { name: "Show grid", exact: true }).click();
+  await page.getByRole("button", { name: "Try animated model" }).click();
+  await expect(page.getByRole("toolbar", { name: "Animation controls" })).toBeVisible();
+  for (const width of [1280, 390]) {
+    await page.setViewportSize({ width, height: 900 });
+    await page.locator(".model-viewer").scrollIntoViewIfNeeded();
+    await page.waitForTimeout(1000);
+    const visibleGrid = await canvasImage(page);
+    await page.getByRole("button", { name: "Show grid", exact: true }).click();
+    await page.waitForTimeout(200);
+    expect(await canvasImage(page)).not.toBe(visibleGrid);
+    await page.getByRole("button", { name: "Show grid", exact: true }).click();
+    const grid = await page.evaluate(`(async () => {
+      const { _roots } = await import('/node_modules/.vite/deps/@react-three_fiber.js');
+      const state = [..._roots.values()][0].store.getState();
+      const pane = state.internal.subscribers.find(s => s.priority === 1).store.getState();
+      let result;
+      pane.scene.traverse(object => {
+        const u = object.material?.uniforms;
+        if (u?.fadeDistance) result = { fadeFrom: u.fadeFrom.value, fadeDistance: u.fadeDistance.value, sectionSize: u.sectionSize.value };
+      });
+      return result;
+    })()`);
+    expect(grid.fadeFrom).toBe(0);
+    expect(grid.fadeDistance).toBeGreaterThan(18);
+    expect(grid.sectionSize).toBeGreaterThan(1);
+  }
+});
+
 test("orthographic toggle replaces presets and both view helpers render", async ({ page }) => {
   await ready(page);
   await expect(page.getByRole("button", { name: /Camera view:/ })).toHaveCount(0);
