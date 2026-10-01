@@ -3,6 +3,7 @@ import { BoxGeometry, Group, Mesh, MeshStandardMaterial, Texture } from "three";
 import { readFile } from "node:fs/promises";
 import { GLTFLoader } from "three-stdlib";
 import { frameBounds, inspectModel, prepareAnimationBounds } from "../src/components/ui/model-viewer/model-inspection";
+import { createViewerCameraStore } from "../src/components/ui/model-viewer/model-viewer-camera";
 
 const test = base.extend({
   browser: async ({ playwright }, provideBrowser) => {
@@ -12,6 +13,27 @@ const test = base.extend({
     await provideBrowser(browser);
     await browser.close();
   },
+});
+
+test("camera store publishes live views and validates arbitrary view commands", () => {
+  const store = createViewerCameraStore();
+  const received: string[] = [];
+  const unsubscribe = store.subscribe(() => received.push(JSON.stringify(store.getSnapshot())));
+  const view = { position: [2, 3, 4], target: [0, 0, 0] } as const;
+  expect(store.setView({ position: [...view.position], target: [...view.target] })).toBe(false);
+  const commands: Array<{ transition: boolean }> = [];
+  store.register((_view, transition) => commands.push({ transition }));
+  expect(store.setView({ position: [...view.position], target: [...view.target] }, { transition: false })).toBe(true);
+  expect(commands).toEqual([{ transition: false }]);
+  expect(store.setView({ position: [0, 0, 0], target: [0, 0, 0] })).toBe(false);
+  expect(store.setView({ position: [Infinity, 0, 0], target: [0, 0, 0] })).toBe(false);
+  store.publish({ position: [...view.position], target: [...view.target] });
+  store.publish({ position: [...view.position], target: [...view.target] });
+  expect(received).toHaveLength(1);
+  store.register(null);
+  expect(store.getSnapshot()).toBeNull();
+  expect(received).toHaveLength(2);
+  unsubscribe();
 });
 
 test("framing fits tiny, huge and offset objects at narrow aspect ratios", () => {
@@ -100,6 +122,47 @@ test("viewer accepts standard ARIA naming and description with legacy alt fallba
   await expect(viewer).not.toHaveAttribute("aria-label");
   await host.getByRole("button", { name: "Change naming" }).click();
   await expect(host.getByRole("group", { name: "Legacy name" })).toBeVisible();
+});
+
+test("custom scene content and camera API support a synchronized arbitrary view", async ({ page }) => {
+  await ready(page);
+  await page.evaluate(`(async () => {
+    const { default: React } = await import('/node_modules/.vite/deps/react.js');
+    const { default: ReactDOM } = await import('/node_modules/.vite/deps/react-dom_client.js');
+    const { ModelViewer, useModelViewer, useModelViewerCamera } = await import('/src/components/ui/model-viewer/index.ts');
+    const h = React.createElement;
+    const host = document.createElement('div');
+    host.id = 'custom-camera-test';
+    document.body.prepend(host);
+    function Gizmo() {
+      const viewer = useModelViewer();
+      React.useEffect(() => { host.dataset.sceneContent = 'mounted'; }, []);
+      React.useEffect(() => { host.dataset.sceneMode = viewer.mode; }, [viewer.mode]);
+      return h('group', { name: 'Custom gizmo' });
+    }
+    function Controls() {
+      const viewer = useModelViewer();
+      const camera = useModelViewerCamera();
+      React.useEffect(() => { host.dataset.camera = JSON.stringify(camera); }, [camera]);
+      return h('button', { disabled: !camera, onClick: () => {
+        host.dataset.command = String(viewer.setCameraView({ position: [4, 3, 5], target: [0, 0.5, 0] }, { transition: false }));
+      } }, 'Custom angle');
+    }
+    ReactDOM.createRoot(host).render(h(ModelViewer, {
+      height: 350, viewCube: false, pauseWhenHidden: false,
+      sceneContent: h(Gizmo),
+    }, h(Controls)));
+  })()`);
+  const host = page.locator("#custom-camera-test");
+  await expect(host).toHaveAttribute("data-scene-content", "mounted");
+  await expect(host).toHaveAttribute("data-scene-mode", "orbit");
+  await expect(host.getByRole("button", { name: "Custom angle" })).toBeEnabled();
+  await host.getByRole("button", { name: "Custom angle" }).click();
+  await expect(host).toHaveAttribute("data-command", "true");
+  await expect.poll(async () => {
+    const camera = JSON.parse(await host.getAttribute("data-camera") ?? "null");
+    return camera?.position.map((value: number) => Number(value.toFixed(2)));
+  }).toEqual([4, 3, 5]);
 });
 
 test("grid stays visible around an animated model on desktop and phone", async ({ page }) => {

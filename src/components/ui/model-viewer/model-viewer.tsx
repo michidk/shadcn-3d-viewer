@@ -20,6 +20,7 @@ export type {
   ViewerViewCube,
   ViewerCameraPreset,
   ViewerCameraState,
+  ViewerCameraOptions,
   ViewerProgress,
 } from "./model-viewer-types";
 
@@ -27,6 +28,7 @@ export type {
 export function ModelViewer({
   toolbar,
   overlay,
+  sceneContent,
   children,
   showUi = true,
   showAnimationControls = true,
@@ -34,7 +36,7 @@ export function ModelViewer({
 }: ModelViewerProps) {
   return (
     <ModelViewerRoot showUi={showUi} {...props}>
-      <ModelViewerScene />
+      <ModelViewerScene sceneContent={sceneContent} />
       {overlay && <ModelViewerOverlay>{overlay}</ModelViewerOverlay>}
       {showUi && (
         <>

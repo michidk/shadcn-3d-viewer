@@ -16,6 +16,8 @@ export type ViewerCameraState = {
   target: [number, number, number];
 };
 
+export type ViewerCameraOptions = { transition?: boolean };
+
 export type ViewerProgress = {
   /** Indeterminate, viewer-scoped loading state. Counts remain zero until a per-viewer asset manager is supplied. */
   active: boolean;
@@ -61,6 +63,8 @@ export interface ModelViewerProps extends Omit<
   defaultViewCube?: ViewerViewCube | false;
   viewCubePosition?: ViewCubePosition;
   viewCubeMargin?: [number, number];
+  /** R3F nodes rendered inside the primary orbit scene, after its camera controls. */
+  sceneContent?: ReactNode;
   onViewCubeChange?: (value: ViewerViewCube | false) => void;
   projection?: "perspective" | "orthographic";
   defaultProjection?: "perspective" | "orthographic";
@@ -119,7 +123,7 @@ export interface ModelViewerProps extends Omit<
 
 export type ModelViewerRootProps = Omit<
   ModelViewerProps,
-  "toolbar" | "overlay" | "showAnimationControls"
+  "toolbar" | "overlay" | "showAnimationControls" | "sceneContent"
 >;
 
 export interface ModelViewerState {
@@ -142,6 +146,10 @@ export interface ModelViewerState {
   cameraPreset: ViewerCameraPreset;
   setCameraPreset: (preset: ViewerCameraPreset) => void;
   resetView: () => void;
+  /** Latest primary orbit camera view, or null before camera controls mount. */
+  getCameraView: () => ViewerCameraState | null;
+  /** Returns false when orbit controls are unavailable or the view is invalid. */
+  setCameraView: (view: ViewerCameraState, options?: ViewerCameraOptions) => boolean;
   inspectorOpen: boolean;
   setInspectorOpen: (open: boolean) => void;
   inspection: ModelInspection | null;

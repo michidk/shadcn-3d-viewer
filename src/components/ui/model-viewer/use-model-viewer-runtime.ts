@@ -10,6 +10,7 @@ import {
   useState,
 } from "react";
 import type { ModelInspection } from "./model-inspection";
+import { createViewerCameraStore } from "./model-viewer-camera";
 import { initialViewerLifecycle, viewerLifecycleReducer } from "./model-viewer-lifecycle";
 import { viewerBackgroundColor } from "./model-viewer-colors";
 import {
@@ -166,6 +167,7 @@ export function useModelViewerRuntime({
     onAnimationSpeedChange,
   );
   const [animationNames, setAnimationNames] = useState<string[]>([]);
+  const [cameraStore] = useState(createViewerCameraStore);
   const [lifecycle, dispatchLifecycle] = useReducer(viewerLifecycleReducer, initialViewerLifecycle);
   const loaded = lifecycle.status === "ready" || lifecycle.status === "error";
   const viewerError = lifecycle.status === "error";
@@ -458,6 +460,8 @@ export function useModelViewerRuntime({
     cameraPreset,
     setCameraPreset,
     resetView: () => setResetToken((value) => value + 1),
+    getCameraView: cameraStore.getSnapshot,
+    setCameraView: cameraStore.setView,
     inspectorOpen,
     setInspectorOpen,
     inspection,
@@ -487,6 +491,7 @@ export function useModelViewerRuntime({
     viewerRef,
     canvasRef,
     viewerKey,
+    cameraStore,
     toolbarOffset,
     reportToolbar,
     setSceneMounted,

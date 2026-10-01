@@ -141,6 +141,7 @@ The dedicated `lazy` entry imports only React, styling, and the loading icon syn
 | `viewCube` | `"drei" \| "asset-studio" \| false` | `"asset-studio"` |
 | `viewCubePosition` | Gizmo alignment, e.g. `"top-right"`, `"bottom-left"` | `"top-right"` |
 | `viewCubeMargin` | `[horizontal, vertical]` pixels | `[64, 64]`; toolbar clearance on narrow viewers |
+| `sceneContent` | R3F nodes | none; primary orbit scene only |
 | `projection` | `"perspective" \| "orthographic"` | `"perspective"` |
 | `showInspector` | `boolean` | `false` |
 | `onInspect` | `(inspection: ModelInspection) => void` | none |
@@ -203,6 +204,32 @@ The toolbar offers one orthographic toggle; direction changes are available thro
 ```
 
 Standalone `ViewCube` defaults to render priority 1. When composing with a custom renderer, use a later priority (the viewer uses 2). The four split panes keep fixed directions; dragging pans and scrolling zooms without rotating them.
+
+To replace the built-in cube with your own R3F gizmo, disable it and pass scene nodes through `sceneContent` (or the same prop on `ModelViewerScene` in a compound viewer):
+
+```tsx
+<ModelViewer
+  src="/models/chair.glb"
+  viewCube={false}
+  sceneContent={<MyR3FViewCube />}
+/>
+```
+
+`sceneContent` renders inside the primary orbit pane, after its default camera controls. It is not rendered in fixed split or first-person mode. Ordinary `children` and `overlay` remain DOM content. A custom scene cube should also provide keyboard-accessible DOM controls; the built-in orientation menu is hidden when `viewCube={false}`.
+
+For arbitrary camera positions, `useModelViewer()` exposes `getCameraView()` and `setCameraView({ position, target }, { transition?: boolean })`. The setter returns `false` until orbit controls are mounted (or for non-finite/zero-distance views). `transition` defaults to `true`. `useModelViewerCamera()` subscribes to the live primary orbit camera view, returning `null` before controls mount; unlike `onCameraChange`, which fires when movement settles, it updates as the user drags. Camera values use world-space Three.js coordinates. This subscription does not rerender the viewer root on each frame.
+
+```tsx
+function CustomDirectionButton() {
+  const viewer = useModelViewer();
+  const camera = useModelViewerCamera();
+  return <button type="button" disabled={!camera} onClick={() => {
+    if (!camera) return;
+    const [x, y, z] = camera.target;
+    viewer.setCameraView({ position: [x + 3, y + 2, z + 4], target: camera.target });
+  }}>Three-quarter view</button>;
+}
+```
 
 Both built-in viewer cube variants have a DOM keyboard counterpart: Tab to **Orient view**, then use Enter/Space to open its direction menu, arrow keys/Home/End to navigate, Enter to select, and Escape to close. The trigger reveals itself on focus and stays visible while open. It is available whenever the cube is enabled in orbit mode, including `showUi={false}` with explicit `showOrientation`; it is absent in fixed split and fly modes. `ModelViewerScene` includes `ModelViewerOrientationControls` automatically. The exported part supports `className`/`style`; the standalone R3F `ViewCube` remains canvas-only and needs equivalent host DOM controls for keyboard access. Direction entries are actions, not radio selections, because orbiting can change the camera afterwards.
 
@@ -287,7 +314,7 @@ function CompactToolbar() {
 
 `render` changes the rendered element while preserving Base UI's refs, handlers, and accessibility attributes. Custom React components supplied to `render` must forward those props to their DOM element. Use `className`, `variant`, and `size` for styling without replacing an element.
 
-The hook exposes mode, lighting, shading, grid, projection, cube, camera preset, animation, inspector, and selection state with corresponding setters; `resetView`, `restartAnimation`, `capture`, and `toggleFullscreen`; plus `status`, `canCapture`, `feedback`, and `reducedMotion`. `status` is `idle` without a scene, otherwise `loading | ready | error`. Each root is independent. Using the hook or connected parts outside a root throws a descriptive error.
+The hook exposes mode, lighting, shading, grid, projection, cube, camera preset, animation, inspector, and selection state with corresponding setters; `resetView`, `getCameraView`, `setCameraView`, `restartAnimation`, `capture`, and `toggleFullscreen`; plus `status`, `canCapture`, `feedback`, and `reducedMotion`. `useModelViewerCamera` provides a separate live camera subscription. `status` is `idle` without a scene, otherwise `loading | ready | error`. Each root is independent. Using either hook or connected parts outside a root throws a descriptive error.
 
 Controlled props stay controlled: a hook action reports the change callback, but the UI changes only when the owner supplies the new value. Use `inspectorOpen` / `onInspectorOpenChange` or `defaultInspectorOpen` for new code; legacy `showInspector` remains supported.
 

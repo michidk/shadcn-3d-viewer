@@ -1,5 +1,6 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { Grid2X2, ScanSearch } from "lucide-react";
+import { GizmoHelper, GizmoViewcube } from "@react-three/drei";
 import {
   ModelViewer,
   ModelViewerRoot,
@@ -10,6 +11,7 @@ import {
   ModelViewerStatus,
   ModelViewerFullscreen,
   useModelViewer,
+  useModelViewerCamera,
   ModelViewerToolbar,
   ModelViewerToolbarButton,
   ModelViewerToolbarGroup,
@@ -91,6 +93,39 @@ type Story = StoryObj<typeof meta>;
 
 export const CustomToolbar: Story = {
   render: (args) => <ModelViewer {...args} toolbar={<CompactToolbar />} />,
+};
+
+function CustomCameraButton() {
+  const viewer = useModelViewer();
+  const camera = useModelViewerCamera();
+  return (
+    <div className="absolute bottom-4 left-4 z-10 rounded-md border bg-background p-2 text-xs shadow-sm">
+      <Button type="button" size="sm" disabled={!camera} onClick={() => {
+        if (!camera) return;
+        const [x, y, z] = camera.target;
+        viewer.setCameraView({ position: [x + 3, y + 2, z + 4], target: camera.target });
+      }}>
+        Custom angle
+      </Button>
+      <span className="ml-2">{camera ? `Camera x: ${camera.position[0].toFixed(1)}` : "Camera unavailable"}</span>
+    </div>
+  );
+}
+
+export const CustomSceneViewCube: Story = {
+  args: { viewCube: false },
+  render: (args) => (
+    <ModelViewer
+      {...args}
+      sceneContent={
+        <GizmoHelper alignment="bottom-right" margin={[75, 75]} renderPriority={2}>
+          <GizmoViewcube color="#ced8c7" textColor="#21382b" strokeColor="#55735b" />
+        </GizmoHelper>
+      }
+    >
+      <CustomCameraButton />
+    </ModelViewer>
+  ),
 };
 
 function RetryNotice() {

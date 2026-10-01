@@ -2,7 +2,7 @@ export { ModelViewer } from "./model-viewer";
 export { ModelViewerRoot } from "./model-viewer-root";
 export { ModelViewerScene } from "./model-viewer-scene";
 export { ModelViewerOrientationControls } from "./model-viewer-orientation";
-export { useModelViewer } from "./model-viewer-context";
+export { useModelViewer, useModelViewerCamera } from "./model-viewer-context";
 export {
   ModelViewerDefaultToolbar,
   ModelViewerAnimationBar,
@@ -39,6 +39,7 @@ export type {
   ModelViewerProps,
   ViewerCameraPreset,
   ViewerCameraState,
+  ViewerCameraOptions,
   ViewerLighting,
   ViewerMode,
   ViewerProgress,

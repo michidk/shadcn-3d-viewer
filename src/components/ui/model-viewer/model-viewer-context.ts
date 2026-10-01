@@ -1,5 +1,5 @@
 "use client";
-import { createContext, useContext } from "react";
+import { createContext, useContext, useSyncExternalStore } from "react";
 import type { ModelViewerState } from "./model-viewer-types";
 import type { useModelViewerRuntime } from "./use-model-viewer-runtime";
 
@@ -24,4 +24,10 @@ export function useViewerRuntime() {
 /** State and actions scoped to the nearest viewer. */
 export function useModelViewer(): ModelViewerState {
   return useViewerRuntime().state;
+}
+
+/** Live primary orbit camera view without rerendering the whole viewer. */
+export function useModelViewerCamera() {
+  const { cameraStore } = useViewerRuntime();
+  return useSyncExternalStore(cameraStore.subscribe, cameraStore.getSnapshot, () => null);
 }

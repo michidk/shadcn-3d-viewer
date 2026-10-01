@@ -62,6 +62,7 @@ import { FileWarning, LoaderCircle } from "lucide-react";
 import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
 import { cn } from "@/lib/utils";
 import { viewerBackgroundColor } from "./model-viewer-colors";
+import type { ViewerCameraStore } from "./model-viewer-camera";
 import { OutsideSky } from "./outside-sky";
 import { ViewerControlButton } from "./viewer-ui";
 import { ModelViewerOrientationControls } from "./model-viewer-orientation";
@@ -140,12 +141,14 @@ class ViewerErrorBoundary extends Component<
 export function ModelViewerScene({
   className,
   children,
+  sceneContent,
   ...props
-}: ComponentProps<"div">) {
+}: ComponentProps<"div"> & { sceneContent?: ReactNode }) {
   const {
     viewerRef,
     canvasRef,
     viewerKey,
+    cameraStore,
     toolbarOffset,
     setSceneMounted,
     src,
@@ -327,6 +330,8 @@ export function ModelViewerScene({
                   onReady={() => markReady(index)}
                   onAnimations={reportAnimations}
                   onCameraChange={index === 0 ? onCameraChange : undefined}
+                  cameraStore={index === 0 ? cameraStore : undefined}
+                  sceneContent={index === 0 ? sceneContent : undefined}
                   onLockChange={index === 0 ? setLocked : undefined}
                 />
               </ScissorView>
@@ -592,6 +597,8 @@ function ViewerScene({
   onReady,
   onAnimations,
   onCameraChange,
+  cameraStore,
+  sceneContent,
   onLockChange,
 }: {
   lighting: ViewerLighting;
@@ -631,6 +638,8 @@ function ViewerScene({
   onReady: () => void;
   onAnimations: (names: string[]) => void;
   onCameraChange?: (state: ViewerCameraState) => void;
+  cameraStore?: ViewerCameraStore;
+  sceneContent?: ReactNode;
   onLockChange?: (locked: boolean) => void;
 }) {
   const contentRef = useRef<Group | null>(null);
@@ -789,7 +798,9 @@ function ViewerScene({
             autoRotate={autoRotate}
             autoRotateSpeed={autoRotateSpeed}
             onCameraChange={onCameraChange}
+            cameraStore={mode === "orbit" ? cameraStore : undefined}
           />
+          {mode === "orbit" && sceneContent}
           {showOrientation && viewCube && (
             <ViewCube
               variant={viewCube}
@@ -1099,6 +1110,7 @@ function CameraRig({
   autoRotate,
   autoRotateSpeed,
   onCameraChange,
+  cameraStore,
   paneSelector,
   fixed,
 }: {
@@ -1112,6 +1124,7 @@ function CameraRig({
   autoRotate: boolean;
   autoRotateSpeed: number;
   onCameraChange?: (state: ViewerCameraState) => void;
+  cameraStore?: ViewerCameraStore;
 }) {
   const controls = useRef<CameraControlsImpl | null>(null);
   const camera = useThree(
@@ -1165,16 +1178,43 @@ function CameraRig({
     if (resetToken > 0) frameObject(true);
   }, [resetToken, frameObject]);
 
+  useEffect(() => {
+    if (!cameraStore) return;
+    cameraStore.register((view, transition) => {
+      void controls.current?.setLookAt(
+        ...view.position,
+        ...view.target,
+        transition,
+      );
+    });
+    const current = controls.current;
+    if (current) cameraStore.publish({
+      position: current.getPosition(new Vector3()).toArray(),
+      target: current.getTarget(new Vector3()).toArray(),
+    });
+    return () => cameraStore.register(null);
+  }, [cameraStore]);
+
   useFrame((_, delta) => {
     if (autoRotate && controls.current)
       controls.current.rotate(autoRotateSpeed * delta, 0, false);
   });
 
-  function reportCamera() {
-    if (!controls.current || !onCameraChange) return;
+  function readCamera(): ViewerCameraState | null {
+    if (!controls.current) return null;
     const position = controls.current.getPosition(new Vector3());
     const target = controls.current.getTarget(new Vector3());
-    onCameraChange({ position: position.toArray(), target: target.toArray() });
+    return { position: position.toArray(), target: target.toArray() };
+  }
+
+  function reportLiveCamera() {
+    const view = readCamera();
+    if (view) cameraStore?.publish(view);
+  }
+
+  function reportCamera() {
+    const view = readCamera();
+    if (view) onCameraChange?.(view);
   }
 
   const actions = CameraControlsImpl.ACTION;
@@ -1188,6 +1228,7 @@ function CameraRig({
       makeDefault
       smoothTime={0.25}
       dollyToCursor
+      onChange={reportLiveCamera}
       onRest={reportCamera}
       azimuthRotateSpeed={fixed ? 0 : 1}
       polarRotateSpeed={fixed ? 0 : 1}
