@@ -66,7 +66,7 @@ const customComponents: ViewerUiComponents = {
   Tooltip: function AppTooltip({ children, content }) {
     return (
       <Tooltip>
-        <TooltipTrigger asChild>{children}</TooltipTrigger>
+        <TooltipTrigger render={children} />
         <TooltipContent
           side="bottom"
           className="border border-primary bg-primary text-primary-foreground"

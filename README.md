@@ -2,6 +2,8 @@
 
 A source-owned shadcn component for viewing GLB models with React Three Fiber. It is adapted from Asset Studio's production model viewer and presented in a standalone Vite demo.
 
+The UI uses shadcn's **Base UI / Nova** primitives (`@base-ui/react`) and the standard neutral theme. Buttons, menus, and tooltips use Base UI's `render` composition API, not Radix's `asChild`. Theme tokens live in `src/theme.css`; add `dark` to the document root for dark mode. The 3D scene's day/night lighting remains independent of the UI theme.
+
 ## Features
 
 - Smooth camera controls, bounded zoom, and a single orthographic projection toggle
@@ -44,6 +46,8 @@ The 14 examples cover the interactive playground, fixed four-view layout, Drei c
 
 Storybook shares `src/theme.css` with the demo but does not load the demo page layout. All model assets are served locally from `public/`, including in the static build. The error story deliberately requests a missing model.
 
+Use Storybook's **Theme** toolbar to preview every example in light or dark mode, including portaled menus and tooltips.
+
 For browser tests, install Chromium with `bunx playwright install --with-deps chromium`, or reuse Docker Chrome through `VIEWER_TEST_CDP`. Set `STORYBOOK_TEST_URL` if Storybook is not at `http://localhost:6006`; the Docker browser must be able to reach that URL. Storybook tests are separate from the demo's `bun run test` suite.
 
 ## Add the component
@@ -55,7 +59,7 @@ bun run registry:build
 bunx shadcn@latest add ./public/r/model-viewer.json
 ```
 
-The registry item installs its React Three Fiber dependencies and the shadcn `alert`, `button`, `tooltip`, and `dropdown-menu` primitives.
+Use a Base UI shadcn project (this repository uses `"style": "base-nova"` in `components.json`). The registry item installs its React Three Fiber dependencies and the shadcn `alert`, `button`, `tooltip`, and `dropdown-menu` primitives. Radix versions of these controls are not interchangeable with the Base UI composition API.
 
 Or copy `src/components/ui/model-viewer/` into an existing shadcn project and install:
 
@@ -132,13 +136,13 @@ Standalone `ViewCube` defaults to render priority 1. When composing with a custo
 
 ### Bring your own UI
 
-Controls include accessible tooltips by default. Replace either implementation without changing the viewer:
+Controls include accessible button labels and visual tooltips by default, following Base UI's tooltip guidance. Do not put essential instructions only in a tooltip. Replace either implementation without changing the viewer:
 
 ```tsx
 <ModelViewer components={{ Button: AppButton, Tooltip: AppTooltip }} />
 ```
 
-`Button` accepts the shadcn button props (including `variant` and `size`) and must forward its ref, event handlers, ARIA attributes, and `className` to the actual button. `Tooltip` receives `{ content, children }`; use `children` as its trigger while preserving refs and handlers. Exported `ViewerUiComponents` and `ViewerTooltipProps` describe these contracts. Define overrides outside render to preserve component identity.
+`Button` accepts the Base UI shadcn button props (including `variant`, `size`, and `render`) and must forward its ref, event handlers, ARIA attributes, and `className` to the actual button. `Tooltip` receives `{ content, children }`; use `<TooltipTrigger render={children} />` to preserve refs and handlers. Exported `ViewerUiComponents` and `ViewerTooltipProps` describe these contracts. Define overrides outside render to preserve component identity.
 
 `ModelInspector` is separately exported with searchable/collapsible hierarchy, metric cards, dimensions, and selection state. Pass `inspection`, `selectedMesh`, `onSelectMesh`, optional `onClose`, `className`, and optional `components`. Use `ViewerUiProvider` to share overrides across composed controls. The inspector includes its stylesheet; override `className`/CSS for custom placement.
 

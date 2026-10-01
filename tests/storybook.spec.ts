@@ -26,7 +26,9 @@ test("Storybook manager and docs render the live viewer", async ({ page }) => {
   await expect(preview.locator("canvas")).toBeVisible({ timeout: 30000 });
   await expect(page.getByRole("tab", { name: "Controls" })).toBeVisible();
   await page.goto("/?path=/docs/viewer-model-viewer--docs");
-  await expect(preview.getByRole("heading", { name: "Model Viewer", exact: true })).toBeVisible({ timeout: 30000 });
+  await expect(
+    preview.getByRole("heading", { name: "Model Viewer", exact: true }),
+  ).toBeVisible({ timeout: 30000 });
   await expect(preview.locator("canvas")).toHaveCount(1);
 });
 
@@ -97,4 +99,76 @@ test("error story shows a recoverable model error", async ({ page }) => {
   await expect(
     page.getByRole("button", { name: "Screenshot options" }),
   ).toBeDisabled();
+});
+
+for (const theme of ["light", "dark"]) {
+  test(`Base UI menus, tooltips and keyboard focus work in ${theme} mode`, async ({
+    page,
+  }) => {
+    await page.goto(
+      `/iframe.html?id=viewer-model-viewer--playground&viewMode=story&globals=theme:${theme}`,
+    );
+    if (theme === "dark") {
+      await expect(page.locator("html")).toHaveClass(/dark/);
+    } else {
+      await expect(page.locator("html")).not.toHaveClass(/dark/);
+    }
+
+    const shading = page.getByRole("button", { name: "Shading: realistic" });
+    await shading.focus();
+    await page.keyboard.press("ArrowDown");
+    const menu = page.getByRole("menu");
+    await expect(menu).toBeVisible();
+    await expect(
+      page.getByRole("menuitem", { name: "realistic", exact: true }),
+    ).toBeFocused();
+    await page.keyboard.press("ArrowDown");
+    await page.keyboard.press("Enter");
+    await expect(menu).not.toBeVisible();
+    await expect(
+      page.getByRole("button", { name: "Shading: solid" }),
+    ).toBeFocused();
+
+    const cube = page.getByRole("button", { name: "View cube options" });
+    await cube.click();
+    const popover = await page
+      .locator("html")
+      .evaluate((element) =>
+        getComputedStyle(element).getPropertyValue("--popover").trim(),
+      );
+    await expect(menu).toHaveCSS("background-color", popover);
+    await page.keyboard.press("Escape");
+    await expect(cube).toBeFocused();
+    await expect(menu).not.toBeVisible();
+
+    const grid = page.getByRole("button", { name: "Show grid", exact: true });
+    await grid.hover();
+    // Base UI tooltips are visual labels; accessible names live on the buttons.
+    await expect(
+      page.locator('[data-slot="tooltip-content"][data-open]'),
+    ).toHaveText("Show grid");
+    await grid.click();
+    await expect(grid).toHaveAttribute("aria-pressed", "true");
+    await expect(page.locator("button button")).toHaveCount(0);
+  });
+}
+
+test("custom Base UI buttons and tooltips compose with menu triggers", async ({
+  page,
+}) => {
+  await openStory(
+    page,
+    "composition-custom-controls--custom-button-and-tooltip",
+  );
+  const cube = page.getByRole("button", { name: "View cube options" });
+  await expect(cube).toHaveClass(/rounded-full/);
+  await cube.hover();
+  await expect(
+    page.locator('[data-slot="tooltip-content"][data-open]'),
+  ).toHaveText("View cube options");
+  await cube.click();
+  await page.getByRole("menuitem", { name: "Drei cube", exact: true }).click();
+  await expect(page.getByRole("menu")).not.toBeVisible();
+  await expect(cube).toBeFocused();
+  await expect(page.locator("button button")).toHaveCount(0);
 });

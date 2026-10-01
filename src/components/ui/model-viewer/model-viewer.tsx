@@ -180,7 +180,7 @@ class ViewerErrorBoundary extends Component<
     const custom = typeof this.props.fallback === "function" ? this.props.fallback(this.state.error) : this.props.fallback;
     return (
       <div className="viewer-error-wrap">
-        {custom ?? <Alert><AlertDescription>Could not display this model: {this.state.error.message}</AlertDescription></Alert>}
+        {custom ?? <Alert variant="destructive"><AlertDescription>Could not display this model: {this.state.error.message}</AlertDescription></Alert>}
       </div>
     );
   }
@@ -401,7 +401,7 @@ export function ModelViewer({
       source.height = canvas.height;
       const context = source.getContext("2d");
       if (!context) throw new Error("The viewer could not create a PNG.");
-      context.fillStyle = lighting === "day" ? "#e7e9e4" : "#111a22";
+      context.fillStyle = lighting === "day" ? "#f5f5f5" : "#171717";
       context.fillRect(0, 0, source.width, source.height);
       context.drawImage(canvas, 0, 0);
       const image = new Promise<Blob>((resolve, reject) => {
@@ -480,7 +480,7 @@ export function ModelViewer({
                 key={`${mode}-${pane.face ?? "primary"}`}
                 track={paneTracks[index]}
                 index={index + 1}
-                clearColor={lighting === "day" ? "#e7e9e4" : "#111a22"}
+                clearColor={lighting === "day" ? "#f5f5f5" : "#171717"}
               >
                   <ViewerScene
                     lighting={lighting}
@@ -791,7 +791,7 @@ function ViewerScene({
     setGridScale(frameBounds(container, 1).radius / 2);
     setFitVersion((value) => value + 1);
   }, []);
-  const background = lighting === "day" ? "#e7e9e4" : "#111a22";
+  const background = lighting === "day" ? "#f5f5f5" : "#171717";
 
   return (
     <>

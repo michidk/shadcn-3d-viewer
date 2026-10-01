@@ -289,7 +289,7 @@ test("tooltips and searchable inspector remain usable on phones", async ({ page 
   await page.setViewportSize({ width: 390, height: 844 });
   await ready(page);
   await page.getByRole("button", { name: "Inspect model", exact: true }).hover();
-  await expect(page.getByRole("tooltip")).toHaveText("Inspect model");
+  await expect(page.locator('[data-slot="tooltip-content"][data-open]')).toHaveText("Inspect model");
   await page.getByRole("button", { name: "Inspect model", exact: true }).click();
   const inspector = page.getByRole("complementary", { name: "Model inspector" });
   const search = page.getByRole("textbox", { name: "Search hierarchy" });
@@ -392,5 +392,5 @@ test("shadcn composition forwards props and refs and supports controlled custom 
   await page.keyboard.press("Home");
   await expect(grid).toBeFocused();
   await grid.hover();
-  await expect(page.getByRole("tooltip")).toHaveText("Toggle reference lines");
+  await expect(page.locator('[data-slot="tooltip-content"][data-open]')).toHaveText("Toggle reference lines");
 });

@@ -175,17 +175,20 @@ export function ModelViewerControls({
   return (
     <ModelViewerToolbar {...props}>
       <DropdownMenu>
-        <DropdownMenuTrigger asChild>
-          <Button
-            type="button"
-            variant="outline"
-            className="viewer-shading-trigger text-[10px] font-semibold"
-            aria-label={`Shading: ${shading}`}
-          >
-            {shading}
-            <ChevronDown />
-          </Button>
-        </DropdownMenuTrigger>
+        <DropdownMenuTrigger
+          render={
+            <Button
+              type="button"
+              variant="outline"
+              size="lg"
+              className="viewer-shading-trigger bg-popover dark:bg-popover"
+              aria-label={`Shading: ${shading}`}
+            >
+              {shading}
+              <ChevronDown />
+            </Button>
+          }
+        />
         <DropdownMenuContent
           align="start"
           sideOffset={6}
@@ -195,7 +198,7 @@ export function ModelViewerControls({
             (option) => (
               <DropdownMenuItem
                 key={option}
-                onSelect={() => onShadingChange(option)}
+                onClick={() => onShadingChange(option)}
               >
                 <Check
                   className={option === shading ? "is-visible" : "is-hidden"}
@@ -250,21 +253,23 @@ export function ModelViewerControls({
           }
         />
         <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button
-              type="button"
-              size="icon-sm"
-              variant="ghost"
-              aria-label="View cube options"
-            >
-              <Box />
-            </Button>
-          </DropdownMenuTrigger>
+          <DropdownMenuTrigger
+            render={
+              <Button
+                type="button"
+                size="icon-sm"
+                variant="ghost"
+                aria-label="View cube options"
+              >
+                <Box />
+              </Button>
+            }
+          />
           <DropdownMenuContent className="viewer-menu">
             {([false, "drei", "asset-studio"] as const).map((value) => (
               <DropdownMenuItem
                 key={String(value)}
-                onSelect={() => onViewCubeChange(value)}
+                onClick={() => onViewCubeChange(value)}
               >
                 <Check
                   className={viewCube === value ? "is-visible" : "is-hidden"}
@@ -290,18 +295,20 @@ export function ModelViewerControls({
           onClick={onReset}
         />
         <DropdownMenu open={captureMenuOpen} onOpenChange={setCaptureMenuOpen}>
-          <DropdownMenuTrigger asChild>
-            <Button
-              type="button"
-              size="icon-sm"
-              variant={captureMenuOpen ? "secondary" : "ghost"}
-              aria-label="Screenshot options"
-              title="Screenshot options"
-              disabled={captureDisabled}
-            >
-              <Camera />
-            </Button>
-          </DropdownMenuTrigger>
+          <DropdownMenuTrigger
+            render={
+              <Button
+                type="button"
+                size="icon-sm"
+                variant={captureMenuOpen ? "secondary" : "ghost"}
+                aria-label="Screenshot options"
+                title="Screenshot options"
+                disabled={captureDisabled}
+              >
+                <Camera />
+              </Button>
+            }
+          />
           <DropdownMenuContent
             align="end"
             sideOffset={8}
@@ -310,10 +317,10 @@ export function ModelViewerControls({
             <div className="viewer-capture-title">
               Capture view <span>PNG</span>
             </div>
-            <DropdownMenuItem onSelect={() => void onCapture("copy")}>
+            <DropdownMenuItem onClick={() => void onCapture("copy")}>
               <Copy /> Copy to clipboard
             </DropdownMenuItem>
-            <DropdownMenuItem onSelect={() => void onCapture("download")}>
+            <DropdownMenuItem onClick={() => void onCapture("download")}>
               <Download /> Download image
             </DropdownMenuItem>
           </DropdownMenuContent>
@@ -362,17 +369,19 @@ export function ModelViewerAnimationControls({
         onClick={() => onPlayingChange(!playing)}
       />
       <DropdownMenu>
-        <DropdownMenuTrigger asChild>
-          <Button
-            type="button"
-            size="sm"
-            variant="ghost"
-            className="viewer-animation-name"
-          >
-            {animation ?? "No animation"}
-            <ChevronDown />
-          </Button>
-        </DropdownMenuTrigger>
+        <DropdownMenuTrigger
+          render={
+            <Button
+              type="button"
+              size="sm"
+              variant="ghost"
+              className="viewer-animation-name"
+            >
+              <span className="truncate">{animation ?? "No animation"}</span>
+              <ChevronDown />
+            </Button>
+          }
+        />
         <DropdownMenuContent
           align="start"
           sideOffset={6}
@@ -381,7 +390,7 @@ export function ModelViewerAnimationControls({
           {clips.map((name) => (
             <DropdownMenuItem
               key={name}
-              onSelect={() => onAnimationChange(name)}
+              onClick={() => onAnimationChange(name)}
             >
               <Check
                 className={name === animation ? "is-visible" : "is-hidden"}
@@ -398,8 +407,9 @@ export function ModelViewerAnimationControls({
       />
       <Button
         type="button"
-        size="icon-sm"
+        size="sm"
         variant="ghost"
+        className="viewer-animation-speed"
         aria-label={`Animation speed ${speed}×`}
         title={`Animation speed ${speed}×`}
         onClick={() =>

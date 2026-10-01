@@ -29,14 +29,14 @@ function DefaultTooltip({ children, content }: ViewerTooltipProps) {
   const hasProvider = useContext(ViewerUiContext) !== null;
   const tooltip = (
     <Tooltip>
-      <TooltipTrigger asChild>{children}</TooltipTrigger>
+      <TooltipTrigger render={children} />
       <TooltipContent>{content}</TooltipContent>
     </Tooltip>
   );
   return hasProvider ? (
     tooltip
   ) : (
-    <TooltipProvider delayDuration={350}>{tooltip}</TooltipProvider>
+    <TooltipProvider delay={350}>{tooltip}</TooltipProvider>
   );
 }
 
@@ -60,7 +60,7 @@ export function ViewerUiProvider({
   );
   return (
     <ViewerUiContext.Provider value={value}>
-      <TooltipProvider delayDuration={350}>{children}</TooltipProvider>
+      <TooltipProvider delay={350}>{children}</TooltipProvider>
     </ViewerUiContext.Provider>
   );
 }
