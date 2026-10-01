@@ -32,6 +32,20 @@ Production checks:
 bun run verify
 ```
 
+## Storybook
+
+```sh
+bun run storybook        # http://localhost:6006
+bun run storybook:build  # static site in storybook-static/
+bun run storybook:test   # smoke tests against a running Storybook
+```
+
+The 14 examples cover the interactive playground, fixed four-view layout, Drei cube, night lighting, the bundled animated robot, model inspection, minimal embeds, error handling, custom toolbars, custom button/tooltip implementations, styled overlays, and standalone inspector states. Viewer toolbar changes and Storybook Controls stay in sync. Docs pages render one live viewer at a time to stay within browser WebGL limits.
+
+Storybook shares `src/theme.css` with the demo but does not load the demo page layout. All model assets are served locally from `public/`, including in the static build. The error story deliberately requests a missing model.
+
+For browser tests, install Chromium with `bunx playwright install --with-deps chromium`, or reuse Docker Chrome through `VIEWER_TEST_CDP`. Set `STORYBOOK_TEST_URL` if Storybook is not at `http://localhost:6006`; the Docker browser must be able to reach that URL. Storybook tests are separate from the demo's `bun run test` suite.
+
 ## Add the component
 
 This repository includes a shadcn registry manifest. Build the local registry, then install the component into another shadcn project:
