@@ -189,7 +189,7 @@ test("storybook indexes all examples and the playground controls stay interactiv
     Object.values(index.entries).filter(
       (entry) => (entry as { type: string }).type === "story",
     ),
-  ).toHaveLength(23);
+  ).toHaveLength(25);
   await openStory(page, "viewer-model-viewer--playground");
   await expect(page.locator("canvas")).toBeVisible();
   const grid = page.getByRole("button", { name: "Show grid", exact: true });
@@ -212,6 +212,38 @@ test("animated example loads the bundled model and plays", async ({ page }) => {
   await expect(
     page.getByRole("button", { name: "Pause animation", exact: true }),
   ).toBeVisible();
+});
+
+test("named animation and rotation can both start automatically", async ({ page }) => {
+  await openStory(page, "viewer-model-viewer--rotating-animated-model");
+  await expect(page.locator('[data-slot="model-viewer"]')).toHaveAttribute("data-state", "ready");
+  await expect(page.locator(".viewer-animation-name")).toContainText("Walking");
+  await expect(page.getByRole("button", { name: "Pause animation" })).toBeVisible();
+  const rotate = page.getByRole("button", { name: "Rotate automatically" });
+  await expect(rotate).toHaveAttribute("aria-pressed", "true");
+  await rotate.click();
+  await expect(rotate).toHaveAttribute("aria-pressed", "false");
+  await page.getByRole("button", { name: "Pause animation" }).click();
+  await expect(page.getByRole("button", { name: "Play animation" })).toBeVisible();
+});
+
+test("outside story shows a sky and a model shadow on the floor", async ({ page }) => {
+  await openStory(page, "viewer-model-viewer--outside-with-floor");
+  const viewer = page.locator('[data-slot="model-viewer"]');
+  await expect(viewer).toHaveAttribute("data-state", "ready");
+  await expect(viewer).toHaveClass(/is-outside/);
+  await expect(page.getByRole("button", { name: "Show floor" })).toHaveAttribute("aria-pressed", "true");
+  const pixels = await viewer.locator("canvas").evaluate((canvas: HTMLCanvasElement) => {
+    const copy = document.createElement("canvas");
+    copy.width = canvas.width;
+    copy.height = canvas.height;
+    const context = copy.getContext("2d")!;
+    context.drawImage(canvas, 0, 0);
+    const sample = (y: number) => [...context.getImageData(canvas.width / 2, y, 1, 1).data];
+    return { sky: sample(canvas.height * 0.12), floor: sample(canvas.height * 0.84) };
+  });
+  expect(pixels.sky[0]).toBeLessThan(pixels.floor[0] - 10);
+  expect(pixels.sky[2]).toBeGreaterThan(pixels.sky[0] + 20);
 });
 
 test("default corner controls stay separated at desktop and phone widths", async ({ page }) => {

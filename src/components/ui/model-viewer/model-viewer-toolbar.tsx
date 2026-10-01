@@ -12,20 +12,21 @@ import {
   Box,
   Camera,
   ChevronDown,
+  CloudSun,
   Copy,
   Download,
   Footprints,
   Gauge,
   Grid2X2,
+  Layers3,
   LayoutGrid,
   ListTree,
-  Moon,
   Pause,
   Play,
   Rotate3D,
   RotateCcw,
+  RotateCw,
   ScanSearch,
-  Sun,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
@@ -195,6 +196,10 @@ export type ModelViewerControlsProps = Omit<
   onLightingChange: (lighting: ViewerLighting) => void;
   grid: boolean;
   onGridChange: (visible: boolean) => void;
+  floor?: boolean;
+  onFloorChange?: (visible: boolean) => void;
+  autoRotate?: boolean;
+  onAutoRotateChange?: (rotating: boolean) => void;
   projection: "perspective" | "orthographic";
   onProjectionChange: (projection: "perspective" | "orthographic") => void;
   viewCube: ViewerViewCube | false;
@@ -216,6 +221,10 @@ export function ModelViewerControls({
   onLightingChange,
   grid,
   onGridChange,
+  floor = false,
+  onFloorChange,
+  autoRotate = false,
+  onAutoRotateChange,
   projection,
   onProjectionChange,
   viewCube,
@@ -290,20 +299,49 @@ export function ModelViewerControls({
           active={mode === "firstPerson"}
           onClick={() => onModeChange("firstPerson")}
         />
+        {onAutoRotateChange && (
+          <ModelViewerToolbarButton
+            icon={<RotateCw />}
+            label="Rotate automatically"
+            active={autoRotate}
+            disabled={mode !== "orbit"}
+            onClick={() => onAutoRotateChange(!autoRotate)}
+          />
+        )}
       </ModelViewerToolbarGroup>
       <ModelViewerToolbarGroup aria-label="Scene options">
-        <ModelViewerToolbarButton
-          icon={lighting === "day" ? <Sun /> : <Moon />}
-          label={lighting === "day" ? "Switch to night" : "Switch to day"}
-          active={lighting === "night"}
-          onClick={() => onLightingChange(lighting === "day" ? "night" : "day")}
-        />
+        <DropdownMenu>
+          <DropdownMenuTrigger
+            render={
+              <Button type="button" size="icon-sm" variant="ghost" aria-label={`Lighting: ${lighting}`} tooltip="Lighting">
+                <CloudSun />
+              </Button>
+            }
+          />
+          <DropdownMenuContent className="min-w-40">
+            <DropdownMenuRadioGroup aria-label="Lighting" value={lighting} onValueChange={onLightingChange}>
+              {(["day", "night", "outside"] as const).map((value) => (
+                <DropdownMenuRadioItem key={value} value={value} closeOnClick>
+                  {value === "outside" ? "Outside sky" : value === "day" ? "Day studio" : "Night studio"}
+                </DropdownMenuRadioItem>
+              ))}
+            </DropdownMenuRadioGroup>
+          </DropdownMenuContent>
+        </DropdownMenu>
         <ModelViewerToolbarButton
           icon={<Grid2X2 />}
           label="Show grid"
           active={grid}
           onClick={() => onGridChange(!grid)}
         />
+        {onFloorChange && (
+          <ModelViewerToolbarButton
+            icon={<Layers3 />}
+            label="Show floor"
+            active={floor}
+            onClick={() => onFloorChange(!floor)}
+          />
+        )}
         <ModelViewerToolbarButton
           icon={<ScanSearch />}
           label="Orthographic view"

@@ -26,6 +26,10 @@ export function ModelViewerDefaultToolbar(
       onLightingChange={viewer.setLighting}
       grid={viewer.showGrid}
       onGridChange={viewer.setShowGrid}
+      floor={viewer.showFloor}
+      onFloorChange={viewer.setShowFloor}
+      autoRotate={viewer.autoRotate}
+      onAutoRotateChange={viewer.setAutoRotate}
       projection={viewer.projection}
       onProjectionChange={viewer.setProjection}
       viewCube={viewer.viewCube}

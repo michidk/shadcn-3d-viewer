@@ -27,6 +27,7 @@ export function ModelViewerRoot(props: ModelViewerRootProps) {
             "model-viewer",
             toolbarOffset > 0 && "has-toolbar",
             state.lighting === "night" && "is-night",
+            state.lighting === "outside" && "is-outside",
             root.isExpanded && "is-expanded",
             root.className,
           )}

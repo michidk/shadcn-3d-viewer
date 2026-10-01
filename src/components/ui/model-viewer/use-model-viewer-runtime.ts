@@ -11,6 +11,7 @@ import {
 } from "react";
 import type { ModelInspection } from "./model-inspection";
 import { initialViewerLifecycle, viewerLifecycleReducer } from "./model-viewer-lifecycle";
+import { viewerBackgroundColor } from "./model-viewer-colors";
 import {
   splitPanes,
   type ModelViewerRootProps,
@@ -39,6 +40,10 @@ export function useModelViewerRuntime({
   showGrid: controlledGrid,
   defaultShowGrid = false,
   onGridChange,
+  showFloor: controlledFloor,
+  defaultShowFloor = false,
+  onFloorChange,
+  floorColor,
   showCubes: requestedCubes,
   showUi = true,
   showOrientation = showUi,
@@ -55,7 +60,9 @@ export function useModelViewerRuntime({
   defaultInspectorOpen = false,
   onInspectorOpenChange,
   onInspect,
-  autoRotate = false,
+  autoRotate: controlledAutoRotate,
+  defaultAutoRotate = false,
+  onAutoRotateChange,
   autoRotateSpeed = 0.15,
   cameraPreset: controlledCameraPreset,
   defaultCameraPreset = "isometric",
@@ -125,6 +132,16 @@ export function useModelViewerRuntime({
     controlledGrid,
     defaultShowGrid,
     onGridChange,
+  );
+  const [floor, setFloor] = useControlledState(
+    controlledFloor,
+    defaultShowFloor,
+    onFloorChange,
+  );
+  const [autoRotate, setAutoRotate] = useControlledState(
+    controlledAutoRotate,
+    defaultAutoRotate,
+    onAutoRotateChange,
   );
   const [cameraPreset, setCameraPreset] = useControlledState(
     controlledCameraPreset,
@@ -356,7 +373,7 @@ export function useModelViewerRuntime({
       source.height = canvas.height;
       const context = source.getContext("2d");
       if (!context) throw new Error("The viewer could not create a PNG.");
-      context.fillStyle = lighting === "day" ? "#f5f5f5" : "#171717";
+      context.fillStyle = viewerBackgroundColor(lighting);
       context.fillRect(0, 0, source.width, source.height);
       context.drawImage(canvas, 0, 0);
       const image = new Promise<Blob>((resolve, reject) => {
@@ -428,6 +445,10 @@ export function useModelViewerRuntime({
     setShading,
     showGrid: grid,
     setShowGrid: setGrid,
+    showFloor: floor,
+    setShowFloor: setFloor,
+    autoRotate,
+    setAutoRotate,
     projection,
     setProjection,
     viewCube,
@@ -474,6 +495,8 @@ export function useModelViewerRuntime({
     lighting,
     shading,
     grid,
+    floor,
+    floorColor,
     cubes,
     cameraPreset,
     resetToken,

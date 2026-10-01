@@ -5,7 +5,7 @@ import type { ViewerUiComponents } from "./viewer-ui";
 import type { ViewCubePosition } from "./view-cube";
 
 export type ViewerMode = "orbit" | "split" | "firstPerson";
-export type ViewerLighting = "day" | "night";
+export type ViewerLighting = "day" | "night" | "outside";
 export type ViewerShading = "realistic" | "solid" | "normals" | "wireframe";
 export type ViewerViewCube = "drei" | "asset-studio";
 export type ViewerCameraPreset =
@@ -47,6 +47,12 @@ export interface ModelViewerProps extends Omit<
   showGrid?: boolean;
   defaultShowGrid?: boolean;
   onGridChange?: (visible: boolean) => void;
+  /** Infinite-looking ground plane that receives model shadows. */
+  showFloor?: boolean;
+  defaultShowFloor?: boolean;
+  onFloorChange?: (visible: boolean) => void;
+  /** Defaults to the current lighting mode's background/horizon color. */
+  floorColor?: string;
   showCubes?: boolean;
   showUi?: boolean;
   showOrientation?: boolean;
@@ -65,7 +71,11 @@ export interface ModelViewerProps extends Omit<
   onInspectorOpenChange?: (open: boolean) => void;
   onInspect?: (inspection: ModelInspection) => void;
   showAnimationControls?: boolean;
+  /** Controlled camera orbit around the model. Active only in orbit mode. */
   autoRotate?: boolean;
+  /** Initial auto-rotation for an uncontrolled viewer. */
+  defaultAutoRotate?: boolean;
+  onAutoRotateChange?: (rotating: boolean) => void;
   autoRotateSpeed?: number;
   cameraPreset?: ViewerCameraPreset;
   defaultCameraPreset?: ViewerCameraPreset;
@@ -120,6 +130,10 @@ export interface ModelViewerState {
   setShading: (shading: ViewerShading) => void;
   showGrid: boolean;
   setShowGrid: (visible: boolean) => void;
+  showFloor: boolean;
+  setShowFloor: (visible: boolean) => void;
+  autoRotate: boolean;
+  setAutoRotate: (rotating: boolean) => void;
   projection: "perspective" | "orthographic";
   setProjection: (projection: "perspective" | "orthographic") => void;
   viewCube: ViewerViewCube | false;

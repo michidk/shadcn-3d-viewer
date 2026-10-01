@@ -109,9 +109,12 @@ The dedicated `lazy` entry imports only React, styling, and the loading icon syn
 | `src` | `string` | built-in sample |
 | `height` | CSS height | `620` |
 | `mode` | `orbit \| split \| firstPerson` | `orbit` |
-| `lighting` | `day \| night` | `day` |
+| `lighting` | `day \| night \| outside` | `day` |
 | `shading` | `realistic \| solid \| normals \| wireframe` | `realistic` |
 | `showGrid` | `boolean` | `false` |
+| `showFloor` | `boolean` | `false` |
+| `defaultShowFloor` | `boolean` | `false`; initial uncontrolled floor visibility |
+| `floorColor` | CSS color | current background/horizon color |
 | `showUi` | `boolean` | `true` |
 | `showOrientation` | `boolean` | follows `showUi` |
 | `viewCube` | `"drei" \| "asset-studio" \| false` | `"asset-studio"` |
@@ -121,9 +124,14 @@ The dedicated `lazy` entry imports only React, styling, and the loading icon syn
 | `showInspector` | `boolean` | `false` |
 | `onInspect` | `(inspection: ModelInspection) => void` | none |
 | `autoRotate` | `boolean` | `false` |
+| `defaultAutoRotate` | `boolean` | `false`; initial uncontrolled rotation |
+| `onAutoRotateChange` | `(rotating: boolean) => void` | none |
+| `autoRotateSpeed` | radians per second | `0.15` |
 | `cameraPreset` | `isometric \| front \| right \| back \| left \| top \| bottom` | `isometric` |
 | `animation` | clip name or `null` | first available clip |
+| `defaultAnimation` | clip name or `null` | first available clip |
 | `animationPlaying` | `boolean` | `false` |
+| `defaultAnimationPlaying` | `boolean` | `false` |
 | `animationSpeed` | `number` | `1` |
 | `environment` | `boolean` | `true` |
 | `poster` | image URL | none |
@@ -133,7 +141,7 @@ The dedicated `lazy` entry imports only React, styling, and the loading icon syn
 | `showRetry` | `boolean` | `false` |
 | `pauseWhenHidden` | `boolean` | `true` |
 
-Loading filenames are hidden unless `showFileName` is enabled. This affects built-in loading UI only, not network requests or custom renderers. Custom loading renderers receive `{ active, progress, item, loaded, total }`; progress describes loader items, not byte-accurate transfer progress. The default error card omits raw technical details; use `onError` for logging or `errorFallback` to render them yourself. Pass `null` (or return `null`) to hide either overlay.
+Loading filenames are hidden unless `showFileName` is enabled. This affects built-in loading UI only, not network requests or custom renderers. Custom loading renderers receive `{ active, progress, item, loaded, total }`; `item` is this viewer's `src`, while the numeric fields remain zero because loading is indeterminate and isolated from other viewers. The default error card omits raw technical details; use `onError` for logging or `errorFallback` to render them yourself. Pass `null` (or return `null`) to hide either overlay.
 
 `showRetry` adds a button to the default error card. `useModelViewer().retry()` provides the same action for custom fallback components: it clears Drei's cache for the failed URL and remounts the renderer, resetting load/inspection state. Retry is manual and only acts on a failed model with a `src`; it does not fix invalid files or renew signed URLs. Replace `src` in the host app for those cases. `onError` reports every failed attempt and `onLoad` reports successful recovery.
 
@@ -147,7 +155,20 @@ With `pauseWhenHidden`, leaving the viewport or hiding the browser tab stops the
 />
 ```
 
-`mode`, `lighting`, `shading`, `showGrid`, `viewCube`, `projection`, camera, and animation props are controlled when supplied. Use their corresponding `default*` props for uncontrolled initial values. Change callbacks report toolbar interactions. In particular, use `onViewCubeChange` and `onProjectionChange` when controlling these options externally.
+`mode`, `lighting`, `shading`, `showGrid`, `showFloor`, `viewCube`, `projection`, `autoRotate`, camera, and animation props are controlled when supplied. Use their corresponding `default*` props for uncontrolled initial values. Change callbacks report toolbar interactions. In particular, use `onViewCubeChange`, `onProjectionChange`, `onFloorChange`, and `onAutoRotateChange` when controlling these options externally. Auto-rotation orbits the camera around the model in orbit mode; its toolbar toggle is disabled in split and fly modes, and the rotation preference resumes when returning to orbit mode.
+
+`showFloor` adds a large ground plane and shadow receiver without changing the model's GLB. Its default color matches the studio background or the Outside horizon tone; `floorColor` overrides it. Outside uses a procedural atmospheric sky and sun lighting without fetching a remote HDRI. Realistic shading preserves source materials and textures; Solid replaces them with a muted matte gray, including the sample objects.
+
+To start an animated model rotating and playing a particular clip:
+
+```tsx
+<ModelViewer
+  src="/models/robot-expressive.glb"
+  defaultAutoRotate
+  defaultAnimation="Walking"
+  defaultAnimationPlaying
+/>
+```
 
 The toolbar offers one orthographic toggle; direction changes are available through the orientation helper. `cameraPreset` remains available for programmatic positioning. Helpers appear in orbit mode. Set `viewCube={false}` to hide one, or explicitly set `showOrientation` to show it in a UI-free viewer.
 

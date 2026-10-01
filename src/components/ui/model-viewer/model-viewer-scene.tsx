@@ -61,6 +61,8 @@ import { clone } from "three/addons/utils/SkeletonUtils.js";
 import { FileWarning, LoaderCircle } from "lucide-react";
 import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
 import { cn } from "@/lib/utils";
+import { viewerBackgroundColor } from "./model-viewer-colors";
+import { OutsideSky } from "./outside-sky";
 import { ViewerControlButton } from "./viewer-ui";
 import { ModelViewerOrientationControls } from "./model-viewer-orientation";
 import { ViewCube, type ViewCubePosition } from "./view-cube";
@@ -151,6 +153,8 @@ export function ModelViewerScene({
     lighting,
     shading,
     grid,
+    floor,
+    floorColor,
     cubes,
     cameraPreset,
     resetToken,
@@ -245,6 +249,7 @@ export function ModelViewerScene({
         </div>
         <Canvas
           className="viewer-canvas"
+          shadows={floor}
           dpr={quality}
           frameloop={
             renderingPaused
@@ -280,12 +285,14 @@ export function ModelViewerScene({
                 key={`${mode}-${pane.face ?? "primary"}`}
                 track={paneTracks[index]}
                 index={index + 1}
-                clearColor={lighting === "day" ? "#f5f5f5" : "#171717"}
+                clearColor={viewerBackgroundColor(lighting)}
               >
                 <ViewerScene
                   lighting={lighting}
                   shading={shading}
                   grid={grid}
+                  floor={floor}
+                  floorColor={floorColor}
                   src={src}
                   cubes={cubes}
                   mode={mode}
@@ -551,6 +558,8 @@ function ViewerScene({
   lighting,
   shading,
   grid,
+  floor,
+  floorColor,
   src,
   cubes,
   mode,
@@ -588,6 +597,8 @@ function ViewerScene({
   lighting: ViewerLighting;
   shading: ViewerShading;
   grid: boolean;
+  floor: boolean;
+  floorColor?: string;
   src?: string;
   cubes: boolean;
   mode: ViewerMode;
@@ -642,7 +653,7 @@ function ViewerScene({
     },
     [],
   );
-  const background = lighting === "day" ? "#f5f5f5" : "#171717";
+  const background = viewerBackgroundColor(lighting);
 
   return (
     <>
@@ -663,18 +674,48 @@ function ViewerScene({
         />
       )}
       <color attach="background" args={[background]} />
-      <ambientLight intensity={lighting === "day" ? 0.48 : 0.3} />
+      {lighting === "outside" && <OutsideSky />}
+      <ambientLight intensity={lighting === "night" ? 0.3 : 0.48} />
       <directionalLight
-        position={[5, 9, 6]}
-        intensity={lighting === "day" ? 1.7 : 1.05}
-        color={lighting === "day" ? "#fff7e6" : "#bdd5ff"}
+        position={[5 * gridScale, 9 * gridScale, 6 * gridScale]}
+        intensity={lighting === "night" ? 1.05 : lighting === "outside" ? 2 : 1.7}
+        color={lighting === "night" ? "#bdd5ff" : "#fff7e6"}
+        castShadow={floor}
+        shadow-mapSize={[2048, 2048]}
+        shadow-camera-left={-16 * gridScale}
+        shadow-camera-right={16 * gridScale}
+        shadow-camera-top={16 * gridScale}
+        shadow-camera-bottom={-16 * gridScale}
+        shadow-camera-near={0.1 * gridScale}
+        shadow-camera-far={40 * gridScale}
+        shadow-normalBias={0.02 * gridScale}
       />
       <directionalLight
         position={[-4, 4, -6]}
-        intensity={lighting === "day" ? 0.45 : 1.4}
-        color={lighting === "day" ? "#dcebdc" : "#688db3"}
+        intensity={lighting === "night" ? 1.4 : 0.45}
+        color={lighting === "night" ? "#688db3" : "#dcebdc"}
       />
-      {environment && <StudioEnvironment lighting={lighting} />}
+      {environment && (
+        lighting === "outside" ? (
+          <Environment resolution={128} frames={1} background={false} environmentIntensity={0.8}>
+            <OutsideSky />
+          </Environment>
+        ) : (
+          <StudioEnvironment lighting={lighting} />
+        )
+      )}
+      {floor && (
+        <>
+          <mesh name="Viewer floor" rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.002 * gridScale, 0]}>
+            <planeGeometry args={[2000 * gridScale, 2000 * gridScale]} />
+            <meshBasicMaterial color={floorColor ?? background} toneMapped={false} />
+          </mesh>
+          <mesh name="Viewer floor shadows" rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.001 * gridScale, 0]} receiveShadow>
+            <planeGeometry args={[2000 * gridScale, 2000 * gridScale]} />
+            <shadowMaterial transparent opacity={lighting === "night" ? 0.5 : 0.28} depthWrite={false} />
+          </mesh>
+        </>
+      )}
       {grid && (
         <Grid
           infiniteGrid
@@ -738,6 +779,7 @@ function ViewerScene({
       ) : (
         <>
           <CameraRig
+            lighting={lighting}
             fixed={Boolean(face)}
             paneSelector={paneSelector}
             objectRef={contentRef}
@@ -872,30 +914,35 @@ function SceneObject({
         <>
           <mesh
             name="Cube"
+            castShadow
             position={[-1.25, 0.45, 0]}
             rotation={[0, 0.25, 0.08]}
           >
             <boxGeometry args={[0.9, 0.9, 0.9]} />
             <ViewerMaterial
               shading={selectedMesh === "0/0" ? "solid" : shading}
+              selected={selectedMesh === "0/0"}
               color={selectedMesh === "0/0" ? "#e9c56a" : "#b3c899"}
             />
           </mesh>
           <mesh
             name="Dodecahedron"
+            castShadow
             position={[1.05, 0.55, -0.55]}
             rotation={[0, -0.35, 0]}
           >
             <dodecahedronGeometry args={[0.55, 0]} />
             <ViewerMaterial
               shading={selectedMesh === "0/1" ? "solid" : shading}
+              selected={selectedMesh === "0/1"}
               color={selectedMesh === "0/1" ? "#e9c56a" : "#d19a78"}
             />
           </mesh>
-          <mesh name="Sphere" position={[0.15, 0.42, 1]}>
+          <mesh name="Sphere" castShadow position={[0.15, 0.42, 1]}>
             <sphereGeometry args={[0.42, 48, 48]} />
             <ViewerMaterial
               shading={selectedMesh === "0/2" ? "solid" : shading}
+              selected={selectedMesh === "0/2"}
               color={selectedMesh === "0/2" ? "#e9c56a" : "#7fa7a7"}
             />
           </mesh>
@@ -940,6 +987,9 @@ function LoadedModel({
   prepareAnimationBounds(gltf.scene, gltf.animations);
   const model = useMemo(() => {
     const result = clone(gltf.scene);
+    result.traverse((object) => {
+      if ((object as Mesh).isMesh) (object as Mesh).castShadow = true;
+    });
     result.updateMatrixWorld(true);
     return result;
   }, [gltf.scene]);
@@ -1022,16 +1072,18 @@ function LoadedModel({
 function ViewerMaterial({
   shading,
   color = "#a7aaa5",
+  selected = false,
 }: {
   shading: ViewerShading;
   color?: string;
+  selected?: boolean;
 }) {
   if (shading === "normals") return <meshNormalMaterial />;
   if (shading === "wireframe")
     return <meshBasicMaterial color="#34483f" wireframe />;
   return (
     <meshStandardMaterial
-      color={color}
+      color={shading === "solid" && !selected ? "#a7aaa5" : color}
       roughness={shading === "solid" ? 0.82 : 0.68}
       metalness={0}
     />
@@ -1039,6 +1091,7 @@ function ViewerMaterial({
 }
 
 function CameraRig({
+  lighting,
   objectRef,
   fitVersion,
   preset,
@@ -1049,6 +1102,7 @@ function CameraRig({
   paneSelector,
   fixed,
 }: {
+  lighting: ViewerLighting;
   fixed: boolean;
   paneSelector: string;
   objectRef: RefObject<Group | null>;
@@ -1082,7 +1136,11 @@ function CameraRig({
           Math.min(size.width, size.height) / (radius * 2.3),
           false,
         );
-      const direction = new Vector3(...presetVectors[preset]).normalize();
+      const direction = new Vector3(
+        ...(lighting === "outside" && preset === "isometric"
+          ? [1.7, 0.5, 1.7] as const
+          : presetVectors[preset]),
+      ).normalize();
       const position = center.clone().add(direction.multiplyScalar(distance));
       controls.current.minDistance = radius * 0.05;
       controls.current.maxDistance = distance * 10;
@@ -1097,7 +1155,7 @@ function CameraRig({
       );
       if (!transition) controls.current.saveState();
     },
-    [camera, objectRef, preset, size.width, size.height],
+    [camera, lighting, objectRef, preset, size.width, size.height],
   );
 
   useEffect(() => {

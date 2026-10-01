@@ -21,6 +21,10 @@
     --viewer-scene-border: #404040;
     background: #171717;
   }
+  .model-viewer.is-outside {
+    --viewer-scene-border: #afc4cb;
+    background: #dbe9ee;
+  }
   .model-viewer canvas {
     display: block;
   }

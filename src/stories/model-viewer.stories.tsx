@@ -26,6 +26,8 @@ const meta = {
         "shading",
         "projection",
         "showGrid",
+        "showFloor",
+        "floorColor",
         "viewCube",
         "viewCubePosition",
         "showUi",
@@ -33,12 +35,15 @@ const meta = {
         "showRetry",
         "pauseWhenHidden",
         "autoRotate",
+        "defaultAutoRotate",
+        "defaultAnimation",
+        "defaultAnimationPlaying",
       ],
     },
   },
   argTypes: {
     mode: { control: "select", options: ["orbit", "split", "firstPerson"] },
-    lighting: { control: "inline-radio", options: ["day", "night"] },
+    lighting: { control: "inline-radio", options: ["day", "night", "outside"] },
     shading: {
       control: "select",
       options: ["realistic", "solid", "normals", "wireframe"],
@@ -79,6 +84,8 @@ const meta = {
         onProjectionChange={(projection) => updateArgs({ projection })}
         onViewCubeChange={(viewCube) => updateArgs({ viewCube })}
         onGridChange={(showGrid) => updateArgs({ showGrid })}
+        onFloorChange={(showFloor) => updateArgs({ showFloor })}
+        onAutoRotateChange={(autoRotate) => updateArgs({ autoRotate })}
         onAnimationChange={(animation) => updateArgs({ animation })}
         onAnimationPlayingChange={(animationPlaying) =>
           updateArgs({ animationPlaying })
@@ -129,6 +136,40 @@ export const AnimatedModel: Story = {
       description: {
         story:
           "The local CC0 robot includes multiple animation clips. Playback starts paused and respects reduced-motion preferences.",
+      },
+    },
+  },
+};
+
+export const RotatingAnimatedModel: Story = {
+  args: {
+    src: "/models/robot-expressive.glb",
+    alt: "Auto-rotating animated robot",
+    defaultAutoRotate: true,
+    defaultAnimation: "Walking",
+    defaultAnimationPlaying: true,
+  },
+  parameters: {
+    docs: {
+      description: {
+        story: "Starts orbiting the camera and playing the Walking clip. The toolbar can pause rotation or animation independently; reduced-motion preferences still suppress both movements.",
+      },
+    },
+  },
+};
+
+export const OutsideWithFloor: Story = {
+  args: {
+    src: "/models/robot-expressive.glb",
+    alt: "Robot outdoors with a ground shadow",
+    lighting: "outside",
+    defaultShowFloor: true,
+    showGrid: false,
+  },
+  parameters: {
+    docs: {
+      description: {
+        story: "Procedural atmospheric sky, sun lighting, and a ground plane matched to the horizon color. The model casts a soft shadow; set floorColor to override the ground color.",
       },
     },
   },

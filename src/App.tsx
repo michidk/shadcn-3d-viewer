@@ -95,7 +95,7 @@ export default function App() {
             onDragLeave={(event) => { if (!event.currentTarget.contains(event.relatedTarget as Node)) setDragging(false); }}
             onDrop={(event) => { event.preventDefault(); setDragging(false); openFile(event.dataTransfer.files[0]); }}
           >
-            <ModelViewer src={model?.url} alt={model?.name ?? "Abstract sample objects"} showCubes={!model} />
+            <ModelViewer src={model?.url} alt={model?.name ?? "Abstract sample objects"} showCubes={!model} defaultAutoRotate />
             {dragging && <div className="drop-overlay"><Upload /><span>Drop a GLB to inspect</span></div>}
           </div>
           <p className="local-note">Models stay in your browser. Drop a local GLB onto the viewer to try your own asset.</p>

@@ -86,6 +86,14 @@
           "type": "registry:ui"
         },
         {
+          "path": "src/components/ui/model-viewer/model-viewer-colors.ts",
+          "type": "registry:ui"
+        },
+        {
+          "path": "src/components/ui/model-viewer/outside-sky.tsx",
+          "type": "registry:ui"
+        },
+        {
           "path": "src/components/ui/model-viewer/model-viewer-lifecycle.ts",
           "type": "registry:ui"
         },

@@ -101,6 +101,27 @@ test("grid stays visible around an animated model on desktop and phone", async (
   }
 });
 
+test("demo starts rotating and the toolbar controls the orbit frame loop", async ({ page }) => {
+  await ready(page);
+  const rotate = page.getByRole("button", { name: "Rotate automatically" });
+  await expect(rotate).toHaveAttribute("aria-pressed", "true");
+  const frameLoop = () => page.evaluate(`(async () => {
+    const { _roots } = await import('/node_modules/.vite/deps/@react-three_fiber.js');
+    return [..._roots.values()][0].store.getState().frameloop;
+  })()`);
+  expect(await frameLoop()).toBe("always");
+  await rotate.click();
+  await expect(rotate).toHaveAttribute("aria-pressed", "false");
+  expect(await frameLoop()).toBe("demand");
+  await rotate.click();
+  await page.getByRole("button", { name: "Four-view split" }).click();
+  await expect(rotate).toBeDisabled();
+  expect(await frameLoop()).toBe("demand");
+  await page.getByRole("button", { name: "Orbit camera" }).click();
+  await expect(rotate).toHaveAttribute("aria-pressed", "true");
+  expect(await frameLoop()).toBe("always");
+});
+
 test("camera movement does not trigger pixelated canvas regression", async ({ page }) => {
   await ready(page);
   await cube(page, "Drei cube");
@@ -138,7 +159,10 @@ test("grid colors are neutral grays in both lighting modes", async ({ page }) =>
   await ready(page);
   await page.getByRole("button", { name: "Show grid", exact: true }).click();
   for (const lighting of ["day", "night"]) {
-    if (lighting === "night") await page.getByRole("button", { name: "Switch to night" }).click();
+    if (lighting === "night") {
+      await page.getByRole("button", { name: "Lighting: day" }).click();
+      await page.getByRole("menuitemradio", { name: "Night studio" }).click();
+    }
     const colors = await page.evaluate(`(async () => {
       const { _roots } = await import('/node_modules/.vite/deps/@react-three_fiber.js');
       const state = [..._roots.values()][0].store.getState();
@@ -159,6 +183,46 @@ test("grid colors are neutral grays in both lighting modes", async ({ page }) =>
       expect(red).toBeGreaterThan(0);
     }
   }
+});
+
+test("solid mutes sample materials and the optional floor receives shadows", async ({ page }) => {
+  await ready(page);
+  const scene = () => page.evaluate(`(async () => {
+    const { _roots } = await import('/node_modules/.vite/deps/@react-three_fiber.js');
+    const state = [..._roots.values()][0].store.getState();
+    const pane = state.internal.subscribers.find(s => s.priority === 1).store.getState();
+    const objects = {};
+    pane.scene.traverse(object => {
+      if (['Cube', 'Viewer floor', 'Viewer floor shadows'].includes(object.name)) {
+        objects[object.name] = { color: object.material?.color?.getHexString(), castShadow: object.castShadow, receiveShadow: object.receiveShadow };
+      }
+    });
+    objects.__shadowMap = state.gl.shadowMap.enabled;
+    return objects;
+  })()`);
+  const realistic = await scene();
+  expect(realistic.__shadowMap).toBe(false);
+  expect(realistic.Cube.color).toBe("b3c899");
+  expect(realistic["Viewer floor"]).toBeUndefined();
+  await page.getByRole("button", { name: "Shading: realistic" }).click();
+  await page.getByRole("menuitemradio", { name: "Solid" }).click();
+  const solid = await scene();
+  expect(solid.Cube.color).toBe("a7aaa5");
+  expect(solid.Cube.castShadow).toBe(true);
+  await page.getByRole("button", { name: "Inspect model", exact: true }).click();
+  await page.getByRole("textbox", { name: "Search hierarchy" }).fill("Cube");
+  await page.locator(".viewer-inspector .inspector-node:enabled").click();
+  expect((await scene()).Cube.color).toBe("e9c56a");
+  await page.getByRole("button", { name: "Clear selection", exact: true }).click();
+  await page.getByRole("button", { name: "Show floor" }).click();
+  const withFloor = await scene();
+  expect(withFloor.__shadowMap).toBe(true);
+  expect(withFloor["Viewer floor"].color).toBe("f5f5f5");
+  expect(withFloor["Viewer floor shadows"].receiveShadow).toBe(true);
+  await page.getByRole("button", { name: "Lighting: day" }).click();
+  await page.getByRole("menuitemradio", { name: "Outside sky" }).click();
+  await expect(page.locator(".model-viewer")).toHaveClass(/is-outside/);
+  expect((await scene())["Viewer floor"].color).toBe("dbe9ee");
 });
 
 test("orthographic toggle replaces presets and both view helpers render", async ({ page }) => {
@@ -228,6 +292,7 @@ test("split panes pan independently without changing their fixed directions", as
 
 test("skinned model animates, pauses, resumes, switches clips and resets on replacement", async ({ page }) => {
   await ready(page);
+  await page.getByRole("button", { name: "Rotate automatically" }).click();
   await page.getByRole("button", { name: "Try animated model" }).click();
   await expect(page.getByRole("toolbar", { name: "Animation controls" })).toBeVisible();
   await expect(page.locator(".viewer-loader")).toHaveCount(0);
@@ -605,6 +670,9 @@ test("registry installs only viewer sources and leaves host styling untouched", 
   expect(item.files.length).toBeGreaterThan(9);
   expect(item.files.map((file: { path: string }) => file.path)).toContain(
     "src/components/ui/model-viewer/model-viewer-lifecycle.ts",
+  );
+  expect(item.files.map((file: { path: string }) => file.path)).toContain(
+    "src/components/ui/model-viewer/outside-sky.tsx",
   );
   for (const file of item.files) {
     expect(file.path).toMatch(/^src\/components\/ui\/model-viewer\//);
