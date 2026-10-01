@@ -126,7 +126,7 @@ export const NightStudio: Story = {
 export const AnimatedModel: Story = {
   args: {
     src: "/models/robot-expressive.glb",
-    alt: "Animated robot",
+    "aria-label": "Animated robot",
     animation: "Walking",
     animationPlaying: false,
     showGrid: true,
@@ -144,7 +144,7 @@ export const AnimatedModel: Story = {
 export const RotatingAnimatedModel: Story = {
   args: {
     src: "/models/robot-expressive.glb",
-    alt: "Auto-rotating animated robot",
+    "aria-label": "Auto-rotating animated robot",
     defaultAutoRotate: true,
     defaultAnimation: "Walking",
     defaultAnimationPlaying: true,
@@ -161,7 +161,7 @@ export const RotatingAnimatedModel: Story = {
 export const OutsideWithFloor: Story = {
   args: {
     src: "/models/robot-expressive.glb",
-    alt: "Robot outdoors with a ground shadow",
+    "aria-label": "Robot outdoors with a ground shadow",
     lighting: "outside",
     defaultShowFloor: true,
     showGrid: false,

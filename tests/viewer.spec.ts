@@ -68,6 +68,40 @@ async function canvasImage(page: Page) {
   return page.locator("canvas").evaluate((canvas: HTMLCanvasElement) => canvas.toDataURL());
 }
 
+test("viewer accepts standard ARIA naming and description with legacy alt fallback", async ({ page }) => {
+  await ready(page);
+  await page.evaluate(`(async () => {
+    const { default: React } = await import('/node_modules/.vite/deps/react.js');
+    const { default: ReactDOM } = await import('/node_modules/.vite/deps/react-dom_client.js');
+    const { ModelViewer } = await import('/src/components/ui/model-viewer/index.ts');
+    const h = React.createElement;
+    const host = document.createElement('div');
+    host.id = 'accessibility-test';
+    document.body.append(host);
+    function Example() {
+      const [phase, setPhase] = React.useState(0);
+      const naming = phase === 0
+        ? { 'aria-label': 'Direct viewer name' }
+        : phase === 1 ? { 'aria-labelledby': 'model-name' } : {};
+      return h(React.Fragment, null,
+        h('h2', { id: 'model-name' }, 'Visible model name'),
+        h('p', { id: 'model-description' }, 'A low-backed chair with curved arms.'),
+        h('button', { onClick: () => setPhase((value) => value + 1) }, 'Change naming'),
+        h(ModelViewer, { ...naming, alt: 'Legacy name', 'aria-describedby': 'model-description', height: 240, showCubes: false }));
+    }
+    ReactDOM.createRoot(host).render(h(Example));
+  })()`);
+  const host = page.locator("#accessibility-test");
+  const viewer = host.locator('[data-slot="model-viewer"]');
+  await expect(host.getByRole("group", { name: "Direct viewer name" })).toBeVisible();
+  await expect(viewer).toHaveAttribute("aria-describedby", "model-description");
+  await host.getByRole("button", { name: "Change naming" }).click();
+  await expect(host.getByRole("group", { name: "Visible model name" })).toBeVisible();
+  await expect(viewer).not.toHaveAttribute("aria-label");
+  await host.getByRole("button", { name: "Change naming" }).click();
+  await expect(host.getByRole("group", { name: "Legacy name" })).toBeVisible();
+});
+
 test("grid stays visible around an animated model on desktop and phone", async ({ page }) => {
   await ready(page);
   await cube(page, "Off");

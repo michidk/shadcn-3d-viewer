@@ -32,6 +32,7 @@ export interface ModelViewerProps extends Omit<
   /** Compatibility escape hatch. Prefer local primitives, composition, and render. */
   components?: Partial<ViewerUiComponents>;
   src?: string;
+  /** @deprecated Use aria-label (or aria-labelledby) to name the viewer. */
   alt?: string;
   className?: string;
   height?: CSSProperties["height"];

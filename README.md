@@ -77,7 +77,7 @@ export function Preview() {
   return (
     <ModelViewer
       src="/models/chair.glb"
-      alt="Walnut lounge chair"
+      aria-label="Walnut lounge chair"
       height={640}
       lighting="day"
       showOrientation
@@ -90,6 +90,24 @@ export function Preview() {
 ```
 
 Omit `src` to render the built-in material study. Use `showUi={false}` for a clean embedded preview.
+
+### Accessibility
+
+Give each meaningful viewer a specific accessible name. `aria-label` names the viewer group directly; use `aria-labelledby` when a visible heading already names it. Link a nearby text description with `aria-describedby` when the model's shape, appearance, or other details matter. The canvas is interactive, so a label alone is not a substitute for describing essential visual information in text.
+
+```tsx
+<h2 id="chair-heading">Walnut lounge chair</h2>
+<ModelViewer
+  src="/models/chair.glb"
+  aria-labelledby="chair-heading"
+  aria-describedby="chair-description"
+/>
+<p id="chair-description">
+  A low-backed chair with curved walnut arms and cream upholstery.
+</p>
+```
+
+The older `alt` prop still works as a fallback accessible name and screenshot filename, but new code should use `aria-label` or `aria-labelledby`. Native ARIA attributes are forwarded to the root viewer element. The orientation menu and toolbar are keyboard-operable; the 3D canvas is not a complete keyboard or screen-reader equivalent for inspecting every mesh, so provide essential model details outside it.
 
 ### Load the renderer on demand
 
@@ -107,6 +125,9 @@ The dedicated `lazy` entry imports only React, styling, and the loading icon syn
 | Prop | Type | Default |
 | --- | --- | --- |
 | `src` | `string` | built-in sample |
+| `aria-label` / `aria-labelledby` | accessible name | `"3D model"` when neither is supplied |
+| `aria-describedby` | IDs of text describing the model | none |
+| `alt` | legacy accessible-name fallback | deprecated; use ARIA naming props |
 | `height` | CSS height | `620` |
 | `mode` | `orbit \| split \| firstPerson` | `orbit` |
 | `lighting` | `day \| night \| outside` | `day` |

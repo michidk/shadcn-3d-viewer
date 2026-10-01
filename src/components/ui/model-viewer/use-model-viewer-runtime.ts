@@ -23,6 +23,8 @@ export function useModelViewerRuntime({
   components,
   src,
   alt = "3D model",
+  "aria-label": ariaLabel,
+  "aria-labelledby": ariaLabelledBy,
   className,
   style,
   ref,
@@ -400,7 +402,7 @@ export function useModelViewerRuntime({
         const link = document.createElement("a");
         link.href = url;
         link.download = `${
-          alt
+          (ariaLabel ?? alt)
             .replace(/[^a-z0-9-_]+/gi, "-")
             .replace(/^-|-$/g, "")
             .slice(0, 80) || "model-view"
@@ -490,7 +492,8 @@ export function useModelViewerRuntime({
     setSceneMounted,
     // Renderer configuration stays private; useModelViewer exposes only state/actions.
     src,
-    alt,
+    accessibleLabel: ariaLabelledBy ? undefined : (ariaLabel ?? alt),
+    ariaLabelledBy,
     mode,
     lighting,
     shading,

@@ -21,7 +21,8 @@ export function ModelViewerRoot(props: ModelViewerRootProps) {
           data-rendering={state.renderingPaused ? "paused" : "active"}
           data-viewer-mode={state.mode}
           data-viewer-key={viewerKey}
-          aria-label={runtime.alt}
+          aria-label={runtime.accessibleLabel}
+          aria-labelledby={runtime.ariaLabelledBy}
           role="group"
           className={cn(
             "model-viewer",
