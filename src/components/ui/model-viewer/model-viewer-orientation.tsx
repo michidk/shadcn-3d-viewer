@@ -16,7 +16,7 @@ export function ModelViewerOrientationControls({ className, ...props }: Componen
   if (!showOrientation || !state.viewCube || state.mode !== "orbit" || state.status !== "ready") return null;
   return (
     <div data-slot="model-viewer-orientation" className={cn("viewer-orientation-controls", className)} {...props}>
-      <DropdownMenu>
+      <DropdownMenu modal={false}>
         <DropdownMenuTrigger render={
           <ViewerControlButton aria-label="Orient view" variant="outline" size="sm">
             <Compass /> Orient view

@@ -240,7 +240,7 @@ export function ModelViewerControls({
   return (
     <ModelViewerToolbar {...props}>
       <ModelViewerToolbarGroup aria-label="Shading">
-        <DropdownMenu>
+        <DropdownMenu modal={false}>
           <DropdownMenuTrigger
             render={
               <Button
@@ -310,7 +310,7 @@ export function ModelViewerControls({
         )}
       </ModelViewerToolbarGroup>
       <ModelViewerToolbarGroup aria-label="Scene options">
-        <DropdownMenu>
+        <DropdownMenu modal={false}>
           <DropdownMenuTrigger
             render={
               <Button type="button" size="icon-sm" variant="ghost" aria-label={`Lighting: ${lighting}`} tooltip="Lighting">
@@ -352,7 +352,7 @@ export function ModelViewerControls({
             )
           }
         />
-        <DropdownMenu>
+        <DropdownMenu modal={false}>
           <DropdownMenuTrigger
             render={
               <Button
@@ -398,7 +398,7 @@ export function ModelViewerControls({
           label="Reset view"
           onClick={onReset}
         />
-        <DropdownMenu open={captureMenuOpen} onOpenChange={setCaptureMenuOpen}>
+        <DropdownMenu modal={false} open={captureMenuOpen} onOpenChange={setCaptureMenuOpen}>
           <DropdownMenuTrigger
             render={
               <Button
@@ -472,7 +472,7 @@ export function ModelViewerAnimationControls({
         active={playing}
         onClick={() => onPlayingChange(!playing)}
       />
-      <DropdownMenu>
+      <DropdownMenu modal={false}>
         <DropdownMenuTrigger
           render={
             <Button

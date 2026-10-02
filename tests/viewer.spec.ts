@@ -90,6 +90,28 @@ async function canvasImage(page: Page) {
   return page.locator("canvas").evaluate((canvas: HTMLCanvasElement) => canvas.toDataURL());
 }
 
+test("viewer menus do not lock scrolling or change the viewer width", async ({ page }) => {
+  for (const width of [1280, 375]) {
+    await page.setViewportSize({ width, height: 800 });
+    await ready(page);
+    const before = await page.evaluate(() => ({
+      viewportWidth: document.documentElement.clientWidth,
+      viewerWidth: document.querySelector(".model-viewer")!.getBoundingClientRect().width,
+    }));
+    await page.getByRole("button", { name: "Shading: realistic" }).click();
+    await expect(page.getByRole("menuitemradio", { name: "Solid" })).toBeVisible();
+    const after = await page.evaluate(() => ({
+      viewportWidth: document.documentElement.clientWidth,
+      viewerWidth: document.querySelector(".model-viewer")!.getBoundingClientRect().width,
+      bodyOverflow: getComputedStyle(document.body).overflow,
+    }));
+    expect(after.viewportWidth).toBe(before.viewportWidth);
+    expect(after.viewerWidth).toBe(before.viewerWidth);
+    expect(after.bodyOverflow).not.toBe("hidden");
+    await page.getByRole("menuitemradio", { name: "Solid" }).click();
+  }
+});
+
 test("viewer accepts standard ARIA naming and description with legacy alt fallback", async ({ page }) => {
   await ready(page);
   await page.evaluate(`(async () => {
