@@ -12,10 +12,11 @@ import {
 import { Button as ShadcnButton } from "@/components/ui/button";
 import {
   Tooltip,
-  TooltipContent,
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+
+import { TooltipContent } from "./viewer-popups";
 
 export type ViewerTooltipProps = { children: ReactElement; content: ReactNode };
 export type ViewerUiComponents = {

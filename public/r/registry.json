@@ -130,6 +130,14 @@
         {
           "path": "src/components/ui/model-viewer/inspector-hierarchy.ts",
           "type": "registry:ui"
+        },
+        {
+          "path": "src/components/ui/model-viewer/viewer-popups.tsx",
+          "type": "registry:ui"
+        },
+        {
+          "path": "src/components/ui/model-viewer/model-resources.ts",
+          "type": "registry:ui"
         }
       ]
     }

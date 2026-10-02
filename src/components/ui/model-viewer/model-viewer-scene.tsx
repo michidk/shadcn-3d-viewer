@@ -219,8 +219,7 @@ export function ModelViewerScene({
           frameloop={
             renderingPaused
               ? "never"
-              : effectiveAutoRotate ||
-                  (effectiveAnimationPlaying && Boolean(effectiveAnimation))
+              : effectiveAutoRotate
                 ? "always"
                 : "demand"
           }

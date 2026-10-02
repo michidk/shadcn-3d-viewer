@@ -31,12 +31,12 @@ import {
 import { cn } from "@/lib/utils";
 import {
   DropdownMenu,
-  DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuRadioGroup,
   DropdownMenuRadioItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { DropdownMenuContent } from "./viewer-popups";
 import { ViewerControlButton as Button } from "./viewer-ui";
 import { useOptionalViewerRuntime } from "./model-viewer-context";
 import type {

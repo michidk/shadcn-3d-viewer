@@ -3,7 +3,8 @@
 import type { ComponentProps } from "react";
 import { Compass } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { DropdownMenu, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { DropdownMenuContent } from "./viewer-popups";
 import { ViewerControlButton } from "./viewer-ui";
 import { useViewerRuntime } from "./model-viewer-context";
 import type { ViewerCameraPreset } from "./model-viewer-types";

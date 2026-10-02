@@ -1,8 +1,11 @@
 "use client";
 
-import { useAnimations, useGLTF } from "@react-three/drei";
+import { useGLTF } from "@react-three/drei";
+import { useFrame, useThree } from "@react-three/fiber";
+import { retainModelResources } from "./model-resources";
 import { useEffect, useMemo, useRef } from "react";
 import {
+  AnimationMixer,
   LoopOnce,
   LoopRepeat,
   MeshStandardMaterial,
@@ -170,8 +173,28 @@ function LoadedModel({
     result.updateMatrixWorld(true);
     return result;
   }, [gltf.scene]);
-  const { actions, names } = useAnimations(gltf.animations, model);
+  useEffect(() => retainModelResources(model), [model]);
+  const invalidate = useThree((state) => state.invalidate);
+  const { mixer, actions, names } = useMemo(() => {
+    const mixer = new AnimationMixer(model);
+    return {
+      mixer,
+      names: gltf.animations.map(clip => clip.name),
+      actions: Object.fromEntries(gltf.animations.map(clip => [clip.name, mixer.clipAction(clip)])),
+    };
+  }, [gltf.animations, model]);
+  useEffect(() => () => {
+    mixer.stopAllAction();
+  }, [mixer]);
   const activeAction = animation ? actions[animation] : undefined;
+  const advancing = useRef(false);
+  useFrame((_, delta) => {
+    // The first demand frame may include seconds spent idle. Do not apply that
+    // elapsed time to a newly resumed or restarted action.
+    mixer.update(advancing.current ? delta : 0);
+    advancing.current = Boolean(activeAction?.isRunning() && activeAction.getEffectiveTimeScale() !== 0);
+    if (advancing.current) invalidate();
+  });
   const playback = useRef({ animationPlaying, animationSpeed });
   playback.current = { animationPlaying, animationSpeed };
   useEffect(() => {
@@ -216,24 +239,30 @@ function LoadedModel({
       loopAnimation ? Infinity : 1,
     );
     activeAction.play();
+    advancing.current = false;
+    invalidate();
     activeAction.paused = !playback.current.animationPlaying;
     activeAction.setEffectiveTimeScale(playback.current.animationSpeed);
     return () => {
       activeAction.stop();
     };
-  }, [activeAction, animation, loopAnimation]);
+  }, [activeAction, animation, loopAnimation, invalidate]);
 
   useEffect(() => {
     if (!activeAction) return;
     activeAction.paused = !animationPlaying;
     activeAction.setEffectiveTimeScale(animationSpeed);
-  }, [activeAction, animationPlaying, animationSpeed]);
+    advancing.current = false;
+    invalidate();
+  }, [activeAction, animationPlaying, animationSpeed, invalidate]);
 
   useEffect(() => {
     if (!activeAction || animationResetToken === 0) return;
     activeAction.reset().play();
+    advancing.current = false;
+    invalidate();
     activeAction.paused = !playback.current.animationPlaying;
-  }, [activeAction, animationResetToken]);
+  }, [activeAction, animationResetToken, invalidate]);
 
   return (
     <primitive

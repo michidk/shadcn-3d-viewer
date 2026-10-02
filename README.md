@@ -372,6 +372,8 @@ Controlled props stay controlled: a hook action reports the change callback, but
 
 Toolbar layout measures mounted top toolbars, including wraps and custom button sizes, to reserve room in split views. Use `placement="static"` for a toolbar that should not reserve top space. Primitive button sizing and menu styling are not overridden by viewer CSS.
 
+Built-in menus and tooltips mount inside the viewer during native fullscreen so they remain visible and interactive. Custom tooltip overrides should likewise portal inside the fullscreen element.
+
 When native fullscreen is unavailable, the expanded viewer acts as a modal dialog: background content becomes inert, keyboard focus stays in the viewer and its menus, Escape exits, and focus returns to the activating control.
 
 Fullscreen defaults to the top-right; animation controls default to the bottom-right. On narrow viewers, the interaction hint sits above the animation panel. Reposition the compound parts with `className` or `style` (for example, `className="top-auto bottom-3"` on `ModelViewerFullscreen`). The default top-right view cube leaves space below fullscreen; explicit `viewCubeMargin` values take precedence.
@@ -407,6 +409,7 @@ The suite covers extreme model scales, framing, shared-resource statistics, the 
 
 - The demo intentionally accepts GLB only because standalone `.gltf` files can reference sidecar buffers and textures. The component itself can load any URL supported by `GLTFLoader`.
 - Draco and Meshopt are enabled by default. Pass a self-hosted Draco decoder path through `useDraco`, or configure KTX2 and other extensions with `extendLoader`.
-- Blob URLs clear Drei's loader cache on unmount by default. Set `clearCacheOnUnmount` explicitly for other short-lived URLs.
+- GPU geometry, material, texture, and skeleton allocations are released after their last mounted viewer or pane unmounts. Cached model objects and image sources remain reusable. Blob URLs also clear Drei's loader cache on unmount by default; set `clearCacheOnUnmount` explicitly for other short-lived URLs.
+- Animation rendering stops when a non-looping clip finishes or playback speed is zero. Restarting or resuming playback wakes the demand loop; auto-rotation continues to request frames independently.
 - `enableCapture` controls PNG capture independently of the built-in UI and defaults to `showUi`. Use `<ModelViewer showUi={false} enableCapture>` for custom capture controls, or `enableCapture={false}` to reduce GPU overhead with the toolbar visible. `canCapture` stays false until the renderer supports capture and the model is ready. Changing `enableCapture` recreates the WebGL canvas because buffer preservation is fixed when its context is created.
 - First-person pointer lock may be blocked inside restrictive iframes; the component automatically falls back to focused-canvas drag look when the browser exposes that policy.

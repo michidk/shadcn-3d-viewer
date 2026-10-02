@@ -1005,3 +1005,78 @@ test("large inspectors bound rendered rows while searching the entire hierarchy"
   await host.getByRole("textbox", { name: "Search hierarchy" }).fill("");
   await expect(host.locator('[data-slot="model-inspector-node"]')).toHaveCount(200);
 });
+
+test("native fullscreen keeps menus and tooltips in the fullscreen element", async ({ page }) => {
+  await ready(page);
+  await page.getByRole("button", { name: "Enter fullscreen" }).click();
+  await expect.poll(() => page.evaluate(() => document.fullscreenElement?.getAttribute("data-slot"))).toBe("model-viewer");
+  await page.getByRole("button", { name: "Shading: realistic" }).click();
+  const solid = page.getByRole("menuitemradio", { name: "Solid", exact: true });
+  await expect(solid).toBeVisible();
+  expect(await solid.evaluate(element => document.fullscreenElement!.contains(element))).toBe(true);
+  await page.keyboard.press("ArrowDown");
+  expect(await page.evaluate(() => document.fullscreenElement!.contains(document.activeElement))).toBe(true);
+  await solid.click();
+  await expect(page.getByRole("button", { name: "Shading: solid" })).toBeVisible();
+  await page.getByRole("button", { name: "Reset view", exact: true }).hover();
+  const tooltip = page.locator('[data-slot="tooltip-content"][data-open]');
+  await expect(tooltip).toBeVisible();
+  expect(await tooltip.evaluate(element => document.fullscreenElement!.contains(element))).toBe(true);
+  await page.getByRole("button", { name: "Exit fullscreen" }).click();
+  await expect.poll(() => page.evaluate(() => document.fullscreenElement === null)).toBe(true);
+  await page.getByRole("button", { name: "Shading: solid" }).click();
+  await page.getByRole("menuitemradio", { name: "Realistic", exact: true }).click();
+});
+
+test("finished and zero-speed animations stop drawing and restart on demand", async ({ page }) => {
+  await page.addInitScript(() => {
+    const frames = new WeakMap<HTMLCanvasElement, number>();
+    Object.assign(window, { animationFrames: frames });
+    const draw = WebGL2RenderingContext.prototype.drawElements;
+    WebGL2RenderingContext.prototype.drawElements = function (...args) {
+      const canvas = this.canvas as HTMLCanvasElement;
+      frames.set(canvas, (frames.get(canvas) ?? 0) + 1);
+      return draw.apply(this, args);
+    };
+  });
+  await ready(page);
+  await page.evaluate(`(async () => {
+    const { default: React } = await import('/node_modules/.vite/deps/react.js');
+    const { default: ReactDOM } = await import('/node_modules/.vite/deps/react-dom_client.js');
+    const { ModelViewer, useModelViewer } = await import('/src/components/ui/model-viewer/index.ts');
+    const h = React.createElement;
+    const host = document.createElement('div');
+    host.id = 'playback-test';
+    host.style.cssText = 'position:fixed;inset:0;z-index:999;background:white';
+    document.body.append(host);
+    function Controls() {
+      const viewer = useModelViewer();
+      return h('button', { onClick: viewer.restartAnimation, style: { position: 'absolute', zIndex: 5 } }, 'Replay');
+    }
+    function Example() {
+      const [speed, setSpeed] = React.useState(0);
+      return h(React.Fragment, null,
+        h('button', { onClick: () => setSpeed(speed ? 0 : 1) }, 'Toggle speed'),
+        h(ModelViewer, { src: '/models/robot-expressive.glb', animation: 'Walking', loopAnimation: false,
+          autoRotate: false, animationPlaying: true, animationSpeed: speed, showUi: false, showOrientation: false, respectReducedMotion: false }, h(Controls)));
+    }
+    ReactDOM.createRoot(host).render(h(Example));
+  })()`);
+  const host = page.locator("#playback-test");
+  await expect(host.locator('[data-slot="model-viewer"]')).toHaveAttribute("data-state", "ready");
+  const count = () => page.evaluate(() => (window as unknown as { animationFrames: WeakMap<HTMLCanvasElement, number> }).animationFrames.get(document.querySelector('#playback-test canvas')!) ?? 0);
+  async function drawing(active: boolean) {
+    await expect.poll(async () => {
+      const before = await count();
+      await page.waitForTimeout(150);
+      return (await count()) > before;
+    }).toBe(active);
+  }
+  await drawing(false);
+  await host.getByRole('button', { name: 'Toggle speed' }).click();
+  await drawing(true);
+  await drawing(false);
+  await host.getByRole('button', { name: 'Replay' }).click();
+  await drawing(true);
+  await drawing(false);
+});
