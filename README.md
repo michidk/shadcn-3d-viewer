@@ -58,6 +58,12 @@ Storybook shares `src/theme.css` with the demo but does not load the demo page l
 
 Use Storybook's **Theme** toolbar to preview every example in light or dark mode, including portaled menus and tooltips.
 
+## Vercel demo
+
+The [demo](https://shadcn-3d-viewer.vercel.app/) and [Storybook](https://shadcn-3d-viewer.vercel.app/storybook/) are built as one static Vercel project. `bun run build:vercel` writes the demo to `dist/` and Storybook to `dist/storybook/`; `vercel.json` configures the build and redirects `/storybook` to `/storybook/` so Storybook's relative asset paths resolve correctly. The deployment includes the public registry JSON at `/r/model-viewer.json`.
+
+To enable deployment on each commit, link the `michidk/shadcn-3d-viewer` GitHub repository to the Vercel project in Vercel's Git settings. The CLI project link alone does not enable Git-triggered deployments. Assign `shadcn-3d-viewer.vercel.app` as the production domain if available.
+
 For browser tests, install Chromium with `bunx playwright install --with-deps chromium`, or reuse Docker Chrome through `VIEWER_TEST_CDP`. Set `STORYBOOK_TEST_URL` if Storybook is not at `http://localhost:6006`; the Docker browser must be able to reach that URL. Storybook tests are separate from the demo's `bun run test` suite.
 
 ## Add the component

@@ -7,8 +7,11 @@
 .brand-mark svg { width: 18px; }
 .header-meta { display: flex; gap: 9px; margin-left: 16px; color: var(--muted-foreground); font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 10px; letter-spacing: .05em; text-transform: uppercase; }
 .header-meta span { padding: 5px 8px; border: 1px solid var(--border); border-radius: 999px; }
-.github-link { display: flex; align-items: center; gap: 7px; margin-left: auto; color: var(--muted-foreground); font-size: 12px; font-weight: 600; }
-.github-link svg { width: 16px; }
+.header-links { display: flex; align-items: center; gap: 18px; margin-left: auto; }
+.header-links a { display: inline-flex; align-items: center; gap: 7px; color: var(--muted-foreground); font-size: 12px; font-weight: 600; }
+.header-links a:hover { color: var(--foreground); }
+.header-links a:focus-visible { border-radius: 3px; outline: 2px solid var(--ring); outline-offset: 4px; }
+.header-links svg { width: 16px; height: 16px; }
 main { width: min(1280px, calc(100% - 64px)); margin: 0 auto; }
 .hero { max-width: 900px; padding: 104px 0 72px; }
 .eyebrow, .section-kicker { margin: 0 0 18px; color: var(--muted-foreground); font-size: 10px; font-weight: 730; letter-spacing: .16em; text-transform: uppercase; }

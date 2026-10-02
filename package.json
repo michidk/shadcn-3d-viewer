@@ -21,6 +21,7 @@
   "scripts": {
     "dev": "vite --host 0.0.0.0",
     "build": "tsc -b && vite build",
+    "build:vercel": "bun run build && bun run storybook:build --output-dir dist/storybook",
     "typecheck": "tsc -b --pretty false",
     "lint": "eslint .",
     "test": "playwright test",

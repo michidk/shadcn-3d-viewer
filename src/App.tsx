@@ -1,10 +1,10 @@
-import { Box, Check, Clipboard, Github, Upload, X } from "lucide-react";
+import { BookOpen, Box, Check, Clipboard, Github, Upload, X } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 
 import { Button } from "@/components/ui/button";
 import { ModelViewer } from "@/components/ui/model-viewer/lazy";
 
-const installCommand = "bunx shadcn@latest add ./public/r/model-viewer.json";
+const installCommand = "bunx shadcn@latest add https://raw.githubusercontent.com/michidk/shadcn-3d-viewer/main/public/r/model-viewer.json";
 const usageCode = [
   "import { ModelViewer } from",
   "  \"@/components/ui/model-viewer\"",
@@ -59,7 +59,10 @@ export default function App() {
           <span>shadcn-3d-viewer</span>
         </a>
         <div className="header-meta"><span>shadcn/ui</span><span>React Three Fiber</span></div>
-        <a className="github-link" href="https://github.com/pmndrs/react-three-fiber" target="_blank" rel="noreferrer"><Github /> <span>R3F</span></a>
+        <nav className="header-links" aria-label="Project links">
+          <a href="/storybook/"><BookOpen aria-hidden="true" /> <span>Storybook</span></a>
+          <a href="https://github.com/michidk/shadcn-3d-viewer" target="_blank" rel="noopener noreferrer"><Github aria-hidden="true" /> <span>GitHub</span></a>
+        </nav>
       </header>
 
       <main id="top">
