@@ -2,6 +2,16 @@
 
 A source-owned shadcn component for viewing GLB models with React Three Fiber. It is adapted from Asset Studio's production model viewer and presented in a standalone Vite demo.
 
+## Install
+
+After the npm release, run this in a Base UI shadcn project:
+
+```sh
+npx shadcn-3d-viewer add
+```
+
+The npm package is a small installer for the included shadcn registry item. It runs `shadcn add` and copies the component source into your project; it is **not** a compiled library to import from `shadcn-3d-viewer`. Review changes before accepting prompts. Pass shadcn options through, for example `npx shadcn-3d-viewer add --dry-run`. The component's own dependencies are installed into your app by shadcn. Use `@/components/ui/model-viewer` in your app after installation.
+
 The demo uses shadcn's **Base UI / Nova** primitives (`@base-ui/react`) and the standard neutral theme. The installed viewer uses your project's local primitives and existing theme; Nova and neutral are not requirements. Buttons, menus, and tooltips use Base UI's `render` composition API, not Radix's `asChild`. Theme tokens live in `src/theme.css`; add `dark` to the document root for dark mode. The 3D scene's day/night lighting remains independent of the UI theme.
 
 ## Features
@@ -52,11 +62,11 @@ For browser tests, install Chromium with `bunx playwright install --with-deps ch
 
 ## Add the component
 
-This repository includes a shadcn registry manifest. Build the local registry, then install the component into another shadcn project:
+To install from a local checkout before the npm release, build the shadcn registry item, then add it from another shadcn project:
 
 ```sh
 bun run registry:build
-bunx shadcn@latest add ./public/r/model-viewer.json
+bunx shadcn@latest add /absolute/path/to/shadcn-3d-viewer/public/r/model-viewer.json
 ```
 
 Use a Base UI shadcn project with the button `variant`/`size`, tooltip `render`, and dropdown radio APIs (the demo uses `"style": "base-nova"` in `components.json`). Any compatible Base UI shadcn style and palette can be used. The registry item installs its React Three Fiber dependencies and the shadcn `alert`, `button`, `tooltip`, and `dropdown-menu` primitives. Radix versions of these controls are not interchangeable with the Base UI composition API. Installation contains only viewer sources and references to your local primitives: it does **not** install `src/theme.css`, set CSS variables, overwrite `components.json`, or select a palette. Do not overwrite your customized primitives when the shadcn CLI prompts.
@@ -67,6 +77,20 @@ Or copy `src/components/ui/model-viewer/` into an existing shadcn project and in
 bun add @react-three/fiber @react-three/drei three three-stdlib lucide-react
 bun add -d @types/three
 ```
+
+## Publishing
+
+This package is MIT licensed and publishes the CLI plus generated registry JSON, not the demo, Storybook, test fixtures, or model assets. Maintainers need Bun and Node 20 or newer. `prepack` rebuilds the registry and runs typecheck, lint, production build, and package tests.
+
+```sh
+bun install --frozen-lockfile
+npm pack --dry-run
+npm publish --dry-run
+# After reviewing the tarball and configuring npm publishing access:
+npm publish --access public
+```
+
+The npm name must still be claimed by the first successful publish. Publishing is not performed by the repository build or CI. The GitHub repository and npm package are separate: pushing code does not publish a new package version.
 
 ## Usage
 

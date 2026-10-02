@@ -1,7 +1,7 @@
 {
   "$schema": "https://ui.shadcn.com/schema/registry.json",
   "name": "shadcn-3d-viewer",
-  "homepage": "https://shadcn-3d-viewer.preview.k8s.lohr.dev/",
+  "homepage": "https://github.com/michidk/shadcn-3d-viewer",
   "items": [
     {
       "name": "model-viewer",
