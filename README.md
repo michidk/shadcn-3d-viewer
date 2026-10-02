@@ -60,9 +60,9 @@ Use Storybook's **Theme** toolbar to preview every example in light or dark mode
 
 ## Vercel demo
 
-The demo and Storybook are configured for one static Vercel project at `/` and `/storybook/`. `bun run build:vercel` writes the demo to `dist/` and Storybook to `dist/storybook/`; `vercel.json` configures the build and redirects `/storybook` to `/storybook/` so Storybook's relative asset paths resolve correctly. The deployment includes the public registry JSON at `/r/model-viewer.json`.
+The [demo](https://shadcn-3d-viewer.vercel.app/) and [Storybook](https://shadcn-3d-viewer.vercel.app/storybook/) share one static Vercel project at `/` and `/storybook/`. `bun run build:vercel` writes the demo to `dist/` and Storybook to `dist/storybook/`; `vercel.json` configures the build and redirects `/storybook` to `/storybook/` so Storybook's relative asset paths resolve correctly. The deployment includes the public registry JSON at `/r/model-viewer.json`.
 
-To enable deployment on each commit, link the `michidk/shadcn-3d-viewer` GitHub repository to the Vercel project in Vercel's Git settings. The CLI project link alone does not enable Git-triggered deployments. Assign `shadcn-3d-viewer.vercel.app` as the production domain if available.
+The Vercel project is connected to `michidk/shadcn-3d-viewer` with `main` as its production branch, so pushes to `main` deploy automatically. The production domain is `shadcn-3d-viewer.vercel.app`.
 
 For browser tests, install Chromium with `bunx playwright install --with-deps chromium`, or reuse Docker Chrome through `VIEWER_TEST_CDP`. Set `STORYBOOK_TEST_URL` if Storybook is not at `http://localhost:6006`; the Docker browser must be able to reach that URL. Storybook tests are separate from the demo's `bun run test` suite.
 

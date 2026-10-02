@@ -7,3 +7,4 @@ playwright-report/
 storybook-static/
 storybook.log
 .vercel/
+.env.local
