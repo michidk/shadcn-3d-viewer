@@ -60,7 +60,7 @@ Use Storybook's **Theme** toolbar to preview every example in light or dark mode
 
 ## Vercel demo
 
-The [demo](https://shadcn-3d-viewer.vercel.app/) and [Storybook](https://shadcn-3d-viewer.vercel.app/storybook/) are built as one static Vercel project. `bun run build:vercel` writes the demo to `dist/` and Storybook to `dist/storybook/`; `vercel.json` configures the build and redirects `/storybook` to `/storybook/` so Storybook's relative asset paths resolve correctly. The deployment includes the public registry JSON at `/r/model-viewer.json`.
+The demo and Storybook are configured for one static Vercel project at `/` and `/storybook/`. `bun run build:vercel` writes the demo to `dist/` and Storybook to `dist/storybook/`; `vercel.json` configures the build and redirects `/storybook` to `/storybook/` so Storybook's relative asset paths resolve correctly. The deployment includes the public registry JSON at `/r/model-viewer.json`.
 
 To enable deployment on each commit, link the `michidk/shadcn-3d-viewer` GitHub repository to the Vercel project in Vercel's Git settings. The CLI project link alone does not enable Git-triggered deployments. Assign `shadcn-3d-viewer.vercel.app` as the production domain if available.
 
