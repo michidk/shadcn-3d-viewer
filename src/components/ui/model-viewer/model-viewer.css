@@ -133,7 +133,7 @@
   }
 
   .viewer-animation-controls {
-    right: 14px;
+    right: 58px;
     bottom: 14px;
     max-width: min(390px, calc(100% - 28px));
   }
@@ -156,7 +156,7 @@
 
   .viewer-fullscreen {
     right: 14px;
-    top: 14px;
+    bottom: 14px;
   }
   .viewer-orientation-controls {
     position: absolute;
@@ -237,7 +237,7 @@
     .viewer-animation-controls {
       top: auto;
       bottom: 9px;
-      right: 9px;
+      right: 53px;
       max-width: calc(100% - 18px);
     }
 
@@ -251,7 +251,7 @@
     }
     .viewer-fullscreen {
       right: 9px;
-      top: 9px;
+      bottom: 9px;
     }
     .model-viewer:has(.viewer-animation-controls) .viewer-help {
       bottom: 62px;
@@ -264,7 +264,6 @@
   .viewer-inspector {
     position: absolute;
     z-index: 4;
-    left: 14px;
     top: max(14px, var(--viewer-toolbar-offset, 0px));
     width: min(330px, calc(100% - 28px));
     max-height: calc(
@@ -281,6 +280,12 @@
       0 4px 6px -1px rgb(0 0 0 / 0.1),
       0 2px 4px -2px rgb(0 0 0 / 0.1);
     font-size: 11px;
+  }
+  .viewer-inspector[data-position="left"] {
+    left: 14px;
+  }
+  .viewer-inspector[data-position="right"] {
+    right: 14px;
   }
   .inspector-header {
     display: flex;
@@ -497,6 +502,12 @@
       max-height: calc(
         100% - max(9px, var(--viewer-toolbar-offset, 0px)) - 64px
       );
+    }
+    .viewer-inspector[data-position="left"] {
+      left: 9px;
+    }
+    .viewer-inspector[data-position="right"] {
+      right: 9px;
     }
     .inspector-header {
       padding: 10px 12px;

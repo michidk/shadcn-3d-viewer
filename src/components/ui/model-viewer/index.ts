@@ -12,7 +12,10 @@ export {
   ModelViewerOverlay,
 } from "./model-viewer-parts";
 export type { ModelViewerInspectorProps } from "./model-viewer-parts";
-export type { ModelViewerRootProps, ModelViewerState } from "./model-viewer-types";
+export type {
+  ModelViewerRootProps,
+  ModelViewerState,
+} from "./model-viewer-types";
 export {
   ModelViewerToolbar,
   ModelViewerToolbarGroup,
@@ -44,6 +47,7 @@ export type {
   ViewerMode,
   ViewerProgress,
   ViewerViewCube,
+  ModelInspectorPosition,
   ViewerShading,
 } from "./model-viewer";
 export type { ModelInspection } from "./model-inspection";

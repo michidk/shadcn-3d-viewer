@@ -229,7 +229,7 @@ Controls include accessible button labels and visual tooltips by default, follow
 
 `Button` accepts the Base UI shadcn button props (including `variant`, `size`, and `render`) and must forward its ref, event handlers, ARIA attributes, and `className` to the actual button. `Tooltip` receives `{ content, children }`; use `<TooltipTrigger render={children} />` to preserve refs and handlers. Exported `ViewerUiComponents` and `ViewerTooltipProps` describe these contracts. Define overrides outside render to preserve component identity.
 
-`ModelInspector` is separately exported with searchable/collapsible hierarchy, metric cards, dimensions, and selection state. Pass `inspection`, `selectedMesh`, `onSelectMesh`, optional `onClose`, `className`, and optional `components`. Use `ViewerUiProvider` to share overrides across composed controls. The inspector includes its stylesheet; override `className`/CSS for custom placement. Search indexes all nodes and their ancestors, including collapsed branches. Large hierarchies initially render 200 rows; **Show more objects** reveals additional batches without restricting search.
+`ModelInspector` is separately exported with searchable/collapsible hierarchy, metric cards, dimensions, and selection state. Pass `inspection`, `selectedMesh`, `onSelectMesh`, optional `onClose`, `position`, `className`, and optional `components`. `position` accepts `"left"` or `"right"` and defaults to `"right"`; the drop-in `ModelViewer` exposes the same choice as `inspectorPosition`. Use `ViewerUiProvider` to share overrides across composed controls. The inspector includes its stylesheet; override `className`/CSS for more custom placement. Search indexes all nodes and their ancestors, including collapsed branches. Large hierarchies initially render 200 rows; **Show more objects** reveals additional batches without restricting search.
 
 ### Compose viewer parts
 
@@ -308,7 +308,7 @@ Built-in menus and tooltips mount inside the viewer during native fullscreen so 
 
 When native fullscreen is unavailable, the expanded viewer acts as a modal dialog: background content becomes inert, keyboard focus stays in the viewer and its menus, Escape exits, and focus returns to the activating control.
 
-Fullscreen defaults to the top-right; animation controls default to the bottom-right. On narrow viewers, the interaction hint sits above the animation panel. Reposition the compound parts with `className` or `style` (for example, `className="top-auto bottom-3"` on `ModelViewerFullscreen`). The default top-right view cube leaves space below fullscreen; explicit `viewCubeMargin` values take precedence.
+Fullscreen defaults to the bottom-right. Animation controls sit immediately to its left, and on narrow viewers the interaction hint moves above the animation panel. Reposition the compound parts with `className` or `style` (for example, `className="top-3 bottom-auto"` on `ModelViewerFullscreen`). Explicit `viewCubeMargin` values take precedence over the default view-cube spacing.
 
 `toolbar={null}` hides only the main toolbar; `showUi={false}` hides all built-in controls. `ModelViewerControls` and `ModelViewerAnimationControls` export the ready-made controlled toolbars. Arrow Left/Right and Home/End move focus between toolbar buttons; Tab retains normal browser navigation.
 
@@ -324,7 +324,7 @@ Styles live in Tailwind's `components` layer, so utility classes can override th
 
 Omitting `animation` automatically selects the first clip; passing `animation={null}` explicitly disables clip selection. Playback starts paused. Clip selection resets when replacing an uncontrolled model, and pause/resume preserves playback position. Respecting reduced motion suppresses playback and auto-rotation; use `respectReducedMotion={false}` only when your application explicitly requests motion.
 
-The inspector reports source-model units and unique material/texture resources. Select a mesh in the hierarchy or click it in the scene to highlight it. Animated framing uses a sampled envelope (17 poses per clip); unusually fast or procedural motion may extend beyond that envelope. Reset view includes the current pose in its bounds.
+The inspector reports source-model units and unique material/texture resources. Select a mesh in the hierarchy or click it in the scene to outline it without replacing its material. Animated framing uses a sampled envelope (17 poses per clip); unusually fast or procedural motion may extend beyond that envelope. Reset view includes the current pose in its bounds.
 
 ## ✨ Feature set
 

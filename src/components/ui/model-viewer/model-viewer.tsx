@@ -14,6 +14,7 @@ import {
 // Keep existing direct type imports working.
 export type {
   ModelViewerProps,
+  ModelInspectorPosition,
   ViewerMode,
   ViewerLighting,
   ViewerShading,
@@ -32,6 +33,7 @@ export function ModelViewer({
   children,
   showUi = true,
   showAnimationControls = true,
+  inspectorPosition = "right",
   ...props
 }: ModelViewerProps) {
   return (
@@ -46,7 +48,7 @@ export function ModelViewer({
           <ModelViewerFullscreen />
         </>
       )}
-      <ModelViewerInspector />
+      <ModelViewerInspector position={inspectorPosition} />
       {children}
     </ModelViewerRoot>
   );

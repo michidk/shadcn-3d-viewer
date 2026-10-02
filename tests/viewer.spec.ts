@@ -338,6 +338,9 @@ test("solid mutes sample materials and the optional floor receives shadows", asy
       if (['Cube', 'Viewer floor', 'Viewer floor shadows'].includes(object.name)) {
         objects[object.name] = { color: object.material?.color?.getHexString(), castShadow: object.castShadow, receiveShadow: object.receiveShadow };
       }
+      if (object.name === 'Viewer selection outline') {
+        objects.__outline = { color: object.children[0]?.material?.color?.getHexString() };
+      }
     });
     objects.__shadowMap = state.gl.shadowMap.enabled;
     return objects;
@@ -354,8 +357,10 @@ test("solid mutes sample materials and the optional floor receives shadows", asy
   await page.getByRole("button", { name: "Inspect model", exact: true }).click();
   await page.getByRole("textbox", { name: "Search hierarchy" }).fill("Cube");
   await page.locator(".viewer-inspector .inspector-node:enabled").click();
-  expect((await scene()).Cube.color).toBe("e9c56a");
+  expect((await scene()).Cube.color).toBe("a7aaa5");
+  await expect.poll(async () => (await scene()).__outline?.color).toBe("f2a93b");
   await page.getByRole("button", { name: "Clear selection", exact: true }).click();
+  await expect.poll(async () => (await scene()).__outline).toBeUndefined();
   await page.getByRole("button", { name: "Show floor" }).click();
   const withFloor = await scene();
   expect(withFloor.__shadowMap).toBe(true);
@@ -526,6 +531,7 @@ test("tooltips and searchable inspector remain usable on phones", async ({ page 
   await expect(page.locator('[data-slot="tooltip-content"][data-open]')).toHaveText("Inspect model");
   await page.getByRole("button", { name: "Inspect model", exact: true }).click();
   const inspector = page.getByRole("complementary", { name: "Model inspector" });
+  await expect(inspector).toHaveAttribute("data-position", "right");
   const search = page.getByRole("textbox", { name: "Search hierarchy" });
   await search.fill("Cube");
   await expect(inspector.locator(".inspector-node:enabled")).toHaveCount(1);
@@ -541,7 +547,9 @@ test("tooltips and searchable inspector remain usable on phones", async ({ page 
   await expect(inspector.locator(".inspector-node:enabled")).toHaveCount(3);
   expect(await inspector.evaluate(element => element.scrollWidth <= element.clientWidth)).toBe(true);
   const panel = (await inspector.boundingBox())!;
+  const viewer = (await page.locator('[data-slot="model-viewer"]').boundingBox())!;
   const footer = (await inspector.locator(".inspector-selection").boundingBox())!;
+  expect(viewer.x + viewer.width - panel.x - panel.width).toBeLessThan(12);
   expect(footer.y + footer.height).toBeLessThanOrEqual(panel.y + panel.height);
 });
 

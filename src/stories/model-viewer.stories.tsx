@@ -30,6 +30,7 @@ const meta = {
         "floorColor",
         "viewCube",
         "viewCubePosition",
+        "inspectorPosition",
         "showUi",
         "showFileName",
         "showRetry",
@@ -56,6 +57,10 @@ const meta = {
     viewCubePosition: {
       control: "select",
       options: ["top-right", "top-left", "bottom-right", "bottom-left"],
+    },
+    inspectorPosition: {
+      control: "inline-radio",
+      options: ["left", "right"],
     },
     height: { control: { type: "range", min: 320, max: 800, step: 20 } },
     pauseWhenHidden: { control: "boolean" },

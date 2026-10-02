@@ -15,6 +15,7 @@ import { useId, useMemo, useState, type ComponentProps } from "react";
 import { cn } from "@/lib/utils";
 import { indexHierarchy } from "./inspector-hierarchy";
 import type { ModelInspection } from "./model-inspection";
+import type { ModelInspectorPosition } from "./model-viewer-types";
 import {
   ViewerControlButton as Button,
   ViewerUiProvider,
@@ -27,6 +28,8 @@ export type ModelInspectorProps = ComponentProps<"aside"> & {
   selectedMesh?: string | null;
   onSelectMesh: (id: string | null) => void;
   onClose?: () => void;
+  /** Side of the viewer used by the positioned inspector. Defaults to right. */
+  position?: ModelInspectorPosition;
   className?: string;
   components?: Partial<ViewerUiComponents>;
 };
@@ -36,6 +39,7 @@ export function ModelInspector({
   selectedMesh,
   onSelectMesh,
   onClose,
+  position = "right",
   className,
   components,
   ...props
@@ -65,6 +69,7 @@ export function ModelInspector({
     <ViewerUiProvider components={components}>
       <aside
         data-slot="model-inspector"
+        data-position={position}
         className={cn("viewer-inspector", className)}
         aria-labelledby={heading}
         {...props}

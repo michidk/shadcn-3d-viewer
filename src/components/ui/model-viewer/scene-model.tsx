@@ -1,7 +1,7 @@
 "use client";
 
-import { useGLTF } from "@react-three/drei";
-import { useFrame, useThree } from "@react-three/fiber";
+import { Outlines, useGLTF } from "@react-three/drei";
+import { createPortal, useFrame, useThree } from "@react-three/fiber";
 import { retainModelResources } from "./model-resources";
 import { useEffect, useMemo, useRef } from "react";
 import {
@@ -100,10 +100,10 @@ export function SceneObject({
           >
             <boxGeometry args={[0.9, 0.9, 0.9]} />
             <ViewerMaterial
-              shading={selectedMesh === "0/0" ? "solid" : shading}
-              selected={selectedMesh === "0/0"}
-              color={selectedMesh === "0/0" ? "#e9c56a" : "#b3c899"}
+              shading={shading}
+              color="#b3c899"
             />
+            {selectedMesh === "0/0" && <SelectionOutline />}
           </mesh>
           <mesh
             name="Dodecahedron"
@@ -113,18 +113,18 @@ export function SceneObject({
           >
             <dodecahedronGeometry args={[0.55, 0]} />
             <ViewerMaterial
-              shading={selectedMesh === "0/1" ? "solid" : shading}
-              selected={selectedMesh === "0/1"}
-              color={selectedMesh === "0/1" ? "#e9c56a" : "#d19a78"}
+              shading={shading}
+              color="#d19a78"
             />
+            {selectedMesh === "0/1" && <SelectionOutline />}
           </mesh>
           <mesh name="Sphere" castShadow position={[0.15, 0.42, 1]}>
             <sphereGeometry args={[0.42, 48, 48]} />
             <ViewerMaterial
-              shading={selectedMesh === "0/2" ? "solid" : shading}
-              selected={selectedMesh === "0/2"}
-              color={selectedMesh === "0/2" ? "#e9c56a" : "#7fa7a7"}
+              shading={shading}
+              color="#7fa7a7"
             />
+            {selectedMesh === "0/2" && <SelectionOutline />}
           </mesh>
         </>
       )}
@@ -173,6 +173,15 @@ function LoadedModel({
     result.updateMatrixWorld(true);
     return result;
   }, [gltf.scene]);
+  const selectedObject = useMemo(() => {
+    if (!selectedMesh) return null;
+    let match: Mesh | null = null;
+    model.traverse((object) => {
+      if ((object as Mesh).isMesh && object.userData.viewerNodeId === selectedMesh)
+        match = object as Mesh;
+    });
+    return match;
+  }, [model, selectedMesh]);
   useEffect(() => retainModelResources(model), [model]);
   const invalidate = useThree((state) => state.invalidate);
   const { mixer, actions, names } = useMemo(() => {
@@ -202,16 +211,9 @@ function LoadedModel({
     model.traverse((object) => {
       const mesh = object as Mesh;
       if (!mesh.isMesh) return;
-      const selected = object.userData.viewerNodeId === selectedMesh;
-      if (!selected && shading === "realistic") return;
+      if (shading === "realistic") return;
       const original = mesh.material;
-      const material = selected
-        ? new MeshStandardMaterial({
-            color: "#e9c56a",
-            emissive: "#a36d15",
-            emissiveIntensity: 0.35,
-          })
-        : shading === "normals"
+      const material = shading === "normals"
           ? new MeshNormalMaterial()
           : shading === "wireframe"
             ? new MeshBasicMaterial({ color: "#34483f", wireframe: true })
@@ -223,7 +225,7 @@ function LoadedModel({
       });
     });
     return () => restore.forEach((reset) => reset());
-  }, [model, selectedMesh, shading]);
+  }, [model, shading]);
 
   useEffect(() => {
     onAnimations(names);
@@ -265,33 +267,45 @@ function LoadedModel({
   }, [activeAction, animationResetToken, invalidate]);
 
   return (
-    <primitive
-      object={model}
-      onClick={(event: import("@react-three/fiber").ThreeEvent<MouseEvent>) => {
-        event.stopPropagation();
-        onSelectMesh(event.object.userData.viewerNodeId ?? null);
-      }}
-    />
+    <>
+      <primitive
+        object={model}
+        onClick={(event: import("@react-three/fiber").ThreeEvent<MouseEvent>) => {
+          event.stopPropagation();
+          onSelectMesh(event.object.userData.viewerNodeId ?? null);
+        }}
+      />
+      {selectedObject && createPortal(<SelectionOutline />, selectedObject)}
+    </>
   );
 }
 
 function ViewerMaterial({
   shading,
   color = "#a7aaa5",
-  selected = false,
 }: {
   shading: ViewerShading;
   color?: string;
-  selected?: boolean;
 }) {
   if (shading === "normals") return <meshNormalMaterial />;
   if (shading === "wireframe")
     return <meshBasicMaterial color="#34483f" wireframe />;
   return (
     <meshStandardMaterial
-      color={shading === "solid" && !selected ? "#a7aaa5" : color}
+      color={shading === "solid" ? "#a7aaa5" : color}
       roughness={shading === "solid" ? 0.82 : 0.68}
       metalness={0}
+    />
+  );
+}
+
+function SelectionOutline() {
+  return (
+    <Outlines
+      name="Viewer selection outline"
+      color="#f2a93b"
+      thickness={3}
+      toneMapped={false}
     />
   );
 }

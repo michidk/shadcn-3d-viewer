@@ -8,6 +8,7 @@ export type ViewerMode = "orbit" | "split" | "firstPerson";
 export type ViewerLighting = "day" | "night" | "outside";
 export type ViewerShading = "realistic" | "solid" | "normals" | "wireframe";
 export type ViewerViewCube = "drei" | "asset-studio";
+export type ModelInspectorPosition = "left" | "right";
 export type ViewerCameraPreset =
   "isometric" | "front" | "right" | "back" | "left" | "top" | "bottom";
 
@@ -75,6 +76,8 @@ export interface ModelViewerProps extends Omit<
   showInspector?: boolean;
   inspectorOpen?: boolean;
   defaultInspectorOpen?: boolean;
+  /** Side used by the built-in inspector. Defaults to right. */
+  inspectorPosition?: ModelInspectorPosition;
   onInspectorOpenChange?: (open: boolean) => void;
   onInspect?: (inspection: ModelInspection) => void;
   showAnimationControls?: boolean;
@@ -125,7 +128,11 @@ export interface ModelViewerProps extends Omit<
 
 export type ModelViewerRootProps = Omit<
   ModelViewerProps,
-  "toolbar" | "overlay" | "showAnimationControls" | "sceneContent"
+  | "toolbar"
+  | "overlay"
+  | "showAnimationControls"
+  | "sceneContent"
+  | "inspectorPosition"
 >;
 
 export interface ModelViewerState {
