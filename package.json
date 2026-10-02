@@ -29,6 +29,7 @@
     "storybook:build": "storybook build --disable-telemetry",
     "storybook:test": "playwright test --config playwright.storybook.config.ts",
     "registry:build": "shadcn build",
+    "test:install": "bun run registry:build && node tests/install-consumer.mjs",
     "test:package": "node --test tests/package.test.mjs",
     "prepack": "bun run registry:build && bun run verify && bun run test:package",
     "verify": "bun run typecheck && bun run lint && bun run build"

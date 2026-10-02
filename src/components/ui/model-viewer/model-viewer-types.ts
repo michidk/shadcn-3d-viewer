@@ -58,6 +58,8 @@ export interface ModelViewerProps extends Omit<
   floorColor?: string;
   showCubes?: boolean;
   showUi?: boolean;
+  /** Preserve the WebGL buffer for PNG capture. Defaults to showUi; enable explicitly for custom controls. */
+  enableCapture?: boolean;
   showOrientation?: boolean;
   viewCube?: ViewerViewCube | false;
   defaultViewCube?: ViewerViewCube | false;

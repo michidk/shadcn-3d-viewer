@@ -13,6 +13,7 @@ import {
 } from "lucide-react";
 import { useId, useMemo, useState, type ComponentProps } from "react";
 import { cn } from "@/lib/utils";
+import { indexHierarchy } from "./inspector-hierarchy";
 import type { ModelInspection } from "./model-inspection";
 import {
   ViewerControlButton as Button,
@@ -43,25 +44,14 @@ export function ModelInspector({
   const [collapsed, setCollapsed] = useState<Set<string>>(() => new Set());
   const heading = useId();
   const selected = inspection.nodes.find((node) => node.id === selectedMesh);
-  const parentIds = useMemo(
-    () =>
-      new Set(
-        inspection.nodes.map((node) =>
-          node.id.slice(0, node.id.lastIndexOf("/")),
-        ),
-      ),
-    [inspection.nodes],
-  );
-  const matching = inspection.nodes.filter((node) =>
-    node.name.toLowerCase().includes(query.toLowerCase()),
-  );
-  const visible = inspection.nodes.filter((node) =>
-    query
-      ? matching.some(
-          (match) => match.id === node.id || match.id.startsWith(`${node.id}/`),
-        )
-      : ![...collapsed].some((id) => node.id.startsWith(`${id}/`)),
-  );
+  const hierarchy = useMemo(() => indexHierarchy(inspection.nodes), [inspection.nodes]);
+  const visible = useMemo(() => hierarchy.visible(query, collapsed), [hierarchy, query, collapsed]);
+  const [page, setPage] = useState({ nodes: inspection.nodes, query, limit: 200 });
+  const limit = page.nodes === inspection.nodes && page.query === query ? page.limit : 200;
+  function changeQuery(next: string) {
+    setQuery(next);
+    setPage({ nodes: inspection.nodes, query: next, limit: 200 });
+  }
   function toggle(id: string) {
     setCollapsed((current) => {
       const next = new Set(current);
@@ -136,22 +126,22 @@ export function ModelInspector({
             aria-label="Search hierarchy"
             placeholder="Find an object…"
             value={query}
-            onChange={(event) => setQuery(event.target.value)}
+            onChange={(event) => changeQuery(event.target.value)}
           />
           {query && (
             <Button
               size="icon-sm"
               variant="ghost"
               aria-label="Clear search"
-              onClick={() => setQuery("")}
+              onClick={() => changeQuery("")}
             >
               <X size={12} />
             </Button>
           )}
         </label>
         <ul className="inspector-tree" aria-label="Scene hierarchy">
-          {visible.map((node) => {
-            const hasChildren = parentIds.has(node.id);
+          {visible.slice(0, limit).map((node) => {
+            const hasChildren = hierarchy.branches.has(node.id);
             return (
               <li
                 data-slot="model-inspector-node"
@@ -197,6 +187,11 @@ export function ModelInspector({
             );
           })}
         </ul>
+        {visible.length > limit && (
+          <Button variant="outline" size="sm" onClick={() => setPage({ nodes: inspection.nodes, query, limit: limit + 200 })}>
+            Show {Math.min(200, visible.length - limit)} more objects
+          </Button>
+        )}
         {visible.length === 0 && (
           <div className="inspector-empty">No objects match “{query}”.</div>
         )}

@@ -28,6 +28,8 @@ jobs:
         run: bun install --frozen-lockfile
       - name: Verify and package sources
         run: npm pack --dry-run
+      - name: Install packed CLI into a clean consumer app
+        run: bun run test:install
       - name: Check generated registry is current
         run: git diff --exit-code -- public/r
 

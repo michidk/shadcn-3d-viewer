@@ -106,6 +106,8 @@ export function ModelViewerScene({
   const {
     viewerRef,
     canvasRef,
+    enableCapture,
+    setCaptureReady,
     viewerKey,
     cameraStore,
     toolbarOffset,
@@ -210,6 +212,7 @@ export function ModelViewerScene({
           })}
         </div>
         <Canvas
+          key={String(enableCapture)}
           className="viewer-canvas"
           shadows={floor}
           dpr={quality}
@@ -224,12 +227,13 @@ export function ModelViewerScene({
           gl={{
             antialias: true,
             alpha: true,
-            preserveDrawingBuffer: showUi,
+            preserveDrawingBuffer: enableCapture,
             powerPreference: "high-performance",
           }}
           eventSource={viewerRef}
           onCreated={({ gl }) => {
             canvasRef.current = gl.domElement;
+            setCaptureReady(gl.getContext().getContextAttributes()?.preserveDrawingBuffer === true);
             gl.setClearAlpha(0);
           }}
         >

@@ -64,7 +64,7 @@ The [demo](https://shadcn-3d-viewer.vercel.app/) and [Storybook](https://shadcn-
 
 The Vercel project is connected to `michidk/shadcn-3d-viewer` with `main` as its production branch, so pushes to `main` deploy automatically. The production domain is `shadcn-3d-viewer.vercel.app`.
 
-For browser tests, install Chromium with `bunx playwright install --with-deps chromium`, or reuse Docker Chrome through `VIEWER_TEST_CDP`. Set `STORYBOOK_TEST_URL` if Storybook is not at `http://localhost:6006`; the Docker browser must be able to reach that URL. Storybook tests are separate from the demo's `bun run test` suite. CI runs both suites in separate jobs, starts their servers automatically, and uploads screenshots, traces, and HTML reports on failure. Local runs reuse your running servers through `VIEWER_TEST_URL` and `STORYBOOK_TEST_URL`.
+For browser tests, install Chromium with `bunx playwright install --with-deps chromium`, or reuse Docker Chrome through `VIEWER_TEST_CDP`. Set `STORYBOOK_TEST_URL` if Storybook is not at `http://localhost:6006`; the Docker browser must be able to reach that URL. Storybook tests are separate from the demo's `bun run test` suite. CI runs both suites in separate jobs, starts their servers automatically, and uploads screenshots, traces, and HTML reports on failure. Local runs reuse your running servers through `VIEWER_TEST_URL` and `STORYBOOK_TEST_URL`. `bun run test:install` also packs the CLI, installs it into a clean Base UI consumer outside this repository, checks the host theme/configuration, and typechecks/builds the installed component. CI runs this consumer check before accepting the package.
 
 ## Add the component
 
@@ -297,7 +297,7 @@ Controls include accessible button labels and visual tooltips by default, follow
 
 `Button` accepts the Base UI shadcn button props (including `variant`, `size`, and `render`) and must forward its ref, event handlers, ARIA attributes, and `className` to the actual button. `Tooltip` receives `{ content, children }`; use `<TooltipTrigger render={children} />` to preserve refs and handlers. Exported `ViewerUiComponents` and `ViewerTooltipProps` describe these contracts. Define overrides outside render to preserve component identity.
 
-`ModelInspector` is separately exported with searchable/collapsible hierarchy, metric cards, dimensions, and selection state. Pass `inspection`, `selectedMesh`, `onSelectMesh`, optional `onClose`, `className`, and optional `components`. Use `ViewerUiProvider` to share overrides across composed controls. The inspector includes its stylesheet; override `className`/CSS for custom placement.
+`ModelInspector` is separately exported with searchable/collapsible hierarchy, metric cards, dimensions, and selection state. Pass `inspection`, `selectedMesh`, `onSelectMesh`, optional `onClose`, `className`, and optional `components`. Use `ViewerUiProvider` to share overrides across composed controls. The inspector includes its stylesheet; override `className`/CSS for custom placement. Search indexes all nodes and their ancestors, including collapsed branches. Large hierarchies initially render 200 rows; **Show more objects** reveals additional batches without restricting search.
 
 ### Compose viewer parts
 
@@ -372,6 +372,8 @@ Controlled props stay controlled: a hook action reports the change callback, but
 
 Toolbar layout measures mounted top toolbars, including wraps and custom button sizes, to reserve room in split views. Use `placement="static"` for a toolbar that should not reserve top space. Primitive button sizing and menu styling are not overridden by viewer CSS.
 
+When native fullscreen is unavailable, the expanded viewer acts as a modal dialog: background content becomes inert, keyboard focus stays in the viewer and its menus, Escape exits, and focus returns to the activating control.
+
 Fullscreen defaults to the top-right; animation controls default to the bottom-right. On narrow viewers, the interaction hint sits above the animation panel. Reposition the compound parts with `className` or `style` (for example, `className="top-auto bottom-3"` on `ModelViewerFullscreen`). The default top-right view cube leaves space below fullscreen; explicit `viewCubeMargin` values take precedence.
 
 `toolbar={null}` hides only the main toolbar; `showUi={false}` hides all built-in controls. `ModelViewerControls` and `ModelViewerAnimationControls` export the ready-made controlled toolbars. Arrow Left/Right and Home/End move focus between toolbar buttons; Tab retains normal browser navigation.
@@ -406,5 +408,5 @@ The suite covers extreme model scales, framing, shared-resource statistics, the 
 - The demo intentionally accepts GLB only because standalone `.gltf` files can reference sidecar buffers and textures. The component itself can load any URL supported by `GLTFLoader`.
 - Draco and Meshopt are enabled by default. Pass a self-hosted Draco decoder path through `useDraco`, or configure KTX2 and other extensions with `extendLoader`.
 - Blob URLs clear Drei's loader cache on unmount by default. Set `clearCacheOnUnmount` explicitly for other short-lived URLs.
-- Screenshot support uses `preserveDrawingBuffer` when viewer UI is enabled. Set `showUi={false}` on dense grids to reduce GPU overhead.
+- `enableCapture` controls PNG capture independently of the built-in UI and defaults to `showUi`. Use `<ModelViewer showUi={false} enableCapture>` for custom capture controls, or `enableCapture={false}` to reduce GPU overhead with the toolbar visible. `canCapture` stays false until the renderer supports capture and the model is ready. Changing `enableCapture` recreates the WebGL canvas because buffer preservation is fixed when its context is created.
 - First-person pointer lock may be blocked inside restrictive iframes; the component automatically falls back to focused-canvas drag look when the browser exposes that policy.

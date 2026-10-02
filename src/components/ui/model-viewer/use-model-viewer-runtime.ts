@@ -12,6 +12,7 @@ import {
 import type { ModelInspection } from "./model-inspection";
 import { createViewerCameraStore } from "./model-viewer-camera";
 import { initialViewerLifecycle, viewerLifecycleReducer } from "./model-viewer-lifecycle";
+import { useExpandedViewerFocus } from "./use-expanded-viewer-focus";
 import { viewerBackgroundColor } from "./model-viewer-colors";
 import {
   splitPanes,
@@ -49,6 +50,7 @@ export function useModelViewerRuntime({
   floorColor,
   showCubes: requestedCubes,
   showUi = true,
+  enableCapture = showUi,
   showOrientation = showUi,
   viewCube: controlledViewCube,
   defaultViewCube = "asset-studio",
@@ -184,6 +186,7 @@ export function useModelViewerRuntime({
   const [animationResetToken, setAnimationResetToken] = useState(0);
   const reducedMotion = useReducedMotion(respectReducedMotion);
   const viewerRef = useRef<HTMLDivElement | null>(null);
+  const fullscreenReturnFocus = useRef<HTMLElement | null>(null);
   const [inViewport, setInViewport] = useState(true);
   const [pageVisible, setPageVisible] = useState(true);
   useEffect(() => {
@@ -202,6 +205,7 @@ export function useModelViewerRuntime({
   const renderingPaused = pauseWhenHidden && (!inViewport || !pageVisible);
   useImperativeHandle(ref, () => viewerRef.current!, []);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
+  const [captureReady, setCaptureReady] = useState(false);
   const feedbackTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const loadReportedGeneration = useRef<number | null>(null);
   const viewerKey = useId();
@@ -212,6 +216,7 @@ export function useModelViewerRuntime({
     setSceneMountedState(mounted);
     dispatchLifecycle({ type: mounted ? "mount" : "unmount" });
     if (!mounted) {
+      setCaptureReady(false);
       setAnimationNames([]);
       setInspection(null);
       setSelectedMesh(null);
@@ -245,7 +250,7 @@ export function useModelViewerRuntime({
     setInspection(null);
     setSelectedMesh(null);
     setLocked(false);
-  }, [src, mode]);
+  }, [src, mode, enableCapture]);
 
   useEffect(() => () => {
     if (src && clearCacheOnUnmount) useGLTF.clear(src);
@@ -303,19 +308,7 @@ export function useModelViewerRuntime({
     return () => document.removeEventListener("fullscreenchange", update);
   }, []);
 
-  useEffect(() => {
-    if (!isExpanded) return;
-    const previousOverflow = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
-    const close = (event: KeyboardEvent) => {
-      if (event.key === "Escape") setIsExpanded(false);
-    };
-    document.addEventListener("keydown", close);
-    return () => {
-      document.body.style.overflow = previousOverflow;
-      document.removeEventListener("keydown", close);
-    };
-  }, [isExpanded]);
+  useExpandedViewerFocus(viewerRef, isExpanded, fullscreenReturnFocus, () => setIsExpanded(false));
 
   useEffect(() => {
     setPointerLockAvailable("requestPointerLock" in HTMLElement.prototype);
@@ -370,7 +363,7 @@ export function useModelViewerRuntime({
 
   async function capture(action: "copy" | "download") {
     const canvas = canvasRef.current;
-    if (!canvas || !sceneMounted || !loaded || viewerError) return;
+    if (!enableCapture || !captureReady || !canvas || !sceneMounted || !loaded || viewerError) return;
     try {
       const source = document.createElement("canvas");
       source.width = canvas.width;
@@ -431,6 +424,7 @@ export function useModelViewerRuntime({
         await document.exitFullscreen();
         return;
       }
+      fullscreenReturnFocus.current = document.activeElement instanceof HTMLElement ? document.activeElement : null;
       if (!document.fullscreenEnabled || !viewerRef.current)
         throw new Error("Fullscreen unavailable");
       await viewerRef.current.requestFullscreen();
@@ -479,7 +473,7 @@ export function useModelViewerRuntime({
     renderingPaused,
     retry,
     status,
-    canCapture: sceneMounted && loaded && !viewerError,
+    canCapture: enableCapture && captureReady && sceneMounted && loaded && !viewerError,
     capture,
     fullscreen: isFullscreen || isExpanded,
     toggleFullscreen,
@@ -490,6 +484,8 @@ export function useModelViewerRuntime({
     root: { components, className, style, children, height, props, isExpanded },
     viewerRef,
     canvasRef,
+    enableCapture,
+    setCaptureReady,
     viewerKey,
     cameraStore,
     toolbarOffset,

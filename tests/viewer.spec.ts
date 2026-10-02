@@ -220,25 +220,45 @@ test("grid stays visible around an animated model on desktop and phone", async (
   }
 });
 
-test("demo starts rotating and the toolbar controls the orbit frame loop", async ({ page }) => {
+test("demo starts rotating and mode changes stop and resume rendering", async ({ page }) => {
+  await page.addInitScript(() => {
+    const frames = new WeakMap<HTMLCanvasElement, number>();
+    Object.assign(window, { viewerFrames: frames });
+    const draw = WebGL2RenderingContext.prototype.drawElements;
+    WebGL2RenderingContext.prototype.drawElements = function (...args) {
+      const canvas = this.canvas as HTMLCanvasElement;
+      frames.set(canvas, (frames.get(canvas) ?? 0) + 1);
+      return draw.apply(this, args);
+    };
+  });
   await ready(page);
+  const root = page.locator('[data-slot="model-viewer"]');
   const rotate = page.getByRole("button", { name: "Rotate automatically" });
+  const count = () => page.evaluate(() => {
+    const canvas = document.querySelector("canvas")!;
+    return (window as unknown as { viewerFrames: WeakMap<HTMLCanvasElement, number> }).viewerFrames.get(canvas) ?? 0;
+  });
+  async function expectDrawing(active: boolean) {
+    await expect(root).toHaveAttribute("data-state", "ready");
+    await expect.poll(async () => {
+      const before = await count();
+      await page.waitForTimeout(400);
+      return (await count()) > before;
+    }).toBe(active);
+  }
   await expect(rotate).toHaveAttribute("aria-pressed", "true");
-  const frameLoop = () => page.evaluate(`(async () => {
-    const { _roots } = await import('/node_modules/.vite/deps/@react-three_fiber.js');
-    return [..._roots.values()][0].store.getState().frameloop;
-  })()`);
-  expect(await frameLoop()).toBe("always");
+  await expectDrawing(true);
   await rotate.click();
   await expect(rotate).toHaveAttribute("aria-pressed", "false");
-  expect(await frameLoop()).toBe("demand");
+  await expectDrawing(false);
   await rotate.click();
+  await expectDrawing(true);
   await page.getByRole("button", { name: "Four-view split" }).click();
   await expect(rotate).toBeDisabled();
-  expect(await frameLoop()).toBe("demand");
+  await expectDrawing(false);
   await page.getByRole("button", { name: "Orbit camera" }).click();
   await expect(rotate).toHaveAttribute("aria-pressed", "true");
-  expect(await frameLoop()).toBe("always");
+  await expectDrawing(true);
 });
 
 test("camera movement does not trigger pixelated canvas regression", async ({ page }) => {
@@ -876,4 +896,112 @@ test("local model URLs are released on replacement and clear under Strict Mode",
   }).trackedModelUrls);
   expect(urls.created).toHaveLength(2);
   for (const url of urls.created) expect(urls.revoked.filter((value) => value === url)).toHaveLength(1);
+});
+
+test("capture can be enabled independently of the built-in UI", async ({ page }) => {
+  await ready(page);
+  await page.evaluate(`(async () => {
+    const { default: React } = await import('/node_modules/.vite/deps/react.js');
+    const { default: ReactDOM } = await import('/node_modules/.vite/deps/react-dom_client.js');
+    const { ModelViewer, useModelViewer } = await import('/src/components/ui/model-viewer/index.ts');
+    const h = React.createElement;
+    const host = document.createElement('div');
+    host.id = 'capture-test';
+    host.style.cssText = 'position:fixed;inset:0;z-index:999;background:white';
+    document.body.append(host);
+    const create = URL.createObjectURL.bind(URL);
+    URL.createObjectURL = (blob) => {
+      if (blob.type === 'image/png') window.capturedPng = blob;
+      return create(blob);
+    };
+    function Controls() {
+      const viewer = useModelViewer();
+      return h('button', { style: { position: 'absolute', zIndex: 3 }, disabled: !viewer.canCapture,
+        onClick: () => viewer.capture('download') }, 'Custom PNG');
+    }
+    function Example() {
+      const [enabled, setEnabled] = React.useState(false);
+      return h(React.Fragment, null,
+        h('button', { onClick: () => setEnabled(!enabled) }, 'Toggle capture'),
+        h(ModelViewer, { showUi: false, enableCapture: enabled }, h(Controls)));
+    }
+    ReactDOM.createRoot(host).render(h(Example));
+  })()`);
+  const host = page.locator("#capture-test");
+  await expect(host.locator('[data-slot="model-viewer"]')).toHaveAttribute("data-state", "ready");
+  await expect(host.getByRole("button", { name: "Custom PNG" })).toBeDisabled();
+  await host.getByRole("button", { name: "Toggle capture" }).click();
+  await expect(host.getByRole("button", { name: "Custom PNG" })).toBeEnabled();
+  await host.getByRole("button", { name: "Custom PNG" }).click();
+  await expect.poll(() => page.evaluate("window.capturedPng?.size ?? 0")).toBeGreaterThan(1000);
+  const colors = await page.evaluate(`(async () => {
+    const image = await createImageBitmap(window.capturedPng);
+    const canvas = document.createElement('canvas');
+    canvas.width = canvas.height = 64;
+    const context = canvas.getContext('2d');
+    context.drawImage(image, 0, 0, 64, 64);
+    image.close();
+    return new Set(new Uint32Array(context.getImageData(0, 0, 64, 64).data.buffer)).size;
+  })()`);
+  expect(colors).toBeGreaterThan(10);
+  await host.getByRole("button", { name: "Toggle capture" }).click();
+  await expect(host.getByRole("button", { name: "Custom PNG" })).toBeDisabled();
+});
+
+test("fallback fullscreen contains focus, supports portaled menus and restores focus", async ({ page }) => {
+  await page.addInitScript(() => Object.defineProperty(document, "fullscreenEnabled", { get: () => false }));
+  await ready(page);
+  const originalOverflow = await page.evaluate(() => document.body.style.overflow);
+  await page.getByRole("button", { name: "Enter fullscreen" }).click();
+  const dialog = page.getByRole("dialog", { name: "Abstract sample objects" });
+  await expect(dialog).toHaveAttribute("aria-modal", "true");
+  expect(await page.locator("header.site-header").evaluate((element) => Boolean(element.closest("[inert]")))).toBe(true);
+  // Programmatic focus cannot escape to background controls either.
+  await page.getByRole("button", { name: "Copy install command", includeHidden: true }).evaluate((element: HTMLElement) => element.focus());
+  expect(await dialog.evaluate((element) => element.contains(document.activeElement))).toBe(true);
+  await dialog.getByRole("button", { name: "Shading: realistic" }).click();
+  await expect(page.getByRole("menuitemradio", { name: "Solid", exact: true })).toBeVisible();
+  await page.keyboard.press("Escape");
+  await expect(dialog).toBeVisible();
+  await expect(page.getByRole("menu")).toHaveCount(0);
+  const exit = dialog.getByRole("button", { name: "Exit fullscreen" });
+  await exit.focus();
+  await page.keyboard.press("Tab");
+  expect(await dialog.evaluate((element) => element.contains(document.activeElement))).toBe(true);
+  await page.keyboard.press("Shift+Tab");
+  expect(await dialog.evaluate((element) => element.contains(document.activeElement))).toBe(true);
+  await page.keyboard.press("Escape");
+  await expect(page.getByRole("dialog")).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "Enter fullscreen" })).toBeFocused();
+  expect(await page.locator("header.site-header").evaluate((element) => Boolean(element.closest("[inert]")))).toBe(false);
+  expect(await page.evaluate(() => document.body.style.overflow)).toBe(originalOverflow);
+});
+
+test("large inspectors bound rendered rows while searching the entire hierarchy", async ({ page }) => {
+  await ready(page);
+  await page.evaluate(`(async () => {
+    const { default: React } = await import('/node_modules/.vite/deps/react.js');
+    const { default: ReactDOM } = await import('/node_modules/.vite/deps/react-dom_client.js');
+    const { ModelInspector } = await import('/src/components/ui/model-viewer/index.ts');
+    const host = document.createElement('div');
+    host.id = 'large-inspector';
+    host.style.cssText = 'position:fixed;inset:0;z-index:999;background:white';
+    document.body.append(host);
+    const nodes = [{ id: '0', name: 'Scene', type: 'Group', depth: 0, mesh: false }];
+    for (let i = 0; i < 1500; i++) nodes.push({ id: '0/' + i, name: 'Part ' + i, type: 'Mesh', depth: 1, mesh: true });
+    ReactDOM.createRoot(host).render(React.createElement(ModelInspector, {
+      inspection: { nodes, triangles: 0, materials: 0, textures: 0, dimensions: [1, 1, 1] },
+      onSelectMesh: id => host.dataset.selected = id,
+    }));
+  })()`);
+  const host = page.locator("#large-inspector");
+  await expect(host.locator('[data-slot="model-inspector-node"]')).toHaveCount(200);
+  await host.getByRole("button", { name: "Show 200 more objects" }).click();
+  await expect(host.locator('[data-slot="model-inspector-node"]')).toHaveCount(400);
+  await host.getByRole("textbox", { name: "Search hierarchy" }).fill("Part 1499");
+  await expect(host.locator('[data-slot="model-inspector-node"]')).toHaveCount(2);
+  await host.getByRole("button", { name: "Part 1499 Mesh", exact: true }).click();
+  await expect(host).toHaveAttribute("data-selected", "0/1499");
+  await host.getByRole("textbox", { name: "Search hierarchy" }).fill("");
+  await expect(host.locator('[data-slot="model-inspector-node"]')).toHaveCount(200);
 });

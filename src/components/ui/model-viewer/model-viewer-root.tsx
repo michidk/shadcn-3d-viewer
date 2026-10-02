@@ -23,7 +23,6 @@ export function ModelViewerRoot(props: ModelViewerRootProps) {
           data-viewer-key={viewerKey}
           aria-label={runtime.accessibleLabel}
           aria-labelledby={runtime.ariaLabelledBy}
-          role="group"
           className={cn(
             "model-viewer",
             toolbarOffset > 0 && "has-toolbar",
@@ -40,6 +39,9 @@ export function ModelViewerRoot(props: ModelViewerRootProps) {
             } as CSSProperties
           }
           {...root.props}
+          role={root.isExpanded ? "dialog" : (root.props.role ?? "group")}
+          aria-modal={root.isExpanded ? true : root.props["aria-modal"]}
+          tabIndex={root.isExpanded ? -1 : root.props.tabIndex}
         >
           {root.children}
         </div>
