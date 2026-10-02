@@ -7,6 +7,7 @@ import {
   Title,
 } from "@storybook/addon-docs/blocks";
 import "../src/theme.css";
+import "./preview.css";
 
 const preview: Preview = {
   globalTypes: {

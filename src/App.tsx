@@ -1,26 +1,47 @@
-import { BookOpen, Box, Check, Clipboard, Github, Upload, X } from "lucide-react";
+import { ArrowUpRight, BookOpen, Box, Check, Clipboard, Github, Upload, X } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 
 import { Button } from "@/components/ui/button";
 import { ModelViewer } from "@/components/ui/model-viewer/lazy";
 
 const installCommand = "bunx shadcn@latest add https://raw.githubusercontent.com/michidk/shadcn-3d-viewer/main/public/r/model-viewer.json";
-const usageCode = [
-  "import { ModelViewer } from",
-  "  \"@/components/ui/model-viewer\"",
-  "",
-  "<ModelViewer",
-  "  src=\"/models/chair.glb\"",
-  "  height={640}",
-  "  lighting=\"day\"",
-  "  showOrientation",
-  "/>",
-].join("\n");
+const storybookBase = import.meta.env.DEV
+  ? "https://shadcn-3d-viewer.vercel.app/storybook/"
+  : "/storybook/";
+
+const featuredStories = [
+  {
+    id: "viewer-model-viewer--rotating-animated-model",
+    label: "Animated model",
+    description: "Watch the robot animate and rotate, then pause either motion from the viewer controls.",
+  },
+  {
+    id: "viewer-model-viewer--outside-with-floor",
+    label: "Outside lighting",
+    description: "See the sky, ground plane, and the model's soft shadow working together.",
+  },
+] as const;
+
+function UsageCode() {
+  return (
+    <pre className="usage-code"><code>
+      <span className="syntax-keyword">import</span>{" { "}<span className="syntax-name">ModelViewer</span>{" } "}<span className="syntax-keyword">from</span>{"\n"}
+      {"  "}<span className="syntax-string">"@/components/ui/model-viewer"</span>{"\n\n"}
+      <span className="syntax-punctuation">{"<"}</span><span className="syntax-name">ModelViewer</span>{"\n"}
+      {"  "}<span className="syntax-property">src</span>=<span className="syntax-string">"/models/chair.glb"</span>{"\n"}
+      {"  "}<span className="syntax-property">height</span>={"{"}<span className="syntax-number">640</span>{"}"}{"\n"}
+      {"  "}<span className="syntax-property">lighting</span>=<span className="syntax-string">"day"</span>{"\n"}
+      {"  "}<span className="syntax-property">showOrientation</span>{"\n"}
+      <span className="syntax-punctuation">{"/>"}</span>
+    </code></pre>
+  );
+}
 
 export default function App() {
   const [model, setModel] = useState<{ name: string; url: string } | null>(null);
   const [copied, setCopied] = useState(false);
   const [dragging, setDragging] = useState(false);
+  const [featuredStory, setFeaturedStory] = useState<(typeof featuredStories)[number]>(featuredStories[0]);
   const fileInput = useRef<HTMLInputElement>(null);
   const modelRef = useRef(model);
   modelRef.current = model;
@@ -60,7 +81,7 @@ export default function App() {
         </a>
         <div className="header-meta"><span>shadcn/ui</span><span>React Three Fiber</span></div>
         <nav className="header-links" aria-label="Project links">
-          <a href="/storybook/"><BookOpen aria-hidden="true" /> <span>Storybook</span></a>
+          <a href={storybookBase}><BookOpen aria-hidden="true" /> <span>Storybook</span></a>
           <a href="https://github.com/michidk/shadcn-3d-viewer" target="_blank" rel="noopener noreferrer"><Github aria-hidden="true" /> <span>GitHub</span></a>
         </nav>
       </header>
@@ -112,7 +133,35 @@ export default function App() {
 
         <section className="usage" aria-labelledby="usage-heading">
           <div><p className="section-kicker">Small public surface</p><h2 id="usage-heading">Bring a URL.<br />Keep control.</h2><p>The viewer is source code in your app, so its styling and behavior remain yours.</p></div>
-          <pre><code>{usageCode}</code></pre>
+          <UsageCode />
+        </section>
+
+        <section className="story-showcase" aria-labelledby="stories-heading">
+          <div className="story-showcase-heading">
+            <div>
+              <p className="section-kicker">More ways to compose</p>
+              <h2 id="stories-heading">See it in action.</h2>
+              <p>{featuredStory.description}</p>
+            </div>
+            <a href={`${storybookBase}?path=/story/${featuredStory.id}`} target="_blank" rel="noopener noreferrer">
+              Open in Storybook <ArrowUpRight aria-hidden="true" />
+            </a>
+          </div>
+          <div className="story-options" role="group" aria-label="Featured Storybook examples">
+            {featuredStories.map((story) => (
+              <button key={story.id} type="button" aria-pressed={story.id === featuredStory.id} onClick={() => setFeaturedStory(story)}>
+                {story.label}
+              </button>
+            ))}
+          </div>
+          <div className="story-frame">
+            <iframe
+              key={featuredStory.id}
+              title={`${featuredStory.label} Storybook example`}
+              src={`${storybookBase}iframe.html?id=${featuredStory.id}&viewMode=story`}
+              loading="lazy"
+            />
+          </div>
         </section>
       </main>
 
