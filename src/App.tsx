@@ -54,9 +54,9 @@ export default function App() {
   return (
     <div className="app-shell">
       <header className="site-header">
-        <a className="brand" href="#top" aria-label="Frame home">
+        <a className="brand" href="#top" aria-label="shadcn-3d-viewer home">
           <span className="brand-mark"><Box /></span>
-          <span>Frame</span>
+          <span>shadcn-3d-viewer</span>
         </a>
         <div className="header-meta"><span>shadcn/ui</span><span>React Three Fiber</span></div>
         <a className="github-link" href="https://github.com/pmndrs/react-three-fiber" target="_blank" rel="noreferrer"><Github /> <span>R3F</span></a>
@@ -113,7 +113,7 @@ export default function App() {
         </section>
       </main>
 
-      <footer className="site-footer"><span>Frame 0.1</span><span>React 19 · Three.js · shadcn/ui</span></footer>
+      <footer className="site-footer"><span>shadcn-3d-viewer 0.1</span><span>React 19 · Three.js · shadcn/ui</span></footer>
     </div>
   );
 }

@@ -1,4 +1,4 @@
-# Frame — shadcn 3D viewer
+# shadcn-3d-viewer
 
 A source-owned shadcn component for viewing GLB models with React Three Fiber. It is adapted from Asset Studio's production model viewer and presented in a standalone Vite demo.
 

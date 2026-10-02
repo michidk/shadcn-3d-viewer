@@ -1,6 +1,6 @@
 {
   "$schema": "https://ui.shadcn.com/schema/registry.json",
-  "name": "frame",
+  "name": "shadcn-3d-viewer",
   "homepage": "https://shadcn-3d-viewer.preview.k8s.lohr.dev/",
   "items": [
     {
