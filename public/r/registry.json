@@ -128,6 +128,26 @@
           "type": "registry:ui"
         },
         {
+          "path": "src/components/ui/model-viewer/use-controlled-state.ts",
+          "type": "registry:ui"
+        },
+        {
+          "path": "src/components/ui/model-viewer/use-viewer-capture.ts",
+          "type": "registry:ui"
+        },
+        {
+          "path": "src/components/ui/model-viewer/use-viewer-feedback.ts",
+          "type": "registry:ui"
+        },
+        {
+          "path": "src/components/ui/model-viewer/use-viewer-fullscreen.ts",
+          "type": "registry:ui"
+        },
+        {
+          "path": "src/components/ui/model-viewer/use-viewer-visibility.ts",
+          "type": "registry:ui"
+        },
+        {
           "path": "src/components/ui/model-viewer/inspector-hierarchy.ts",
           "type": "registry:ui"
         },

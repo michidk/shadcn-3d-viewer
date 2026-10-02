@@ -12,14 +12,17 @@ import {
 import type { ModelInspection } from "./model-inspection";
 import { createViewerCameraStore } from "./model-viewer-camera";
 import { initialViewerLifecycle, viewerLifecycleReducer } from "./model-viewer-lifecycle";
-import { useExpandedViewerFocus } from "./use-expanded-viewer-focus";
-import { viewerBackgroundColor } from "./model-viewer-colors";
 import {
   splitPanes,
   type ModelViewerRootProps,
   type ModelViewerState,
   type ViewerMode,
 } from "./model-viewer-types";
+import { useControlledState } from "./use-controlled-state";
+import { useViewerCapture } from "./use-viewer-capture";
+import { useViewerFeedback } from "./use-viewer-feedback";
+import { useViewerFullscreen } from "./use-viewer-fullscreen";
+import { useReducedMotion, useViewerHidden } from "./use-viewer-visibility";
 
 export function useModelViewerRuntime({
   components,
@@ -174,55 +177,39 @@ export function useModelViewerRuntime({
   const loaded = lifecycle.status === "ready" || lifecycle.status === "error";
   const viewerError = lifecycle.status === "error";
   const [retryToken, setRetryToken] = useState(0);
-  const [feedback, setFeedback] = useState<{
-    message: string;
-    error: boolean;
-  } | null>(null);
-  const [isFullscreen, setIsFullscreen] = useState(false);
-  const [isExpanded, setIsExpanded] = useState(false);
+  const { feedback, report, clearFeedback } = useViewerFeedback();
   const [locked, setLocked] = useState(false);
   const [pointerLockAvailable, setPointerLockAvailable] = useState(true);
   const [resetToken, setResetToken] = useState(0);
   const [animationResetToken, setAnimationResetToken] = useState(0);
   const reducedMotion = useReducedMotion(respectReducedMotion);
   const viewerRef = useRef<HTMLDivElement | null>(null);
-  const fullscreenReturnFocus = useRef<HTMLElement | null>(null);
-  const [inViewport, setInViewport] = useState(true);
-  const [pageVisible, setPageVisible] = useState(true);
-  useEffect(() => {
-    const update = () => setPageVisible(document.visibilityState !== "hidden");
-    update();
-    document.addEventListener("visibilitychange", update);
-    const observer = typeof IntersectionObserver === "undefined"
-      ? null
-      : new IntersectionObserver(([entry]) => setInViewport(entry.isIntersecting));
-    if (viewerRef.current) observer?.observe(viewerRef.current);
-    return () => {
-      document.removeEventListener("visibilitychange", update);
-      observer?.disconnect();
-    };
-  }, []);
-  const renderingPaused = pauseWhenHidden && (!inViewport || !pageVisible);
+  const viewerHidden = useViewerHidden(viewerRef);
+  const renderingPaused = pauseWhenHidden && viewerHidden;
   useImperativeHandle(ref, () => viewerRef.current!, []);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const [captureReady, setCaptureReady] = useState(false);
-  const feedbackTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const loadReportedGeneration = useRef<number | null>(null);
   const viewerKey = useId();
   const cubes = requestedCubes ?? !src;
   const expectedPanes = mode === "split" ? splitPanes.length : 1;
   const [sceneMounted, setSceneMountedState] = useState(false);
+  /** Clear everything derived from the current scene/load generation. */
+  const resetModelSession = useCallback(() => {
+    setAnimationNames([]);
+    setInspection(null);
+    setSelectedMesh(null);
+    setLocked(false);
+  }, []);
   const setSceneMounted = useCallback((mounted: boolean) => {
     setSceneMountedState(mounted);
     dispatchLifecycle({ type: mounted ? "mount" : "unmount" });
     if (!mounted) {
+      // The canvas goes away with the scene, so capture must wait for the next one.
       setCaptureReady(false);
-      setAnimationNames([]);
-      setInspection(null);
-      setSelectedMesh(null);
-      setLocked(false);
+      resetModelSession();
     }
-  }, []);
+  }, [resetModelSession]);
   const [toolbarOffset, setToolbarOffset] = useState(0);
   const toolbarMeasurements = useRef(new Map<HTMLElement, number>());
   const reportToolbar = useCallback(
@@ -245,12 +232,9 @@ export function useModelViewerRuntime({
 
   useEffect(() => {
     dispatchLifecycle({ type: "reset" });
-    setFeedback(null);
-    setAnimationNames([]);
-    setInspection(null);
-    setSelectedMesh(null);
-    setLocked(false);
-  }, [src, mode, enableCapture]);
+    clearFeedback();
+    resetModelSession();
+  }, [src, mode, enableCapture, clearFeedback, resetModelSession]);
 
   useEffect(() => () => {
     if (src && clearCacheOnUnmount) useGLTF.clear(src);
@@ -298,23 +282,10 @@ export function useModelViewerRuntime({
     [onInspect],
   );
 
-  useEffect(() => {
-    const update = () => {
-      const active = document.fullscreenElement === viewerRef.current;
-      setIsFullscreen(active);
-      if (active) setIsExpanded(false);
-    };
-    document.addEventListener("fullscreenchange", update);
-    return () => document.removeEventListener("fullscreenchange", update);
-  }, []);
-
-  useExpandedViewerFocus(viewerRef, isExpanded, fullscreenReturnFocus, () => setIsExpanded(false));
+  const { fullscreen, isExpanded, toggleFullscreen } = useViewerFullscreen(viewerRef, report);
 
   useEffect(() => {
     setPointerLockAvailable("requestPointerLock" in HTMLElement.prototype);
-    return () => {
-      if (feedbackTimer.current) clearTimeout(feedbackTimer.current);
-    };
   }, []);
 
   const markReady = useCallback((index: number) => {
@@ -342,18 +313,10 @@ export function useModelViewerRuntime({
     if (!viewerError || !src) return;
     useGLTF.clear(src);
     dispatchLifecycle({ type: "reset" });
-    setAnimationNames([]);
-    setInspection(null);
-    setSelectedMesh(null);
-    setFeedback(null);
+    clearFeedback();
+    resetModelSession();
     setRetryToken((value) => value + 1);
-  }, [src, viewerError]);
-
-  function report(message: string, error = false) {
-    setFeedback({ message, error });
-    if (feedbackTimer.current) clearTimeout(feedbackTimer.current);
-    feedbackTimer.current = setTimeout(() => setFeedback(null), 4500);
-  }
+  }, [src, viewerError, clearFeedback, resetModelSession]);
 
   function changeMode(next: ViewerMode) {
     if (next === mode) return;
@@ -361,77 +324,14 @@ export function useModelViewerRuntime({
     setMode(next);
   }
 
-  async function capture(action: "copy" | "download") {
-    const canvas = canvasRef.current;
-    if (!enableCapture || !captureReady || !canvas || !sceneMounted || !loaded || viewerError) return;
-    try {
-      const source = document.createElement("canvas");
-      source.width = canvas.width;
-      source.height = canvas.height;
-      const context = source.getContext("2d");
-      if (!context) throw new Error("The viewer could not create a PNG.");
-      context.fillStyle = viewerBackgroundColor(lighting);
-      context.fillRect(0, 0, source.width, source.height);
-      context.drawImage(canvas, 0, 0);
-      const image = new Promise<Blob>((resolve, reject) => {
-        source.toBlob(
-          (blob) =>
-            blob
-              ? resolve(blob)
-              : reject(new Error("The viewer could not create a PNG.")),
-          "image/png",
-        );
-      });
-      if (action === "copy") {
-        if (!navigator.clipboard?.write || typeof ClipboardItem === "undefined")
-          throw new Error(
-            "Image clipboard access is unavailable. Download the PNG instead.",
-          );
-        await navigator.clipboard.write([
-          new ClipboardItem({ "image/png": image }),
-        ]);
-        report("Screenshot copied to clipboard.");
-      } else {
-        const blob = await image;
-        const url = URL.createObjectURL(blob);
-        const link = document.createElement("a");
-        link.href = url;
-        link.download = `${
-          (ariaLabel ?? alt)
-            .replace(/[^a-z0-9-_]+/gi, "-")
-            .replace(/^-|-$/g, "")
-            .slice(0, 80) || "model-view"
-        }.png`;
-        link.click();
-        setTimeout(() => URL.revokeObjectURL(url), 60_000);
-        report("Screenshot downloaded as PNG.");
-      }
-    } catch (error) {
-      report(
-        error instanceof Error ? error.message : "Could not capture the view.",
-        true,
-      );
-    }
-  }
-
-  async function toggleFullscreen() {
-    if (isExpanded) {
-      setIsExpanded(false);
-      return;
-    }
-    try {
-      if (document.fullscreenElement === viewerRef.current) {
-        await document.exitFullscreen();
-        return;
-      }
-      fullscreenReturnFocus.current = document.activeElement instanceof HTMLElement ? document.activeElement : null;
-      if (!document.fullscreenEnabled || !viewerRef.current)
-        throw new Error("Fullscreen unavailable");
-      await viewerRef.current.requestFullscreen();
-    } catch {
-      setIsExpanded(true);
-    }
-  }
+  const canCapture = enableCapture && captureReady && sceneMounted && loaded && !viewerError;
+  const capture = useViewerCapture({
+    canvasRef,
+    canCapture,
+    lighting,
+    fileName: ariaLabel ?? alt,
+    report,
+  });
 
   const status = lifecycle.status;
   const state: ModelViewerState = {
@@ -473,9 +373,9 @@ export function useModelViewerRuntime({
     renderingPaused,
     retry,
     status,
-    canCapture: enableCapture && captureReady && sceneMounted && loaded && !viewerError,
+    canCapture,
     capture,
-    fullscreen: isFullscreen || isExpanded,
+    fullscreen,
     toggleFullscreen,
     feedback,
   };
@@ -546,37 +446,4 @@ export function useModelViewerRuntime({
     reportAnimations,
     fail,
   };
-}
-
-function useControlledState<T>(
-  controlled: T | undefined,
-  defaultValue: T,
-  onChange?: (value: T) => void,
-): [T, (value: T) => void, (value: T) => void] {
-  const [internal, setInternal] = useState(defaultValue);
-  const value = controlled === undefined ? internal : controlled;
-  const setValue = useCallback(
-    (next: T) => {
-      if (controlled === undefined) setInternal(next);
-      onChange?.(next);
-    },
-    [controlled, onChange],
-  );
-  return [value, setValue, setInternal];
-}
-
-function useReducedMotion(enabled: boolean) {
-  const [reduced, setReduced] = useState(false);
-  useEffect(() => {
-    if (!enabled) {
-      setReduced(false);
-      return;
-    }
-    const query = window.matchMedia("(prefers-reduced-motion: reduce)");
-    const update = () => setReduced(query.matches);
-    update();
-    query.addEventListener("change", update);
-    return () => query.removeEventListener("change", update);
-  }, [enabled]);
-  return reduced;
 }

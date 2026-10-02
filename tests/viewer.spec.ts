@@ -1039,6 +1039,19 @@ test("native fullscreen keeps menus and tooltips in the fullscreen element", asy
   await page.getByRole("menuitemradio", { name: "Realistic", exact: true }).click();
 });
 
+test("a rejected native fullscreen exit reports an error instead of expanding the fallback", async ({ page }) => {
+  await ready(page);
+  await page.getByRole("button", { name: "Enter fullscreen" }).click();
+  await expect.poll(() => page.evaluate(() => document.fullscreenElement?.getAttribute("data-slot"))).toBe("model-viewer");
+  await page.evaluate(() => {
+    document.exitFullscreen = () => Promise.reject(new Error("Exit denied"));
+  });
+  await page.getByRole("button", { name: "Exit fullscreen" }).click();
+  await expect(page.getByRole("alert").filter({ hasText: "Could not exit fullscreen" })).toBeVisible();
+  await expect(page.locator('[data-slot="model-viewer"][aria-modal="true"]')).toHaveCount(0);
+  expect(await page.evaluate(() => document.fullscreenElement?.getAttribute("data-slot"))).toBe("model-viewer");
+});
+
 test("finished and zero-speed animations stop drawing and restart on demand", async ({ page }) => {
   await page.addInitScript(() => {
     const frames = new WeakMap<HTMLCanvasElement, number>();

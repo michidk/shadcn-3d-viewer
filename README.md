@@ -357,7 +357,7 @@ After the npm release, the shorter installer command will be available too:
 npx shadcn-3d-viewer add
 ```
 
-The npm package is a small installer for the included shadcn registry item. It runs `shadcn add` and copies the component source into your project; it is **not** a compiled library to import from `shadcn-3d-viewer`. Pass shadcn options through—for example, `npx shadcn-3d-viewer add --dry-run`—and review changes before accepting prompts.
+The npm package is a small installer for the included shadcn registry item. It runs the exact `shadcn` version this release was built and tested with (not `shadcn@latest`) and copies the component source into your project; it is **not** a compiled library to import from `shadcn-3d-viewer`. Pass shadcn options through—for example, `npx shadcn-3d-viewer add --dry-run`—and review changes before accepting prompts.
 
 To use a short namespace, add this to your app's `components.json` and then run `npx shadcn@latest add @viewer/model-viewer`:
 
