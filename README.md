@@ -14,112 +14,6 @@ The npm package is a small installer for the included shadcn registry item. It r
 
 The demo uses shadcn's **Base UI / Nova** primitives (`@base-ui/react`) and the standard neutral theme. The installed viewer uses your project's local primitives and existing theme; Nova and neutral are not requirements. Buttons, menus, and tooltips use Base UI's `render` composition API, not Radix's `asChild`. Theme tokens live in `src/theme.css`; add `dark` to the document root for dark mode. The 3D scene's day/night lighting remains independent of the UI theme.
 
-## Features
-
-- Smooth camera controls, bounded zoom, and a single orthographic projection toggle
-- Optional orientation helper: Drei's labeled cube or Asset Studio's colored axes
-- Four fixed front/right/back/left views with independent pan and zoom, sharing one WebGL renderer
-- First-person fly camera with pointer-lock and drag-look fallback
-- Realistic, solid, normal, and wireframe shading
-- Procedural image-based studio lighting, day/night modes, and an optional fading grid
-- GLTF animation clip selection, playback, restart, looping, and speed controls
-- Clipboard and downloadable PNG captures
-- Fullscreen with an in-page fallback
-- Loading progress, posters, custom fallbacks, and error states
-- Performance-based pixel ratio (1–2×, without pixelated drag mode), reduced-motion support, and demand-driven rendering
-- Draco, Meshopt, and custom loader configuration
-- Optional UI-free mode for cards and compact previews
-- Model dimensions, triangle/material/texture counts, selectable meshes, and scene hierarchy
-
-## Run it
-
-```sh
-bun install
-bun run dev
-```
-
-Production checks:
-
-```sh
-bun run verify
-```
-
-## Storybook
-
-```sh
-bun run storybook        # http://localhost:6006
-bun run storybook:build  # static site in storybook-static/
-bun run storybook:test   # smoke tests against a running Storybook
-```
-
-The 26 examples cover the interactive playground, fixed four-view layout, Drei cube, night lighting, the bundled animated robot, model inspection, minimal embeds, loading/error customization, opt-in filenames, hidden feedback, retry and custom recovery, offscreen playback, on-demand loading, custom toolbars, compound viewer parts, Base UI `render` composition, compatibility button/tooltip overrides, styled overlays, and standalone inspector states. Viewer toolbar changes and Storybook Controls stay in sync. Docs pages render one live viewer at a time to stay within browser WebGL limits.
-
-Storybook shares `src/theme.css` with the demo but does not load the demo page layout. All model assets are served locally from `public/`, including in the static build. The error story deliberately requests a missing model.
-
-Use Storybook's **Theme** toolbar to preview every example in light or dark mode, including portaled menus and tooltips.
-
-## Vercel demo
-
-The [demo](https://shadcn-3d-viewer.vercel.app/) and [Storybook](https://shadcn-3d-viewer.vercel.app/storybook/) share one static Vercel project at `/` and `/storybook/`. `bun run build:vercel` writes the demo to `dist/` and Storybook to `dist/storybook/`; `vercel.json` configures the build and redirects `/storybook` to `/storybook/` so Storybook's relative asset paths resolve correctly. The deployment includes the public registry JSON at `/r/model-viewer.json`.
-
-The Vercel project is connected to `michidk/shadcn-3d-viewer` with `main` as its production branch, so pushes to `main` deploy automatically. The production domain is `shadcn-3d-viewer.vercel.app`.
-
-For browser tests, install Chromium with `bunx playwright install --with-deps chromium`, or reuse Docker Chrome through `VIEWER_TEST_CDP`. Set `STORYBOOK_TEST_URL` if Storybook is not at `http://localhost:6006`; the Docker browser must be able to reach that URL. Storybook tests are separate from the demo's `bun run test` suite. CI runs both suites in separate jobs, starts their servers automatically, and uploads screenshots, traces, and HTML reports on failure. Local runs reuse your running servers through `VIEWER_TEST_URL` and `STORYBOOK_TEST_URL`. `bun run test:install` also packs the CLI, installs it into a clean Base UI consumer outside this repository, checks the host theme/configuration, and typechecks/builds the installed component. CI runs this consumer check before accepting the package.
-
-## Add the component
-
-The public repository already serves a registry item through GitHub's raw file URL. No npm release is needed for this path:
-
-```sh
-npx shadcn@latest add https://raw.githubusercontent.com/michidk/shadcn-3d-viewer/main/public/r/model-viewer.json
-```
-
-To use a short namespace, add this to your app's `components.json` and then run `npx shadcn@latest add @viewer/model-viewer`:
-
-```json
-{
-  "registries": {
-    "@viewer": "https://raw.githubusercontent.com/michidk/shadcn-3d-viewer/main/public/r/{name}.json"
-  }
-}
-```
-
-This is a self-hosted shadcn registry item, not a listing in a central shadcn catalog. For a version-pinned install, replace `main` in the URL with a release tag. The npm installer uses the same generated item from its tarball.
-
-To install from a local checkout before the npm release, build the shadcn registry item, then add it from another shadcn project:
-
-```sh
-bun run registry:build
-bunx shadcn@latest add /absolute/path/to/shadcn-3d-viewer/public/r/model-viewer.json
-```
-
-Use a Base UI shadcn project with the button `variant`/`size`, tooltip `render`, and dropdown radio APIs (the demo uses `"style": "base-nova"` in `components.json`). Any compatible Base UI shadcn style and palette can be used. The registry item installs its React Three Fiber dependencies and the shadcn `alert`, `button`, `tooltip`, and `dropdown-menu` primitives. Radix versions of these controls are not interchangeable with the Base UI composition API. Installation contains only viewer sources and references to your local primitives: it does **not** install `src/theme.css`, set CSS variables, overwrite `components.json`, or select a palette. Do not overwrite your customized primitives when the shadcn CLI prompts.
-
-Or copy `src/components/ui/model-viewer/` into an existing shadcn project and install:
-
-```sh
-bun add @react-three/fiber @react-three/drei three three-stdlib lucide-react
-bun add -d @types/three
-```
-
-## Publishing
-
-This package is MIT licensed and publishes the CLI plus generated registry JSON, not the demo, Storybook, test fixtures, or model assets. Maintainers need Bun and Node 20 or newer. `prepack` rebuilds the registry with the pinned shadcn CLI and runs typecheck, lint, production build, and package tests.
-
-```sh
-bun install --frozen-lockfile
-npm pack --dry-run
-npm publish --dry-run
-# After reviewing the tarball and configuring npm publishing access:
-npm publish --access public
-```
-
-The npm name must still be claimed by the first successful publish. Publishing is not performed by the repository build or CI. The GitHub repository and npm package are separate: pushing code does not publish a new package version.
-
-### GitHub release workflow
-
-The `Publish npm package` workflow runs only when a non-prerelease GitHub release is published. Before using it, configure a granular npm publish token as the repository secret `NPM_TOKEN`; the workflow cannot create or read that credential for you. Set the package version in `package.json`, merge the change to `main`, create a matching `v<version>` tag on that commit, then publish a GitHub release for the tag. The workflow checks that the tag matches the package version and belongs to `main`, installs from the lockfile, and runs `npm publish --access public --provenance` (which runs `prepack` verification). It never publishes from an ordinary push or pull request. The first npm release also claims the still-unpublished package name.
-
 ## Usage
 
 ```tsx
@@ -394,6 +288,72 @@ Omitting `animation` automatically selects the first clip; passing `animation={n
 
 The inspector reports source-model units and unique material/texture resources. Select a mesh in the hierarchy or click it in the scene to highlight it. Animated framing uses a sampled envelope (17 poses per clip); unusually fast or procedural motion may extend beyond that envelope. Reset view includes the current pose in its bounds.
 
+## Features
+
+- Smooth camera controls, bounded zoom, and a single orthographic projection toggle
+- Optional orientation helper: Drei's labeled cube or Asset Studio's colored axes
+- Four fixed front/right/back/left views with independent pan and zoom, sharing one WebGL renderer
+- First-person fly camera with pointer-lock and drag-look fallback
+- Realistic, solid, normal, and wireframe shading
+- Procedural image-based studio lighting, day/night modes, and an optional fading grid
+- GLTF animation clip selection, playback, restart, looping, and speed controls
+- Clipboard and downloadable PNG captures
+- Fullscreen with an in-page fallback
+- Loading progress, posters, custom fallbacks, and error states
+- Performance-based pixel ratio (1–2×, without pixelated drag mode), reduced-motion support, and demand-driven rendering
+- Draco, Meshopt, and custom loader configuration
+- Optional UI-free mode for cards and compact previews
+- Model dimensions, triangle/material/texture counts, selectable meshes, and scene hierarchy
+
+## Add the component
+
+The public repository already serves a registry item through GitHub's raw file URL. No npm release is needed for this path:
+
+```sh
+npx shadcn@latest add https://raw.githubusercontent.com/michidk/shadcn-3d-viewer/main/public/r/model-viewer.json
+```
+
+To use a short namespace, add this to your app's `components.json` and then run `npx shadcn@latest add @viewer/model-viewer`:
+
+```json
+{
+  "registries": {
+    "@viewer": "https://raw.githubusercontent.com/michidk/shadcn-3d-viewer/main/public/r/{name}.json"
+  }
+}
+```
+
+This is a self-hosted shadcn registry item, not a listing in a central shadcn catalog. For a version-pinned install, replace `main` in the URL with a release tag. The npm installer uses the same generated item from its tarball.
+
+To install from a local checkout before the npm release, build the shadcn registry item, then add it from another shadcn project:
+
+```sh
+bun run registry:build
+bunx shadcn@latest add /absolute/path/to/shadcn-3d-viewer/public/r/model-viewer.json
+```
+
+Use a Base UI shadcn project with the button `variant`/`size`, tooltip `render`, and dropdown radio APIs (the demo uses `"style": "base-nova"` in `components.json`). Any compatible Base UI shadcn style and palette can be used. The registry item installs its React Three Fiber dependencies and the shadcn `alert`, `button`, `tooltip`, and `dropdown-menu` primitives. Radix versions of these controls are not interchangeable with the Base UI composition API. Installation contains only viewer sources and references to your local primitives: it does **not** install `src/theme.css`, set CSS variables, overwrite `components.json`, or select a palette. Do not overwrite your customized primitives when the shadcn CLI prompts.
+
+Or copy `src/components/ui/model-viewer/` into an existing shadcn project and install:
+
+```sh
+bun add @react-three/fiber @react-three/drei three three-stdlib lucide-react
+bun add -d @types/three
+```
+
+## Run it
+
+```sh
+bun install
+bun run dev
+```
+
+Production checks:
+
+```sh
+bun run verify
+```
+
 ## Regression checks
 
 The included CC0 robot fixture exercises skinned animation and multiple clips. Start the demo, then run:
@@ -413,3 +373,43 @@ The suite covers extreme model scales, framing, shared-resource statistics, the 
 - Animation rendering stops when a non-looping clip finishes or playback speed is zero. Restarting or resuming playback wakes the demand loop; auto-rotation continues to request frames independently.
 - `enableCapture` controls PNG capture independently of the built-in UI and defaults to `showUi`. Use `<ModelViewer showUi={false} enableCapture>` for custom capture controls, or `enableCapture={false}` to reduce GPU overhead with the toolbar visible. `canCapture` stays false until the renderer supports capture and the model is ready. Changing `enableCapture` recreates the WebGL canvas because buffer preservation is fixed when its context is created.
 - First-person pointer lock may be blocked inside restrictive iframes; the component automatically falls back to focused-canvas drag look when the browser exposes that policy.
+
+## Storybook
+
+```sh
+bun run storybook        # http://localhost:6006
+bun run storybook:build  # static site in storybook-static/
+bun run storybook:test   # smoke tests against a running Storybook
+```
+
+The 26 examples cover the interactive playground, fixed four-view layout, Drei cube, night lighting, the bundled animated robot, model inspection, minimal embeds, loading/error customization, opt-in filenames, hidden feedback, retry and custom recovery, offscreen playback, on-demand loading, custom toolbars, compound viewer parts, Base UI `render` composition, compatibility button/tooltip overrides, styled overlays, and standalone inspector states. Viewer toolbar changes and Storybook Controls stay in sync. Docs pages render one live viewer at a time to stay within browser WebGL limits.
+
+Storybook shares `src/theme.css` with the demo but does not load the demo page layout. All model assets are served locally from `public/`, including in the static build. The error story deliberately requests a missing model.
+
+Use Storybook's **Theme** toolbar to preview every example in light or dark mode, including portaled menus and tooltips.
+
+## Vercel demo
+
+The [demo](https://shadcn-3d-viewer.vercel.app/) and [Storybook](https://shadcn-3d-viewer.vercel.app/storybook/) share one static Vercel project at `/` and `/storybook/`. `bun run build:vercel` writes the demo to `dist/` and Storybook to `dist/storybook/`; `vercel.json` configures the build and redirects `/storybook` to `/storybook/` so Storybook's relative asset paths resolve correctly. The deployment includes the public registry JSON at `/r/model-viewer.json`.
+
+The Vercel project is connected to `michidk/shadcn-3d-viewer` with `main` as its production branch, so pushes to `main` deploy automatically. The production domain is `shadcn-3d-viewer.vercel.app`.
+
+For browser tests, install Chromium with `bunx playwright install --with-deps chromium`, or reuse Docker Chrome through `VIEWER_TEST_CDP`. Set `STORYBOOK_TEST_URL` if Storybook is not at `http://localhost:6006`; the Docker browser must be able to reach that URL. Storybook tests are separate from the demo's `bun run test` suite. CI runs both suites in separate jobs, starts their servers automatically, and uploads screenshots, traces, and HTML reports on failure. Local runs reuse your running servers through `VIEWER_TEST_URL` and `STORYBOOK_TEST_URL`. `bun run test:install` also packs the CLI, installs it into a clean Base UI consumer outside this repository, checks the host theme/configuration, and typechecks/builds the installed component. CI runs this consumer check before accepting the package.
+
+## Publishing
+
+This package is MIT licensed and publishes the CLI plus generated registry JSON, not the demo, Storybook, test fixtures, or model assets. Maintainers need Bun and Node 20 or newer. `prepack` rebuilds the registry with the pinned shadcn CLI and runs typecheck, lint, production build, and package tests.
+
+```sh
+bun install --frozen-lockfile
+npm pack --dry-run
+npm publish --dry-run
+# After reviewing the tarball and configuring npm publishing access:
+npm publish --access public
+```
+
+The npm name must still be claimed by the first successful publish. Publishing is not performed by the repository build or CI. The GitHub repository and npm package are separate: pushing code does not publish a new package version.
+
+### GitHub release workflow
+
+The `Publish npm package` workflow runs only when a non-prerelease GitHub release is published. Before using it, configure a granular npm publish token as the repository secret `NPM_TOKEN`; the workflow cannot create or read that credential for you. Set the package version in `package.json`, merge the change to `main`, create a matching `v<version>` tag on that commit, then publish a GitHub release for the tag. The workflow checks that the tag matches the package version and belongs to `main`, installs from the lockfile, and runs `npm publish --access public --provenance` (which runs `prepack` verification). It never publishes from an ordinary push or pull request. The first npm release also claims the still-unpublished package name.
