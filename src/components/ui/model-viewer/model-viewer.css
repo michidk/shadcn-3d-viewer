@@ -18,8 +18,8 @@
     color: var(--foreground);
   }
   .model-viewer.is-night {
-    --viewer-scene-border: #404040;
-    background: #171717;
+    --viewer-scene-border: #40516a;
+    background: #17243a;
   }
   .model-viewer.is-outside {
     --viewer-scene-border: #afc4cb;

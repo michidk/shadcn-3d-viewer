@@ -501,7 +501,7 @@ function ViewerScene({
             <OutsideSky />
           </Environment>
         ) : (
-          <StudioEnvironment lighting={lighting} />
+          <StudioEnvironment key={lighting} lighting={lighting} />
         )
       )}
       {floor && (

@@ -327,6 +327,34 @@ test("grid colors are neutral grays in both lighting modes", async ({ page }) =>
   }
 });
 
+test("studio environment refreshes when lighting changes", async ({ page }) => {
+  await ready(page);
+  const environmentId = () =>
+    page.evaluate(`(() => {
+      const { _roots } = window.__viewerFiber;
+      const state = [..._roots.values()][0].store.getState();
+      const pane = state.internal.subscribers.find(s => s.priority === 1).store.getState();
+      return pane.scene.environment?.uuid;
+    })()`);
+
+  await page.evaluate(`import('/node_modules/.vite/deps/@react-three_fiber.js').then(module => { window.__viewerFiber = module; })`);
+  await expect.poll(environmentId).toBeTruthy();
+  const dayEnvironment = await environmentId();
+
+  await page.getByRole("button", { name: "Lighting: day" }).click();
+  await page.getByRole("menuitemradio", { name: "Night studio" }).click();
+  await expect(page.locator('[data-slot="model-viewer"]')).toHaveCSS(
+    "background-color",
+    "rgb(23, 36, 58)",
+  );
+  await expect.poll(environmentId).not.toBe(dayEnvironment);
+  const nightEnvironment = await environmentId();
+
+  await page.getByRole("button", { name: "Lighting: night" }).click();
+  await page.getByRole("menuitemradio", { name: "Day studio" }).click();
+  await expect.poll(environmentId).not.toBe(nightEnvironment);
+});
+
 test("solid mutes sample materials and the optional floor receives shadows", async ({ page }) => {
   await ready(page);
   const scene = () => page.evaluate(`(async () => {
