@@ -1,4 +1,4 @@
-import { ArrowUpRight, BookOpen, Box, Check, Clipboard, Github, Upload, X } from "lucide-react";
+import { ArrowUpRight, BookOpen, Bot, Box, Check, Clipboard, CloudSun, Github, LayoutGrid, Scan, Upload, X } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 
 import { Button } from "@/components/ui/button";
@@ -13,12 +13,34 @@ const featuredStories = [
   {
     id: "viewer-model-viewer--rotating-animated-model",
     label: "Animated model",
-    description: "Watch the robot animate and rotate, then pause either motion from the viewer controls.",
+    description: "Watch the robot animate and rotate, with only its playback controls kept in view.",
+    detail: "Playback controls",
+    icon: Bot,
+    sample: "animated",
   },
   {
     id: "viewer-model-viewer--outside-with-floor",
     label: "Outside lighting",
     description: "See the sky, ground plane, and the model's soft shadow working together.",
+    detail: "Scene only",
+    icon: CloudSun,
+    sample: "outside",
+  },
+  {
+    id: "viewer-model-viewer--four-fixed-views",
+    label: "Four fixed views",
+    description: "Compare the model from four orthographic directions with independent pan and zoom.",
+    detail: "Pan + zoom",
+    icon: LayoutGrid,
+    sample: "split",
+  },
+  {
+    id: "viewer-model-viewer--minimal-embed",
+    label: "Minimal embed",
+    description: "Use the renderer as a quiet, UI-free preview inside a card or product page.",
+    detail: "No controls",
+    icon: Scan,
+    sample: "minimal",
   },
 ] as const;
 
@@ -37,7 +59,55 @@ function UsageCode() {
   );
 }
 
-export default function App() {
+function SampleFrame({ sample }: { sample: string }) {
+  if (sample === "animated") {
+    return <div className="sample-frame-shell"><ModelViewer
+      src="/models/robot-expressive.glb"
+      aria-label="Animated robot sample"
+      height="100%"
+      defaultAutoRotate
+      defaultAnimation="Walking"
+      defaultAnimationPlaying
+      toolbar={null}
+      viewCube={false}
+      showOrientation={false}
+    /></div>;
+  }
+  if (sample === "outside") {
+    return <div className="sample-frame-shell"><ModelViewer
+      src="/models/robot-expressive.glb"
+      aria-label="Outside lighting sample"
+      height="100%"
+      lighting="outside"
+      defaultShowFloor
+      toolbar={null}
+      showAnimationControls={false}
+      viewCube={false}
+      showOrientation={false}
+    /></div>;
+  }
+  if (sample === "split") {
+    return <div className="sample-frame-shell"><ModelViewer
+      aria-label="Four fixed views sample"
+      height="100%"
+      mode="split"
+      projection="orthographic"
+      showGrid
+      toolbar={null}
+      showAnimationControls={false}
+      viewCube={false}
+      showOrientation={false}
+    /></div>;
+  }
+  return <div className="sample-frame-shell"><ModelViewer
+    aria-label="Minimal 3D sample"
+    height="100%"
+    showUi={false}
+    viewCube={false}
+  /></div>;
+}
+
+function LandingPage() {
   const [model, setModel] = useState<{ name: string; url: string } | null>(null);
   const [copied, setCopied] = useState(false);
   const [dragging, setDragging] = useState(false);
@@ -105,7 +175,6 @@ export default function App() {
               <h2 id="demo-heading">{model?.name ?? "Material study 01"}</h2>
             </div>
             <div className="file-actions">
-              <Button type="button" variant="ghost" size="sm" onClick={() => { clearModel(); replaceModel({ name: "Animated robot", url: "/models/robot-expressive.glb" }); }}>Try animated model</Button>
               {model && <Button type="button" variant="ghost" size="sm" onClick={clearModel}><X /> Clear</Button>}
               <Button type="button" variant="outline" size="sm" onClick={() => fileInput.current?.click()}><Upload /> Open model</Button>
               <input ref={fileInput} className="sr-only" type="file" accept=".glb,model/gltf-binary" onChange={(event) => openFile(event.target.files?.[0])} />
@@ -146,20 +215,43 @@ export default function App() {
               Open in Storybook <ArrowUpRight aria-hidden="true" />
             </a>
           </div>
-          <div className="story-options" role="group" aria-label="Featured Storybook examples">
-            {featuredStories.map((story) => (
-              <button key={story.id} type="button" aria-pressed={story.id === featuredStory.id} onClick={() => setFeaturedStory(story)}>
-                {story.label}
-              </button>
-            ))}
-          </div>
-          <div className="story-frame">
-            <iframe
-              key={featuredStory.id}
-              title={`${featuredStory.label} Storybook example`}
-              src={`${storybookBase}iframe.html?id=${featuredStory.id}&viewMode=story`}
-              loading="lazy"
-            />
+          <div className="story-browser">
+            <div className="story-options" role="listbox" aria-label="Featured Storybook examples">
+              <p>Samples</p>
+              {featuredStories.map((story) => {
+                const Icon = story.icon;
+                return (
+                  <button
+                    key={story.id}
+                    type="button"
+                    role="option"
+                    aria-selected={story.id === featuredStory.id}
+                    onClick={() => setFeaturedStory(story)}
+                  >
+                    <span className="story-option-icon"><Icon aria-hidden="true" /></span>
+                    <span className="story-option-copy">
+                      <strong>{story.label}</strong>
+                      <small>{story.detail}</small>
+                    </span>
+                    <ArrowUpRight aria-hidden="true" />
+                  </button>
+                );
+              })}
+            </div>
+            <div className="story-stage">
+              <div className="story-stage-meta">
+                <span>Live sample</span>
+                <strong>{featuredStory.label}</strong>
+              </div>
+              <div className="story-frame">
+                <iframe
+                  key={featuredStory.id}
+                  title={`${featuredStory.label} Storybook example`}
+                  src={`?sample=${featuredStory.sample}`}
+                  loading="lazy"
+                />
+              </div>
+            </div>
           </div>
         </section>
       </main>
@@ -167,4 +259,9 @@ export default function App() {
       <footer className="site-footer"><span>shadcn-3d-viewer 0.1</span><span>React 19 · Three.js · shadcn/ui</span></footer>
     </div>
   );
+}
+
+export default function App() {
+  const sample = new URLSearchParams(window.location.search).get("sample");
+  return sample ? <SampleFrame sample={sample} /> : <LandingPage />;
 }

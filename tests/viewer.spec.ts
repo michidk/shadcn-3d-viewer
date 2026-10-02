@@ -89,6 +89,9 @@ async function cube(page: Page, name: string) {
 async function canvasImage(page: Page) {
   return page.locator("canvas").evaluate((canvas: HTMLCanvasElement) => canvas.toDataURL());
 }
+async function openRobot(page: Page) {
+  await page.locator('input[type="file"]').setInputFiles("public/models/robot-expressive.glb");
+}
 
 test("viewer menus do not lock scrolling or change the viewer width", async ({ page }) => {
   for (const width of [1280, 375]) {
@@ -191,7 +194,7 @@ test("grid stays visible around an animated model on desktop and phone", async (
   await ready(page);
   await cube(page, "Off");
   await page.getByRole("button", { name: "Show grid", exact: true }).click();
-  await page.getByRole("button", { name: "Try animated model" }).click();
+  await openRobot(page);
   await expect(page.getByRole("toolbar", { name: "Animation controls" })).toBeVisible();
   for (const width of [1280, 390]) {
     await page.setViewportSize({ width, height: 900 });
@@ -432,7 +435,7 @@ test("split panes pan independently without changing their fixed directions", as
 test("skinned model animates, pauses, resumes, switches clips and resets on replacement", async ({ page }) => {
   await ready(page);
   await page.getByRole("button", { name: "Rotate automatically" }).click();
-  await page.getByRole("button", { name: "Try animated model" }).click();
+  await openRobot(page);
   await expect(page.getByRole("toolbar", { name: "Animation controls" })).toBeVisible();
   await expect(page.locator(".viewer-loader")).toHaveCount(0);
   await cube(page, "Off");
@@ -462,7 +465,7 @@ test("skinned model animates, pauses, resumes, switches clips and resets on repl
   await expect(page.locator('.viewer-inspector li button[aria-pressed="true"]')).toHaveCount(1);
   await page.getByRole("button", { name: "Clear", exact: true }).click();
   await expect(page.getByRole("toolbar", { name: "Animation controls" })).toHaveCount(0);
-  await page.getByRole("button", { name: "Try animated model" }).click();
+  await openRobot(page);
   await expect(page.locator(".viewer-animation-name")).not.toHaveText("Walking");
 });
 
