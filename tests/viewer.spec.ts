@@ -78,7 +78,7 @@ test("real skinned fixture retains its skeleton and a finite animation envelope"
 
 async function ready(page: Page) {
   await page.goto("/");
-  await page.locator(".model-viewer").scrollIntoViewIfNeeded();
+  await page.locator('[data-slot="model-viewer"]').scrollIntoViewIfNeeded();
   await expect(page.locator("canvas")).toBeVisible();
   await page.waitForTimeout(1500);
 }
@@ -166,7 +166,7 @@ test("custom scene content and camera API support a synchronized arbitrary view"
       const viewer = useModelViewer();
       const camera = useModelViewerCamera();
       React.useEffect(() => { host.dataset.camera = JSON.stringify(camera); }, [camera]);
-      return h('button', { disabled: !camera, onClick: () => {
+      return h('button', { style: { position: 'absolute', bottom: 12, left: 12, zIndex: 3 }, disabled: !camera, onClick: () => {
         host.dataset.command = String(viewer.setCameraView({ position: [4, 3, 5], target: [0, 0.5, 0] }, { transition: false }));
       } }, 'Custom angle');
     }
@@ -195,7 +195,7 @@ test("grid stays visible around an animated model on desktop and phone", async (
   await expect(page.getByRole("toolbar", { name: "Animation controls" })).toBeVisible();
   for (const width of [1280, 390]) {
     await page.setViewportSize({ width, height: 900 });
-    await page.locator(".model-viewer").scrollIntoViewIfNeeded();
+    await page.locator('[data-slot="model-viewer"]').scrollIntoViewIfNeeded();
     await page.waitForTimeout(1000);
     const visibleGrid = await canvasImage(page);
     await page.getByRole("button", { name: "Show grid", exact: true }).click();
@@ -799,4 +799,81 @@ test("registry installs only viewer sources and leaves host styling untouched", 
     expect(source).not.toMatch(/(?:import|@import).*theme\.css/);
     expect(source).not.toMatch(/:root\s*\{|--primary\s*:/);
   }
+});
+
+test("scene errors after readiness disable capture and can be retried", async ({ page }) => {
+  await ready(page);
+  await page.evaluate(`(async () => {
+    const { default: React } = await import('/node_modules/.vite/deps/react.js');
+    const { default: ReactDOM } = await import('/node_modules/.vite/deps/react-dom_client.js');
+    const { createRoot } = ReactDOM;
+    const { ModelViewer } = await import('/src/components/ui/model-viewer/index.ts');
+    const h = React.createElement;
+    const host = document.createElement('div');
+    host.id = 'late-error-test';
+    host.style.cssText = 'position:fixed;inset:0;z-index:999;background:white';
+    document.body.append(host);
+    function SceneFailure({ fail }) {
+      if (fail) throw new Error('Late scene failure');
+      return null;
+    }
+    function Example() {
+      const [fail, setFail] = React.useState(false);
+      return h(React.Fragment, null,
+        h('button', { onClick: () => setFail(true) }, 'Break scene'),
+        h(ModelViewer, { src: '/models/robot-expressive.glb', showRetry: true,
+          sceneContent: h(SceneFailure, { fail }), onError: () => setFail(false) }));
+    }
+    createRoot(host).render(h(Example));
+  })()`);
+  const host = page.locator("#late-error-test");
+  const viewer = host.locator('[data-slot="model-viewer"]');
+  await expect(viewer).toHaveAttribute("data-state", "ready");
+  await host.getByRole("button", { name: "Break scene" }).click();
+  await expect(viewer).toHaveAttribute("data-state", "error");
+  await expect(host.getByRole("button", { name: "Screenshot options" })).toBeDisabled();
+  await host.getByRole("button", { name: "Retry loading model" }).click();
+  await expect(viewer).toHaveAttribute("data-state", "ready");
+  await expect(host.getByRole("button", { name: "Screenshot options" })).toBeEnabled();
+});
+
+test("a failed renderer download preserves the page and offers recovery", async ({ page }) => {
+  const moduleUrl = "**/model-viewer/model-viewer.tsx*";
+  await page.route(moduleUrl, (route) => route.abort("failed"));
+  await page.goto("/");
+  await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
+  await expect(page.getByRole("alert")).toContainText("Unable to load the viewer.");
+  await page.unroute(moduleUrl);
+  await page.getByRole("button", { name: "Reload page", exact: true }).click();
+  await expect(page.locator('[data-slot="model-viewer"]')).toHaveAttribute("data-state", "ready");
+});
+
+test("local model URLs are released on replacement and clear under Strict Mode", async ({ page }) => {
+  await page.addInitScript(() => {
+    const tracked = { created: [] as string[], revoked: [] as string[] };
+    Object.assign(window, { trackedModelUrls: tracked });
+    const create = URL.createObjectURL.bind(URL);
+    const revoke = URL.revokeObjectURL.bind(URL);
+    URL.createObjectURL = (blob) => {
+      const url = create(blob);
+      if (blob instanceof File) tracked.created.push(url);
+      return url;
+    };
+    URL.revokeObjectURL = (url) => {
+      tracked.revoked.push(url);
+      revoke(url);
+    };
+  });
+  await ready(page);
+  const buffer = await readFile("public/models/robot-expressive.glb");
+  for (const name of ["first.glb", "second.glb"]) {
+    await page.locator('input[type="file"]').setInputFiles({ name, mimeType: "model/gltf-binary", buffer });
+    await expect(page.locator('[data-slot="model-viewer"]')).toHaveAttribute("data-state", "ready");
+  }
+  await page.getByRole("button", { name: "Clear", exact: true }).click();
+  const urls = await page.evaluate(() => (window as unknown as {
+    trackedModelUrls: { created: string[]; revoked: string[] };
+  }).trackedModelUrls);
+  expect(urls.created).toHaveLength(2);
+  for (const url of urls.created) expect(urls.revoked.filter((value) => value === url)).toHaveLength(1);
 });

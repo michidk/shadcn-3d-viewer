@@ -189,7 +189,7 @@ test("storybook indexes all examples and the playground controls stay interactiv
     Object.values(index.entries).filter(
       (entry) => (entry as { type: string }).type === "story",
     ),
-  ).toHaveLength(25);
+  ).toHaveLength(26);
   await openStory(page, "viewer-model-viewer--playground");
   await expect(page.locator("canvas")).toBeVisible();
   const grid = page.getByRole("button", { name: "Show grid", exact: true });

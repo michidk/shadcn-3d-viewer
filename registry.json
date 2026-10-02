@@ -108,6 +108,18 @@
         {
           "path": "src/components/ui/model-viewer/use-model-viewer-runtime.ts",
           "type": "registry:ui"
+        },
+        {
+          "path": "src/components/ui/model-viewer/scene-renderer.tsx",
+          "type": "registry:ui"
+        },
+        {
+          "path": "src/components/ui/model-viewer/scene-model.tsx",
+          "type": "registry:ui"
+        },
+        {
+          "path": "src/components/ui/model-viewer/scene-camera.tsx",
+          "type": "registry:ui"
         }
       ]
     }

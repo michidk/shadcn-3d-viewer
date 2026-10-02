@@ -44,25 +44,24 @@ export default function App() {
   const [featuredStory, setFeaturedStory] = useState<(typeof featuredStories)[number]>(featuredStories[0]);
   const fileInput = useRef<HTMLInputElement>(null);
   const modelRef = useRef(model);
-  modelRef.current = model;
 
   useEffect(() => () => {
-    if (modelRef.current) URL.revokeObjectURL(modelRef.current.url);
+    if (modelRef.current?.url.startsWith("blob:")) URL.revokeObjectURL(modelRef.current.url);
   }, []);
 
   function openFile(file?: File) {
     if (!file || !/\.glb$/i.test(file.name)) return;
-    setModel((current) => {
-      if (current) URL.revokeObjectURL(current.url);
-      return { name: file.name, url: URL.createObjectURL(file) };
-    });
+    replaceModel({ name: file.name, url: URL.createObjectURL(file) });
+  }
+
+  function replaceModel(next: typeof model) {
+    if (modelRef.current?.url.startsWith("blob:")) URL.revokeObjectURL(modelRef.current.url);
+    modelRef.current = next;
+    setModel(next);
   }
 
   function clearModel() {
-    setModel((current) => {
-      if (current) URL.revokeObjectURL(current.url);
-      return null;
-    });
+    replaceModel(null);
     if (fileInput.current) fileInput.current.value = "";
   }
 
@@ -106,7 +105,7 @@ export default function App() {
               <h2 id="demo-heading">{model?.name ?? "Material study 01"}</h2>
             </div>
             <div className="file-actions">
-              <Button type="button" variant="ghost" size="sm" onClick={() => { clearModel(); setModel({ name: "Animated robot", url: "/models/robot-expressive.glb" }); }}>Try animated model</Button>
+              <Button type="button" variant="ghost" size="sm" onClick={() => { clearModel(); replaceModel({ name: "Animated robot", url: "/models/robot-expressive.glb" }); }}>Try animated model</Button>
               {model && <Button type="button" variant="ghost" size="sm" onClick={clearModel}><X /> Clear</Button>}
               <Button type="button" variant="outline" size="sm" onClick={() => fileInput.current?.click()}><Upload /> Open model</Button>
               <input ref={fileInput} className="sr-only" type="file" accept=".glb,model/gltf-binary" onChange={(event) => openFile(event.target.files?.[0])} />

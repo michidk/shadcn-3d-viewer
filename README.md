@@ -52,7 +52,7 @@ bun run storybook:build  # static site in storybook-static/
 bun run storybook:test   # smoke tests against a running Storybook
 ```
 
-The 23 examples cover the interactive playground, fixed four-view layout, Drei cube, night lighting, the bundled animated robot, model inspection, minimal embeds, loading/error customization, opt-in filenames, hidden feedback, retry and custom recovery, offscreen playback, on-demand loading, custom toolbars, compound viewer parts, Base UI `render` composition, compatibility button/tooltip overrides, styled overlays, and standalone inspector states. Viewer toolbar changes and Storybook Controls stay in sync. Docs pages render one live viewer at a time to stay within browser WebGL limits.
+The 26 examples cover the interactive playground, fixed four-view layout, Drei cube, night lighting, the bundled animated robot, model inspection, minimal embeds, loading/error customization, opt-in filenames, hidden feedback, retry and custom recovery, offscreen playback, on-demand loading, custom toolbars, compound viewer parts, Base UI `render` composition, compatibility button/tooltip overrides, styled overlays, and standalone inspector states. Viewer toolbar changes and Storybook Controls stay in sync. Docs pages render one live viewer at a time to stay within browser WebGL limits.
 
 Storybook shares `src/theme.css` with the demo but does not load the demo page layout. All model assets are served locally from `public/`, including in the static build. The error story deliberately requests a missing model.
 
@@ -64,7 +64,7 @@ The [demo](https://shadcn-3d-viewer.vercel.app/) and [Storybook](https://shadcn-
 
 The Vercel project is connected to `michidk/shadcn-3d-viewer` with `main` as its production branch, so pushes to `main` deploy automatically. The production domain is `shadcn-3d-viewer.vercel.app`.
 
-For browser tests, install Chromium with `bunx playwright install --with-deps chromium`, or reuse Docker Chrome through `VIEWER_TEST_CDP`. Set `STORYBOOK_TEST_URL` if Storybook is not at `http://localhost:6006`; the Docker browser must be able to reach that URL. Storybook tests are separate from the demo's `bun run test` suite.
+For browser tests, install Chromium with `bunx playwright install --with-deps chromium`, or reuse Docker Chrome through `VIEWER_TEST_CDP`. Set `STORYBOOK_TEST_URL` if Storybook is not at `http://localhost:6006`; the Docker browser must be able to reach that URL. Storybook tests are separate from the demo's `bun run test` suite. CI runs both suites in separate jobs, starts their servers automatically, and uploads screenshots, traces, and HTML reports on failure. Local runs reuse your running servers through `VIEWER_TEST_URL` and `STORYBOOK_TEST_URL`.
 
 ## Add the component
 
@@ -170,7 +170,7 @@ import { ModelViewer } from "@/components/ui/model-viewer/lazy";
 {open && <ModelViewer src="/models/chair.glb" height={420} />}
 ```
 
-The dedicated `lazy` entry imports only React, styling, and the loading icon synchronously. It reserves the viewer's space and accepts `importFallback` (a React node, or `null`) while downloading the renderer. That placeholder runs before a viewer context exists; `loadingFallback` continues to handle model loading inside the root. The eager barrel remains available for compound composition; importing it elsewhere on the same page can load the renderer eagerly. JavaScript chunk-download failures propagate to your app's error boundary; model retry does not retry failed application chunks. The demo uses the lazy entry too.
+The dedicated `lazy` entry imports only React, styling, and the loading icon synchronously. It reserves the viewer's space and accepts `importFallback` (a React node, or `null`) while downloading the renderer. That placeholder runs before a viewer context exists; `loadingFallback` continues to handle model loading inside the root. The eager barrel remains available for compound composition; importing it elsewhere on the same page can load the renderer eagerly. JavaScript chunk-download failures show a local error message, call `onError`, and offer **Reload page** to recover from failed requests or outdated deployment assets. Model-loading failures continue to use `errorFallback` and model retry. The demo uses the lazy entry too.
 
 ### Props
 

@@ -33,7 +33,9 @@ export function viewerLifecycleReducer(
     case "unmount":
       return { status: "idle", readyPanes: new Set(), generation: current.generation + 1 };
     case "error":
-      return current.status === "loading" ? { ...current, status: "error" } : current;
+      return current.status === "loading" || current.status === "ready"
+        ? { ...current, status: "error" }
+        : current;
     case "ready": {
       if (current.status !== "loading" || current.readyPanes.has(event.pane)) return current;
       const readyPanes = new Set(current.readyPanes).add(event.pane);
