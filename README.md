@@ -62,6 +62,24 @@ For browser tests, install Chromium with `bunx playwright install --with-deps ch
 
 ## Add the component
 
+The public repository already serves a registry item through GitHub's raw file URL. No npm release is needed for this path:
+
+```sh
+npx shadcn@latest add https://raw.githubusercontent.com/michidk/shadcn-3d-viewer/main/public/r/model-viewer.json
+```
+
+To use a short namespace, add this to your app's `components.json` and then run `npx shadcn@latest add @viewer/model-viewer`:
+
+```json
+{
+  "registries": {
+    "@viewer": "https://raw.githubusercontent.com/michidk/shadcn-3d-viewer/main/public/r/{name}.json"
+  }
+}
+```
+
+This is a self-hosted shadcn registry item, not a listing in a central shadcn catalog. For a version-pinned install, replace `main` in the URL with a release tag. The npm installer uses the same generated item from its tarball.
+
 To install from a local checkout before the npm release, build the shadcn registry item, then add it from another shadcn project:
 
 ```sh
@@ -80,7 +98,7 @@ bun add -d @types/three
 
 ## Publishing
 
-This package is MIT licensed and publishes the CLI plus generated registry JSON, not the demo, Storybook, test fixtures, or model assets. Maintainers need Bun and Node 20 or newer. `prepack` rebuilds the registry and runs typecheck, lint, production build, and package tests.
+This package is MIT licensed and publishes the CLI plus generated registry JSON, not the demo, Storybook, test fixtures, or model assets. Maintainers need Bun and Node 20 or newer. `prepack` rebuilds the registry with the pinned shadcn CLI and runs typecheck, lint, production build, and package tests.
 
 ```sh
 bun install --frozen-lockfile
@@ -91,6 +109,10 @@ npm publish --access public
 ```
 
 The npm name must still be claimed by the first successful publish. Publishing is not performed by the repository build or CI. The GitHub repository and npm package are separate: pushing code does not publish a new package version.
+
+### GitHub release workflow
+
+The `Publish npm package` workflow runs only when a non-prerelease GitHub release is published. Before using it, configure a granular npm publish token as the repository secret `NPM_TOKEN`; the workflow cannot create or read that credential for you. Set the package version in `package.json`, merge the change to `main`, create a matching `v<version>` tag on that commit, then publish a GitHub release for the tag. The workflow checks that the tag matches the package version and belongs to `main`, installs from the lockfile, and runs `npm publish --access public --provenance` (which runs `prepack` verification). It never publishes from an ordinary push or pull request. The first npm release also claims the still-unpublished package name.
 
 ## Usage
 
