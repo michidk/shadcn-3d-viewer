@@ -1,20 +1,52 @@
-# shadcn-3d-viewer
+<!-- markdownlint-disable MD033 -->
+<h1 align="center">shadcn-3d-viewer</h1>
 
-A source-owned shadcn component for viewing GLB models with React Three Fiber. It is adapted from Asset Studio's production model viewer and presented in a standalone Vite demo.
+<p align="center">
+  <strong>A source-owned 3D model viewer for shadcn/ui.</strong><br>
+  Inspect, animate, compose, and capture GLB models with React Three Fiber—without giving up control of the source.
+</p>
 
-## Install
+<p align="center">
+  <a href="https://shadcn-3d-viewer.vercel.app/">Live demo</a>
+  &nbsp;·&nbsp;
+  <a href="https://shadcn-3d-viewer.vercel.app/storybook/">Storybook</a>
+  &nbsp;·&nbsp;
+  <a href="#-quick-start">Quick start</a>
+  &nbsp;·&nbsp;
+  <a href="#-api-and-composition">API</a>
+</p>
 
-After the npm release, run this in a Base UI shadcn project:
+<p align="center">
+  <a href="https://github.com/michidk/shadcn-3d-viewer/actions/workflows/ci.yml"><img alt="CI" src="https://github.com/michidk/shadcn-3d-viewer/actions/workflows/ci.yml/badge.svg"></a>
+  <a href="LICENSE"><img alt="License: MIT" src="https://img.shields.io/badge/license-MIT-blue.svg"></a>
+  <img alt="React 19" src="https://img.shields.io/badge/React-19-149ECA?logo=react&logoColor=white">
+  <img alt="React Three Fiber" src="https://img.shields.io/badge/React_Three_Fiber-000000?logo=threedotjs&logoColor=white">
+</p>
+
+---
+
+## 🧊 What it is
+
+`shadcn-3d-viewer` is a production-minded shadcn component for viewing GLB models. It is adapted from Asset Studio's model viewer and presented here with an interactive Vite demo and a comprehensive Storybook.
+
+- 🎛️ **A complete viewer, not just a canvas.** Orbit, split, and first-person cameras; studio and outdoor lighting; four shading modes; animation controls; screenshots; fullscreen; and a searchable scene inspector.
+- 🧩 **Composable by design.** Use the ready-made `ModelViewer`, arrange compound parts yourself, or connect custom controls through `useModelViewer()`.
+- 🎨 **Source-owned and theme-aware.** shadcn installs the component into your application, where it uses your local Base UI primitives and semantic theme tokens.
+- ⚡ **Built for real interfaces.** Lazy loading, demand-driven rendering, offscreen pausing, reduced-motion support, resilient error states, and responsive controls are included.
+- ♿ **Accessible around the canvas.** ARIA naming, keyboard-operable toolbars and orientation controls, focus-managed fullscreen, and hooks for meaningful text descriptions.
+
+> [!TIP]
+> **Try it before installing.** Open the [live demo](https://shadcn-3d-viewer.vercel.app/), then drop in a local `.glb` file. The model stays in your browser.
+
+## 🚀 Quick start
+
+Add the registry item directly to a Base UI shadcn project:
 
 ```sh
-npx shadcn-3d-viewer add
+bunx shadcn@latest add https://raw.githubusercontent.com/michidk/shadcn-3d-viewer/main/public/r/model-viewer.json
 ```
 
-The npm package is a small installer for the included shadcn registry item. It runs `shadcn add` and copies the component source into your project; it is **not** a compiled library to import from `shadcn-3d-viewer`. Review changes before accepting prompts. Pass shadcn options through, for example `npx shadcn-3d-viewer add --dry-run`. The component's own dependencies are installed into your app by shadcn. Use `@/components/ui/model-viewer` in your app after installation.
-
-The demo uses shadcn's **Base UI / Nova** primitives (`@base-ui/react`) and the standard neutral theme. The installed viewer uses your project's local primitives and existing theme; Nova and neutral are not requirements. Buttons, menus, and tooltips use Base UI's `render` composition API, not Radix's `asChild`. Theme tokens live in `src/theme.css`; add `dark` to the document root for dark mode. The 3D scene's day/night lighting remains independent of the UI theme.
-
-## Usage
+Then render it from the source now owned by your app:
 
 ```tsx
 import { ModelViewer } from "@/components/ui/model-viewer";
@@ -34,6 +66,12 @@ export function Preview() {
   );
 }
 ```
+
+The registry installs the viewer's React Three Fiber dependencies and required shadcn primitives. Review the CLI diff before accepting any overwrite prompts. See [Add the component](#-add-the-component) for namespace, version-pinned, and manual installation options.
+
+The demo uses shadcn's **Base UI / Nova** primitives (`@base-ui/react`) and the standard neutral theme. The installed viewer uses your project's local primitives and existing theme; Nova and neutral are not requirements. Buttons, menus, and tooltips use Base UI's `render` composition API, not Radix's `asChild`. Theme tokens live in `src/theme.css`; add `dark` to the document root for dark mode. The 3D scene's day/night lighting remains independent of the UI theme.
+
+## 🧩 API and composition
 
 Omit `src` to render the built-in material study. Use `showUi={false}` for a clean embedded preview.
 
@@ -288,7 +326,7 @@ Omitting `animation` automatically selects the first clip; passing `animation={n
 
 The inspector reports source-model units and unique material/texture resources. Select a mesh in the hierarchy or click it in the scene to highlight it. Animated framing uses a sampled envelope (17 poses per clip); unusually fast or procedural motion may extend beyond that envelope. Reset view includes the current pose in its bounds.
 
-## Features
+## ✨ Feature set
 
 - Smooth camera controls, bounded zoom, and a single orthographic projection toggle
 - Optional orientation helper: Drei's labeled cube or Asset Studio's colored axes
@@ -305,13 +343,21 @@ The inspector reports source-model units and unique material/texture resources. 
 - Optional UI-free mode for cards and compact previews
 - Model dimensions, triangle/material/texture counts, selectable meshes, and scene hierarchy
 
-## Add the component
+## 📦 Add the component
 
 The public repository already serves a registry item through GitHub's raw file URL. No npm release is needed for this path:
 
 ```sh
 npx shadcn@latest add https://raw.githubusercontent.com/michidk/shadcn-3d-viewer/main/public/r/model-viewer.json
 ```
+
+After the npm release, the shorter installer command will be available too:
+
+```sh
+npx shadcn-3d-viewer add
+```
+
+The npm package is a small installer for the included shadcn registry item. It runs `shadcn add` and copies the component source into your project; it is **not** a compiled library to import from `shadcn-3d-viewer`. Pass shadcn options through—for example, `npx shadcn-3d-viewer add --dry-run`—and review changes before accepting prompts.
 
 To use a short namespace, add this to your app's `components.json` and then run `npx shadcn@latest add @viewer/model-viewer`:
 
@@ -341,7 +387,7 @@ bun add @react-three/fiber @react-three/drei three three-stdlib lucide-react
 bun add -d @types/three
 ```
 
-## Run it
+## 🛠️ Local development
 
 ```sh
 bun install
@@ -354,7 +400,7 @@ Production checks:
 bun run verify
 ```
 
-## Regression checks
+## ✅ Regression checks
 
 The included CC0 robot fixture exercises skinned animation and multiple clips. Start the demo, then run:
 
@@ -365,7 +411,7 @@ VIEWER_TEST_URL=http://localhost:5173 bun run test
 
 The suite covers extreme model scales, framing, shared-resource statistics, the real animated fixture, pane isolation, both helpers, the orthographic toggle, fly fallback, playback and replacement, and phone layout. For an existing Docker Chrome, set `VIEWER_TEST_CDP=http://127.0.0.1:9223` and a `VIEWER_TEST_URL` reachable from that container.
 
-## Notes
+## 📝 Implementation notes
 
 - The demo intentionally accepts GLB only because standalone `.gltf` files can reference sidecar buffers and textures. The component itself can load any URL supported by `GLTFLoader`.
 - Draco and Meshopt are enabled by default. Pass a self-hosted Draco decoder path through `useDraco`, or configure KTX2 and other extensions with `extendLoader`.
@@ -374,7 +420,7 @@ The suite covers extreme model scales, framing, shared-resource statistics, the 
 - `enableCapture` controls PNG capture independently of the built-in UI and defaults to `showUi`. Use `<ModelViewer showUi={false} enableCapture>` for custom capture controls, or `enableCapture={false}` to reduce GPU overhead with the toolbar visible. `canCapture` stays false until the renderer supports capture and the model is ready. Changing `enableCapture` recreates the WebGL canvas because buffer preservation is fixed when its context is created.
 - First-person pointer lock may be blocked inside restrictive iframes; the component automatically falls back to focused-canvas drag look when the browser exposes that policy.
 
-## Storybook
+## 📚 Storybook
 
 ```sh
 bun run storybook        # http://localhost:6006
@@ -388,7 +434,7 @@ Storybook shares `src/theme.css` with the demo but does not load the demo page l
 
 Use Storybook's **Theme** toolbar to preview every example in light or dark mode, including portaled menus and tooltips.
 
-## Vercel demo
+## 🌐 Demo deployment
 
 The [demo](https://shadcn-3d-viewer.vercel.app/) and [Storybook](https://shadcn-3d-viewer.vercel.app/storybook/) share one static Vercel project at `/` and `/storybook/`. `bun run build:vercel` writes the demo to `dist/` and Storybook to `dist/storybook/`; `vercel.json` configures the build and redirects `/storybook` to `/storybook/` so Storybook's relative asset paths resolve correctly. The deployment includes the public registry JSON at `/r/model-viewer.json`.
 
@@ -396,7 +442,7 @@ The Vercel project is connected to `michidk/shadcn-3d-viewer` with `main` as its
 
 For browser tests, install Chromium with `bunx playwright install --with-deps chromium`, or reuse Docker Chrome through `VIEWER_TEST_CDP`. Set `STORYBOOK_TEST_URL` if Storybook is not at `http://localhost:6006`; the Docker browser must be able to reach that URL. Storybook tests are separate from the demo's `bun run test` suite. CI runs both suites in separate jobs, starts their servers automatically, and uploads screenshots, traces, and HTML reports on failure. Local runs reuse your running servers through `VIEWER_TEST_URL` and `STORYBOOK_TEST_URL`. `bun run test:install` also packs the CLI, installs it into a clean Base UI consumer outside this repository, checks the host theme/configuration, and typechecks/builds the installed component. CI runs this consumer check before accepting the package.
 
-## Publishing
+## 🚢 Publishing
 
 This package is MIT licensed and publishes the CLI plus generated registry JSON, not the demo, Storybook, test fixtures, or model assets. Maintainers need Bun and Node 20 or newer. `prepack` rebuilds the registry with the pinned shadcn CLI and runs typecheck, lint, production build, and package tests.
 
