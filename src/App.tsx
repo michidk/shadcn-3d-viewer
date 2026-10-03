@@ -37,8 +37,8 @@ const featuredStories = [
   {
     id: "viewer-model-viewer--minimal-embed",
     label: "Minimal embed",
-    description: "Use the renderer as a quiet, UI-free preview inside a card or product page.",
-    detail: "No controls",
+    description: "Use the renderer as a quiet preview with only fullscreen kept in view.",
+    detail: "Fullscreen only",
     icon: Scan,
     sample: "minimal",
   },
@@ -99,10 +99,12 @@ function SampleFrame({ sample }: { sample: string }) {
       showOrientation={false}
     /></div>;
   }
-  return <div className="sample-frame-shell"><ModelViewer
+  return <div className="sample-frame-shell sample-frame-minimal"><ModelViewer
     aria-label="Minimal 3D sample"
     height="100%"
-    showUi={false}
+    toolbar={null}
+    showAnimationControls={false}
+    showOrientation={false}
     viewCube={false}
   /></div>;
 }
@@ -148,7 +150,6 @@ function LandingPage() {
           <span className="brand-mark"><Box /></span>
           <span>shadcn-3d-viewer</span>
         </a>
-        <div className="header-meta"><span>shadcn/ui</span><span>React Three Fiber</span></div>
         <nav className="header-links" aria-label="Project links">
           <a href={storybookBase}><BookOpen aria-hidden="true" /> <span>Storybook</span></a>
           <a href="https://github.com/michidk/shadcn-3d-viewer" target="_blank" rel="noopener noreferrer"><GitBranch aria-hidden="true" /> <span>GitHub</span></a>
@@ -256,7 +257,6 @@ function LandingPage() {
         </section>
       </main>
 
-      <footer className="site-footer"><span>shadcn-3d-viewer 0.1</span><span>React 19 · Three.js · shadcn/ui</span></footer>
     </div>
   );
 }
