@@ -67,13 +67,20 @@ test("offscreen and hidden-tab viewers stop drawing and resume without changing 
   const root = page.locator('[data-slot="model-viewer"]');
   await expect(root).toHaveAttribute("data-state", "ready", { timeout: 30000 });
   const draws = () => page.evaluate(() => (window as Window & { viewerDraws: number }).viewerDraws);
+  async function pausedDraws() {
+    // The DOM reports paused before the separate R3F root drains queued frames.
+    // Require a full quiet interval instead of assuming a fixed settling delay.
+    await expect.poll(async () => {
+      const before = await draws();
+      await page.waitForTimeout(400);
+      return (await draws()) - before;
+    }).toBe(0);
+    return draws();
+  }
   await expect.poll(draws).toBeGreaterThan(0);
   await page.evaluate(() => window.scrollTo(0, document.body.scrollHeight));
   await expect(root).toHaveAttribute("data-rendering", "paused");
-  await page.waitForTimeout(200);
-  const before = await draws();
-  await page.waitForTimeout(400);
-  expect(await draws()).toBe(before);
+  const before = await pausedDraws();
   await page.evaluate(() => window.scrollTo(0, 0));
   await expect(root).toHaveAttribute("data-rendering", "active");
   await expect.poll(draws).toBeGreaterThan(before);
@@ -83,10 +90,7 @@ test("offscreen and hidden-tab viewers stop drawing and resume without changing 
     document.dispatchEvent(new Event("visibilitychange"));
   });
   await expect(root).toHaveAttribute("data-rendering", "paused");
-  await page.waitForTimeout(200);
-  const hidden = await draws();
-  await page.waitForTimeout(400);
-  expect(await draws()).toBe(hidden);
+  const hidden = await pausedDraws();
   await page.evaluate(() => {
     Object.defineProperty(document, "visibilityState", { configurable: true, get: () => "visible" });
     document.dispatchEvent(new Event("visibilitychange"));
