@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { ModelViewer } from "@/components/ui/model-viewer/lazy";
 
-const installCommand = "bunx shadcn@latest add https://raw.githubusercontent.com/michidk/shadcn-3d-viewer/main/public/r/model-viewer.json";
+const installCommand = "npx shadcn-3d-viewer@latest add";
 const storybookBase = import.meta.env.DEV
   ? "https://shadcn-3d-viewer.vercel.app/storybook/"
   : "/storybook/";
