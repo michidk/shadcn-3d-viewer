@@ -1,4 +1,4 @@
-import { ArrowUpRight, BookOpen, Bot, Box, Check, Clipboard, CloudSun, Github, LayoutGrid, Scan, Upload, X } from "lucide-react";
+import { ArrowUpRight, BookOpen, Bot, Box, Check, Clipboard, CloudSun, GitBranch, LayoutGrid, Scan, Upload, X } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 
 import { Button } from "@/components/ui/button";
@@ -151,7 +151,7 @@ function LandingPage() {
         <div className="header-meta"><span>shadcn/ui</span><span>React Three Fiber</span></div>
         <nav className="header-links" aria-label="Project links">
           <a href={storybookBase}><BookOpen aria-hidden="true" /> <span>Storybook</span></a>
-          <a href="https://github.com/michidk/shadcn-3d-viewer" target="_blank" rel="noopener noreferrer"><Github aria-hidden="true" /> <span>GitHub</span></a>
+          <a href="https://github.com/michidk/shadcn-3d-viewer" target="_blank" rel="noopener noreferrer"><GitBranch aria-hidden="true" /> <span>GitHub</span></a>
         </nav>
       </header>
 
