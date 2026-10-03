@@ -118,8 +118,7 @@ test("viewer menus do not lock scrolling or change the viewer width", async ({ p
 test("viewer accepts standard ARIA naming and description with legacy alt fallback", async ({ page }) => {
   await ready(page);
   await page.evaluate(`(async () => {
-    const { default: React } = await import('/node_modules/.vite/deps/react.js');
-    const { default: ReactDOM } = await import('/node_modules/.vite/deps/react-dom_client.js');
+    const { React, ReactDOM } = await import('/tests/fixtures/viewer-runtime.ts');
     const { ModelViewer } = await import('/src/components/ui/model-viewer/index.ts');
     const h = React.createElement;
     const host = document.createElement('div');
@@ -152,8 +151,7 @@ test("viewer accepts standard ARIA naming and description with legacy alt fallba
 test("custom scene content and camera API support a synchronized arbitrary view", async ({ page }) => {
   await ready(page);
   await page.evaluate(`(async () => {
-    const { default: React } = await import('/node_modules/.vite/deps/react.js');
-    const { default: ReactDOM } = await import('/node_modules/.vite/deps/react-dom_client.js');
+    const { React, ReactDOM } = await import('/tests/fixtures/viewer-runtime.ts');
     const { ModelViewer, useModelViewer, useModelViewerCamera } = await import('/src/components/ui/model-viewer/index.ts');
     const h = React.createElement;
     const host = document.createElement('div');
@@ -207,7 +205,7 @@ test("grid stays visible around an animated model on desktop and phone", async (
     await page.getByRole("button", { name: "Show grid", exact: true }).click();
     await expect(page.getByRole("button", { name: "Show grid", exact: true })).toHaveAttribute("aria-pressed", "true");
     const grid = await page.evaluate(`(async () => {
-      const { _roots } = await import('/node_modules/.vite/deps/@react-three_fiber.js');
+      const { _roots } = await import('/tests/fixtures/viewer-runtime.ts');
       const state = [..._roots.values()][0].store.getState();
       const pane = state.internal.subscribers.find(s => s.priority === 1).store.getState();
       let result;
@@ -268,7 +266,7 @@ test("camera movement does not trigger pixelated canvas regression", async ({ pa
   await ready(page);
   await cube(page, "Drei cube");
   await page.evaluate(`(async () => {
-    const { _roots } = await import('/node_modules/.vite/deps/@react-three_fiber.js');
+    const { _roots } = await import('/tests/fixtures/viewer-runtime.ts');
     const store = [..._roots.values()][0].store;
     window.viewerQualitySamples = [];
     window.viewerQualityTimer = setInterval(() => {
@@ -306,7 +304,7 @@ test("grid colors are neutral grays in both lighting modes", async ({ page }) =>
       await page.getByRole("menuitemradio", { name: "Night studio" }).click();
     }
     const colors = await page.evaluate(`(async () => {
-      const { _roots } = await import('/node_modules/.vite/deps/@react-three_fiber.js');
+      const { _roots } = await import('/tests/fixtures/viewer-runtime.ts');
       const state = [..._roots.values()][0].store.getState();
       const pane = state.internal.subscribers.find(s => s.priority === 1).store.getState();
       let result;
@@ -337,7 +335,7 @@ test("studio environment refreshes when lighting changes", async ({ page }) => {
       return pane.scene.environment?.uuid;
     })()`);
 
-  await page.evaluate(`import('/node_modules/.vite/deps/@react-three_fiber.js').then(module => { window.__viewerFiber = module; })`);
+  await page.evaluate(`import('/tests/fixtures/viewer-runtime.ts').then(module => { window.__viewerFiber = module; })`);
   await expect.poll(environmentId).toBeTruthy();
   const dayEnvironment = await environmentId();
 
@@ -358,7 +356,7 @@ test("studio environment refreshes when lighting changes", async ({ page }) => {
 test("solid mutes sample materials and the optional floor receives shadows", async ({ page }) => {
   await ready(page);
   const scene = () => page.evaluate(`(async () => {
-    const { _roots } = await import('/node_modules/.vite/deps/@react-three_fiber.js');
+    const { _roots } = await import('/tests/fixtures/viewer-runtime.ts');
     const state = [..._roots.values()][0].store.getState();
     const pane = state.internal.subscribers.find(s => s.priority === 1).store.getState();
     const objects = {};
@@ -434,7 +432,7 @@ test("split panes pan independently without changing their fixed directions", as
   await page.waitForTimeout(1500);
   await expect(page.locator("canvas")).toHaveCount(1);
   const directions = () => page.evaluate(`(async () => {
-    const { _roots } = await import('/node_modules/.vite/deps/@react-three_fiber.js');
+    const { _roots } = await import('/tests/fixtures/viewer-runtime.ts');
     const state = [..._roots.values()][0].store.getState();
     return state.internal.subscribers.filter(s => s.priority > 0).map(s => {
       const { camera } = s.store.getState();
@@ -584,8 +582,7 @@ test("tooltips and searchable inspector remain usable on phones", async ({ page 
 test("standalone inspector accepts custom button and tooltip implementations", async ({ page }) => {
   await ready(page);
   await page.evaluate(`(async () => {
-    const { default: React } = await import('/node_modules/.vite/deps/react.js');
-    const { default: ReactDOM } = await import('/node_modules/.vite/deps/react-dom_client.js');
+    const { React, ReactDOM } = await import('/tests/fixtures/viewer-runtime.ts');
     const h = React.createElement;
     const { createRoot } = ReactDOM;
     const { ModelInspector } = await import('/src/components/ui/model-viewer/model-inspector.tsx');
@@ -614,8 +611,7 @@ test("standalone inspector accepts custom button and tooltip implementations", a
 test("shadcn composition forwards props and refs and supports controlled custom toolbars", async ({ page }) => {
   await ready(page);
   await page.evaluate(`(async () => {
-    const { default: React } = await import('/node_modules/.vite/deps/react.js');
-    const { default: ReactDOM } = await import('/node_modules/.vite/deps/react-dom_client.js');
+    const { React, ReactDOM } = await import('/tests/fixtures/viewer-runtime.ts');
     const { ModelViewer, ModelViewerToolbar, ModelViewerToolbarGroup, ModelViewerToolbarButton } = await import('/src/components/ui/model-viewer/index.ts');
     const h = React.createElement;
     const host = document.createElement('div');
@@ -668,8 +664,7 @@ test("shadcn composition forwards props and refs and supports controlled custom 
 test("compound roots isolate state, respect controlled updates and mount scenes explicitly", async ({ page }) => {
   await ready(page);
   await page.evaluate(`(async () => {
-    const { default: React } = await import('/node_modules/.vite/deps/react.js');
-    const { default: ReactDOM } = await import('/node_modules/.vite/deps/react-dom_client.js');
+    const { React, ReactDOM } = await import('/tests/fixtures/viewer-runtime.ts');
     const { createRoot } = ReactDOM;
     const { ModelViewerRoot, ModelViewerScene, ModelViewerDefaultToolbar, ModelViewerToolbar, ModelViewerToolbarGroup, ModelViewerToolbarButton, useModelViewer } = await import('/src/components/ui/model-viewer/index.ts');
     const h = React.createElement;
@@ -741,8 +736,7 @@ test("compound roots isolate state, respect controlled updates and mount scenes 
 test("an inline animation callback does not reset a chosen clip on parent rerender", async ({ page }) => {
   await ready(page);
   await page.evaluate(`(async () => {
-    const { default: React } = await import('/node_modules/.vite/deps/react.js');
-    const { default: ReactDOM } = await import('/node_modules/.vite/deps/react-dom_client.js');
+    const { React, ReactDOM } = await import('/tests/fixtures/viewer-runtime.ts');
     const { ModelViewer } = await import('/src/components/ui/model-viewer/index.ts');
     const h = React.createElement;
     const host = document.createElement('div');
@@ -774,8 +768,7 @@ test("an inline animation callback does not reset a chosen clip on parent rerend
 test("changing mode after a load error shows an error, never a stuck loader", async ({ page }) => {
   await ready(page);
   await page.evaluate(`(async () => {
-    const { default: React } = await import('/node_modules/.vite/deps/react.js');
-    const { default: ReactDOM } = await import('/node_modules/.vite/deps/react-dom_client.js');
+    const { React, ReactDOM } = await import('/tests/fixtures/viewer-runtime.ts');
     const { ModelViewer } = await import('/src/components/ui/model-viewer/index.ts');
     const h = React.createElement;
     const host = document.createElement('div');
@@ -812,8 +805,7 @@ test("concurrent viewers keep loading filenames and fallback data scoped to thei
   try {
     await ready(page);
     await page.evaluate(`(async () => {
-      const { default: React } = await import('/node_modules/.vite/deps/react.js');
-      const { default: ReactDOM } = await import('/node_modules/.vite/deps/react-dom_client.js');
+      const { React, ReactDOM } = await import('/tests/fixtures/viewer-runtime.ts');
       const { ModelViewer } = await import('/src/components/ui/model-viewer/index.ts');
       const h = React.createElement;
       const host = document.createElement('div');
@@ -863,8 +855,7 @@ test("registry installs only viewer sources and leaves host styling untouched", 
 test("scene errors after readiness disable capture and can be retried", async ({ page }) => {
   await ready(page);
   await page.evaluate(`(async () => {
-    const { default: React } = await import('/node_modules/.vite/deps/react.js');
-    const { default: ReactDOM } = await import('/node_modules/.vite/deps/react-dom_client.js');
+    const { React, ReactDOM } = await import('/tests/fixtures/viewer-runtime.ts');
     const { createRoot } = ReactDOM;
     const { ModelViewer } = await import('/src/components/ui/model-viewer/index.ts');
     const h = React.createElement;
@@ -940,8 +931,7 @@ test("local model URLs are released on replacement and clear under Strict Mode",
 test("capture can be enabled independently of the built-in UI", async ({ page }) => {
   await ready(page);
   await page.evaluate(`(async () => {
-    const { default: React } = await import('/node_modules/.vite/deps/react.js');
-    const { default: ReactDOM } = await import('/node_modules/.vite/deps/react-dom_client.js');
+    const { React, ReactDOM } = await import('/tests/fixtures/viewer-runtime.ts');
     const { ModelViewer, useModelViewer } = await import('/src/components/ui/model-viewer/index.ts');
     const h = React.createElement;
     const host = document.createElement('div');
@@ -1019,8 +1009,7 @@ test("fallback fullscreen contains focus, supports portaled menus and restores f
 test("large inspectors bound rendered rows while searching the entire hierarchy", async ({ page }) => {
   await ready(page);
   await page.evaluate(`(async () => {
-    const { default: React } = await import('/node_modules/.vite/deps/react.js');
-    const { default: ReactDOM } = await import('/node_modules/.vite/deps/react-dom_client.js');
+    const { React, ReactDOM } = await import('/tests/fixtures/viewer-runtime.ts');
     const { ModelInspector } = await import('/src/components/ui/model-viewer/index.ts');
     const host = document.createElement('div');
     host.id = 'large-inspector';
@@ -1093,8 +1082,7 @@ test("finished and zero-speed animations stop drawing and restart on demand", as
   });
   await ready(page);
   await page.evaluate(`(async () => {
-    const { default: React } = await import('/node_modules/.vite/deps/react.js');
-    const { default: ReactDOM } = await import('/node_modules/.vite/deps/react-dom_client.js');
+    const { React, ReactDOM } = await import('/tests/fixtures/viewer-runtime.ts');
     const { ModelViewer, useModelViewer } = await import('/src/components/ui/model-viewer/index.ts');
     const h = React.createElement;
     const host = document.createElement('div');
