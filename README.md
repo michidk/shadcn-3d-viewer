@@ -69,7 +69,24 @@ export function Preview() {
 
 The registry installs the viewer's React Three Fiber dependencies and required shadcn primitives. Review the CLI diff before accepting any overwrite prompts. See [Add the component](#-add-the-component) for namespace, version-pinned, and manual installation options.
 
-The demo uses shadcn's **Base UI / Nova** primitives (`@base-ui/react`) and the standard neutral theme. The installed viewer uses your project's local primitives and existing theme; Nova and neutral are not requirements. Buttons, menus, and tooltips use Base UI's `render` composition API, not Radix's `asChild`. Theme tokens live in `src/theme.css`; add `dark` to the document root for dark mode. The 3D scene's day/night lighting remains independent of the UI theme.
+Use compatible **Base UI** shadcn primitives with the `render` composition API. The viewer inherits your theme; 3D lighting is independent of light/dark mode.
+
+## ✨ Feature set
+
+- Smooth camera controls, bounded zoom, and a single orthographic projection toggle
+- Optional orientation helper: Drei's labeled cube or Asset Studio's colored axes
+- Four fixed front/right/back/left views with independent pan and zoom, sharing one WebGL renderer
+- First-person fly camera with pointer-lock and drag-look fallback
+- Realistic, solid, normal, and wireframe shading
+- Procedural image-based studio lighting, day/night modes, and an optional fading grid
+- GLTF animation clip selection, playback, restart, looping, and speed controls
+- Clipboard and downloadable PNG captures
+- Fullscreen with an in-page fallback
+- Loading progress, posters, custom fallbacks, and error states
+- Performance-based pixel ratio (1–2×, without pixelated drag mode), reduced-motion support, and demand-driven rendering
+- Draco, Meshopt, and custom loader configuration
+- Optional UI-free mode for cards and compact previews
+- Model dimensions, triangle/material/texture counts, selectable meshes, and scene hierarchy
 
 ## 🧩 API and composition
 
@@ -77,7 +94,7 @@ Omit `src` to render the built-in material study. Use `showUi={false}` for a cle
 
 ### Accessibility
 
-Give each meaningful viewer a specific accessible name. `aria-label` names the viewer group directly; use `aria-labelledby` when a visible heading already names it. Link a nearby text description with `aria-describedby` when the model's shape, appearance, or other details matter. The canvas is interactive, so a label alone is not a substitute for describing essential visual information in text.
+Name the viewer with `aria-label` or `aria-labelledby`. Use `aria-describedby` to link essential visual details in nearby text.
 
 ```tsx
 <h2 id="chair-heading">Walnut lounge chair</h2>
@@ -91,7 +108,7 @@ Give each meaningful viewer a specific accessible name. `aria-label` names the v
 </p>
 ```
 
-The older `alt` prop still works as a fallback accessible name and screenshot filename, but new code should use `aria-label` or `aria-labelledby`. Native ARIA attributes are forwarded to the root viewer element. The orientation menu and toolbar are keyboard-operable; the 3D canvas is not a complete keyboard or screen-reader equivalent for inspecting every mesh, so provide essential model details outside it.
+`alt` remains a fallback accessible name and screenshot filename. Toolbars and orientation controls support keyboards; provide essential model details outside the canvas.
 
 ### Load the renderer on demand
 
@@ -102,7 +119,7 @@ import { ModelViewer } from "@/components/ui/model-viewer/lazy";
 {open && <ModelViewer src="/models/chair.glb" height={420} />}
 ```
 
-The dedicated `lazy` entry imports only React, styling, and the loading icon synchronously. It reserves the viewer's space and accepts `importFallback` (a React node, or `null`) while downloading the renderer. That placeholder runs before a viewer context exists; `loadingFallback` continues to handle model loading inside the root. The eager barrel remains available for compound composition; importing it elsewhere on the same page can load the renderer eagerly. JavaScript chunk-download failures show a local error message, call `onError`, and offer **Reload page** to recover from failed requests or outdated deployment assets. Model-loading failures continue to use `errorFallback` and model retry. The demo uses the lazy entry too.
+The lazy entry defers the renderer until mount. Use `importFallback` during chunk loading and `loadingFallback` during model loading. Chunk failures call `onError` and offer a page reload; model failures use `errorFallback` and retry. Importing the eager barrel elsewhere can load the renderer early.
 
 ### Props
 
@@ -147,11 +164,11 @@ The dedicated `lazy` entry imports only React, styling, and the loading icon syn
 | `showRetry` | `boolean` | `false` |
 | `pauseWhenHidden` | `boolean` | `true` |
 
-Loading filenames are hidden unless `showFileName` is enabled. This affects built-in loading UI only, not network requests or custom renderers. Custom loading renderers receive `{ active, progress, item, loaded, total }`; `item` is this viewer's `src`, while the numeric fields remain zero because loading is indeterminate and isolated from other viewers. The default error card omits raw technical details; use `onError` for logging or `errorFallback` to render them yourself. Pass `null` (or return `null`) to hide either overlay.
+Set `showFileName` to show the source in the default loader. Custom loaders receive `{ active, progress, item, loaded, total }`; `item` is this viewer’s `src` and numeric progress is indeterminate (zero). Use `onError` for technical details. Pass `null` to hide either fallback.
 
-`showRetry` adds a button to the default error card. `useModelViewer().retry()` provides the same action for custom fallback components: it clears Drei's cache for the failed URL and remounts the renderer, resetting load/inspection state. Retry is manual and only acts on a failed model with a `src`; it does not fix invalid files or renew signed URLs. Replace `src` in the host app for those cases. `onError` reports every failed attempt and `onLoad` reports successful recovery.
+`showRetry` or `useModelViewer().retry()` retries a failed model, clears its loader cache, and remounts the renderer. Replace `src` to fix an invalid or expired URL.
 
-With `pauseWhenHidden`, leaving the viewport or hiding the browser tab stops the frame loop and pauses animation/auto-rotation without unmounting the model. Returning resumes from the existing pose and preserves the requested play/pause state (including controlled props); this does not emit playback-change callbacks. Network/model loading is not cancelled. Disable this option for intentional background rendering. `useModelViewer().renderingPaused` and `data-rendering="paused|active"` expose the effective suspension state. Browsers without IntersectionObserver still suspend for hidden tabs.
+`pauseWhenHidden` pauses rendering, animation, and rotation offscreen or in a hidden tab, preserving playback state. Loading continues. Read `renderingPaused` or `data-rendering="paused|active"` for the effective state.
 
 ```tsx
 <ModelViewer
@@ -161,9 +178,9 @@ With `pauseWhenHidden`, leaving the viewport or hiding the browser tab stops the
 />
 ```
 
-`mode`, `lighting`, `shading`, `showGrid`, `showFloor`, `viewCube`, `projection`, `autoRotate`, camera, and animation props are controlled when supplied. Use their corresponding `default*` props for uncontrolled initial values. Change callbacks report toolbar interactions. In particular, use `onViewCubeChange`, `onProjectionChange`, `onFloorChange`, and `onAutoRotateChange` when controlling these options externally. Auto-rotation orbits the camera around the model in orbit mode; its toolbar toggle is disabled in split and fly modes, and the rotation preference resumes when returning to orbit mode.
+State props are controlled when supplied; use corresponding `default*` props for initial uncontrolled values and change callbacks to handle toolbar actions. Auto-rotation applies only in orbit mode.
 
-`showFloor` adds a large ground plane and shadow receiver without changing the model's GLB. Its default color matches the studio background or the Outside horizon tone; `floorColor` overrides it. Outside uses a procedural atmospheric sky and sun lighting without fetching a remote HDRI. Realistic shading preserves source materials and textures; Solid replaces them with a muted matte gray, including the sample objects.
+`showFloor` adds a shadow-receiving ground plane; `floorColor` overrides its color. Outside lighting uses a procedural sky. Realistic shading preserves materials; Solid replaces them with matte gray.
 
 To start an animated model rotating and playing a particular clip:
 
@@ -176,9 +193,9 @@ To start an animated model rotating and playing a particular clip:
 />
 ```
 
-The toolbar offers one orthographic toggle; direction changes are available through the orientation helper. `cameraPreset` remains available for programmatic positioning. Helpers appear in orbit mode. Set `viewCube={false}` to hide one, or explicitly set `showOrientation` to show it in a UI-free viewer.
+Use the toolbar for orthographic projection and the orientation helper or `cameraPreset` for direction. Helpers appear in orbit mode; `viewCube={false}` hides them and explicit `showOrientation` enables them with `showUi={false}`.
 
-`ViewCube` is also an exported, source-owned shadcn-style component. Compose it inside your own React Three Fiber `Canvas` with default camera controls, or configure it through `ModelViewer`:
+Use the exported `ViewCube` in an R3F `Canvas` with default camera controls, or configure it through the viewer:
 
 ```tsx
 <ModelViewer defaultViewCube="drei" viewCubePosition="top-right" viewCubeMargin={[64, 80]} />
@@ -187,9 +204,9 @@ The toolbar offers one orthographic toggle; direction changes are available thro
 <ViewCube variant="asset-studio" position="top-right" margin={[64, 64]} />
 ```
 
-Standalone `ViewCube` defaults to render priority 1. When composing with a custom renderer, use a later priority (the viewer uses 2). The four split panes keep fixed directions; dragging pans and scrolling zooms without rotating them.
+Standalone `ViewCube` uses render priority 1; set a later priority with custom renderers (the viewer uses 2). Split panes have fixed directions with pan and zoom.
 
-To replace the built-in cube with your own R3F gizmo, disable it and pass scene nodes through `sceneContent` (or the same prop on `ModelViewerScene` in a compound viewer):
+Replace the cube with custom R3F content:
 
 ```tsx
 <ModelViewer
@@ -199,9 +216,9 @@ To replace the built-in cube with your own R3F gizmo, disable it and pass scene 
 />
 ```
 
-`sceneContent` renders inside the primary orbit pane, after its default camera controls. It is not rendered in fixed split or first-person mode. Ordinary `children` and `overlay` remain DOM content. A custom scene cube should also provide keyboard-accessible DOM controls; the built-in orientation menu is hidden when `viewCube={false}`.
+`sceneContent` renders in the primary orbit pane only. `children` and `overlay` are DOM content. Custom gizmos need equivalent keyboard controls.
 
-For arbitrary camera positions, `useModelViewer()` exposes `getCameraView()` and `setCameraView({ position, target }, { transition?: boolean })`. The setter returns `false` until orbit controls are mounted (or for non-finite/zero-distance views). `transition` defaults to `true`. `useModelViewerCamera()` subscribes to the live primary orbit camera view, returning `null` before controls mount; unlike `onCameraChange`, which fires when movement settles, it updates as the user drags. Camera values use world-space Three.js coordinates. This subscription does not rerender the viewer root on each frame.
+`getCameraView()` and `setCameraView({ position, target }, { transition?: boolean })` use world-space coordinates. Transitions default to enabled; the setter returns `false` for invalid views or unmounted orbit controls. `useModelViewerCamera()` subscribes to live movement (initially `null`); `onCameraChange` fires after movement settles.
 
 ```tsx
 function CustomDirectionButton() {
@@ -215,21 +232,19 @@ function CustomDirectionButton() {
 }
 ```
 
-Both built-in viewer cube variants have a DOM keyboard counterpart: Tab to **Orient view**, then use Enter/Space to open its direction menu, arrow keys/Home/End to navigate, Enter to select, and Escape to close. The trigger reveals itself on focus and stays visible while open. It is available whenever the cube is enabled in orbit mode, including `showUi={false}` with explicit `showOrientation`; it is absent in fixed split and fly modes. `ModelViewerScene` includes `ModelViewerOrientationControls` automatically. The exported part supports `className`/`style`; the standalone R3F `ViewCube` remains canvas-only and needs equivalent host DOM controls for keyboard access. Direction entries are actions, not radio selections, because orbiting can change the camera afterwards.
+Tab to **Orient view** for keyboard direction controls. The menu supports Enter/Space, arrows, Home/End, and Escape. `ModelViewerScene` includes it automatically when the cube is enabled in orbit mode; standalone `ViewCube` needs host DOM controls.
 
 ### Compatibility component overrides
 
-Prefer editing your local shadcn primitives, composing the exported parts, and using Base UI's `render` prop. The optional `components` API remains available for existing consumers and application-wide overrides; it is not required to match your theme.
-
-Controls include accessible button labels and visual tooltips by default, following Base UI's tooltip guidance. Do not put essential instructions only in a tooltip. Replace either implementation without changing the viewer:
+Prefer local primitives and composed parts. Use `components` for application-wide overrides:
 
 ```tsx
 <ModelViewer components={{ Button: AppButton, Tooltip: AppTooltip }} />
 ```
 
-`Button` accepts the Base UI shadcn button props (including `variant`, `size`, and `render`) and must forward its ref, event handlers, ARIA attributes, and `className` to the actual button. `Tooltip` receives `{ content, children }`; use `<TooltipTrigger render={children} />` to preserve refs and handlers. Exported `ViewerUiComponents` and `ViewerTooltipProps` describe these contracts. Define overrides outside render to preserve component identity.
+`Button` must forward Base UI props, refs, handlers, ARIA attributes, and `className`. `Tooltip` receives `{ content, children }`; compose with `<TooltipTrigger render={children} />`. See `ViewerUiComponents` and `ViewerTooltipProps`. Define overrides outside render.
 
-`ModelInspector` is separately exported with searchable/collapsible hierarchy, metric cards, dimensions, and selection state. Pass `inspection`, `selectedMesh`, `onSelectMesh`, optional `onClose`, `position`, `className`, and optional `components`. `position` accepts `"left"` or `"right"` and defaults to `"right"`; the drop-in `ModelViewer` exposes the same choice as `inspectorPosition`. Use `ViewerUiProvider` to share overrides across composed controls. The inspector includes its stylesheet; override `className`/CSS for more custom placement. Search indexes all nodes and their ancestors, including collapsed branches. Large hierarchies initially render 200 rows; **Show more objects** reveals additional batches without restricting search.
+`ModelInspector` accepts `inspection`, `selectedMesh`, `onSelectMesh`, optional `onClose`, `position` (`left` or `right`), `className`, and `components`. The preset uses `inspectorPosition`. Search includes collapsed nodes; large hierarchies show 200 rows per batch. `ViewerUiProvider` shares overrides across controls.
 
 ### Compose viewer parts
 
@@ -256,9 +271,9 @@ import {
 </ModelViewerRoot>
 ```
 
-The root owns state and the containing DOM element. It renders **no Canvas or controls automatically**. Mount exactly one `ModelViewerScene` inside each root; mount or omit the other parts as needed. The scene owns model loading, error/loading fallbacks, and the renderer. `ModelViewerAnimationBar` appears only when clips are available; `ModelViewerInspector` appears when opened and inspection data is ready.
+The root owns state and its DOM container. Mount exactly one `ModelViewerScene`; add other parts as needed. The scene handles rendering and loading/error states. Animation and inspector parts appear when their data is available.
 
-`ModelViewerRoot` takes the viewer's scene and controlled/default state props, native DOM props, and refs. The preset-only props `toolbar`, `overlay`, and `showAnimationControls` are replaced by children in a compound composition. `showUi` on the root controls pane labels and the default orientation/capture configuration; it does not hide explicitly mounted children.
+`ModelViewerRoot` accepts state props, native DOM props, and refs. Compose children instead of preset-only `toolbar`, `overlay`, and `showAnimationControls`. Root `showUi` does not hide explicitly mounted children.
 
 ### Build controls with shared state
 
@@ -296,52 +311,33 @@ function CompactToolbar() {
 <ModelViewer toolbar={<CompactToolbar />} />
 ```
 
-`render` changes the rendered element while preserving Base UI's refs, handlers, and accessibility attributes. Custom React components supplied to `render` must forward those props to their DOM element. Use `className`, `variant`, and `size` for styling without replacing an element.
+`render` preserves Base UI refs, handlers, and ARIA attributes. Custom components must forward them. Use `className`, `variant`, and `size` for styling.
 
-The hook exposes mode, lighting, shading, grid, projection, cube, camera preset, animation, inspector, and selection state with corresponding setters; `resetView`, `getCameraView`, `setCameraView`, `restartAnimation`, `capture`, and `toggleFullscreen`; plus `status`, `canCapture`, `feedback`, and `reducedMotion`. `useModelViewerCamera` provides a separate live camera subscription. `status` is `idle` without a scene, otherwise `loading | ready | error`. Each root is independent. Using either hook or connected parts outside a root throws a descriptive error.
+The hook exposes viewer state and setters, camera commands, `resetView`, `restartAnimation`, `capture`, `toggleFullscreen`, and status. Each root is independent; hooks require a root. `status` is `idle | loading | ready | error`.
 
-Controlled props stay controlled: a hook action reports the change callback, but the UI changes only when the owner supplies the new value. Use `inspectorOpen` / `onInspectorOpenChange` or `defaultInspectorOpen` for new code; legacy `showInspector` remains supported.
+Controlled actions report change callbacks; the owner must update the prop. Prefer `inspectorOpen` / `onInspectorOpenChange` or `defaultInspectorOpen`; legacy `showInspector` still works.
 
-Toolbar layout measures mounted top toolbars, including wraps and custom button sizes, to reserve room in split views. Use `placement="static"` for a toolbar that should not reserve top space. Primitive button sizing and menu styling are not overridden by viewer CSS.
+Top toolbars reserve space automatically. Use `placement="static"` to opt out.
 
-Built-in menus and tooltips mount inside the viewer during native fullscreen so they remain visible and interactive. Custom tooltip overrides should likewise portal inside the fullscreen element.
+Custom tooltip portals must target the fullscreen element. Built-in menus and tooltips do this automatically.
 
-When native fullscreen is unavailable, the expanded viewer acts as a modal dialog: background content becomes inert, keyboard focus stays in the viewer and its menus, Escape exits, and focus returns to the activating control.
+The fullscreen fallback traps focus, makes background content inert, exits with Escape, and restores focus.
 
-Fullscreen defaults to the bottom-right. Animation controls sit immediately to its left, and on narrow viewers the interaction hint moves above the animation panel. Reposition the compound parts with `className` or `style` (for example, `className="top-3 bottom-auto"` on `ModelViewerFullscreen`). Explicit `viewCubeMargin` values take precedence over the default view-cube spacing.
+Fullscreen defaults to bottom-right, beside animation controls. Reposition parts with `className` or `style`; use `viewCubeMargin` for cube spacing.
 
-`toolbar={null}` hides only the main toolbar; `showUi={false}` hides all built-in controls. `ModelViewerControls` and `ModelViewerAnimationControls` export the ready-made controlled toolbars. Arrow Left/Right and Home/End move focus between toolbar buttons; Tab retains normal browser navigation.
+`toolbar={null}` hides the main toolbar; `showUi={false}` hides built-in controls. Exported `ModelViewerControls` and `ModelViewerAnimationControls` support custom layouts. Toolbar focus uses arrows and Home/End.
 
-DOM-facing components accept native props, React 19 refs, `className`, and `style`. `ModelViewer` forwards these to its root `div` (its `onLoad`/`onError` remain model lifecycle callbacks), and renders `children` as additional DOM overlays, not R3F scene children. Use positioned children with a z-index to place additional UI above the canvas.
+DOM parts forward native props, React 19 refs, `className`, and `style`. Viewer `onLoad`/`onError` are model callbacks. Use positioned `children` for DOM overlays and `sceneContent` for R3F nodes.
 
-Additional compound slots are `model-viewer-scene`, `model-viewer-status`, `model-viewer-fullscreen`, and `model-viewer-overlay`. Shading, view-cube, and animation selections use semantic menu radio groups with `aria-checked`.
+Style parts through stable `data-slot` attributes. The root exposes `data-state="idle|loading|ready|error"`; toggle buttons expose `data-state="on|off"`.
 
-Stable `data-slot` attributes include `model-viewer`, `model-viewer-toolbar`, `model-viewer-toolbar-group`, `model-viewer-toolbar-button`, `model-viewer-animation-controls`, `model-inspector`, and `model-inspector-node`. The root exposes `data-state="idle|loading|ready|error"`; toggle buttons expose `data-state="on|off"`.
+Styles use Tailwind’s `components` layer and shadcn tokens, so utilities can override them. Width fills the parent; default height is 620px. Explicit `height` or inline height overrides height utilities.
 
-Styles live in Tailwind's `components` layer, so utility classes can override them. UI surfaces use shadcn semantic tokens; day/night lighting changes the 3D scene independently of the host application's theme. The grid uses neutral grays in both lighting modes. Width fills the parent by default; constrain it with a parent such as `<div className="mx-auto max-w-5xl">` when a full-width workspace is not wanted. Default height is 620px; a height utility can override it unless an explicit `height` or inline `style.height` is supplied.
+`ViewerControlButton` supports custom `tooltip` content or `false`. Controls default to `type="button"`.
 
-`ViewerControlButton` is also exported. Its optional `tooltip` prop accepts custom content or `false` to hide it. Controls default to `type="button"`, so placing a viewer inside a form does not submit it. A shared tooltip provider coordinates hover delays; standalone controls provide their own fallback.
+Omitting `animation` selects the first clip; `null` disables selection. Playback starts paused. Reduced motion suppresses playback and rotation unless `respectReducedMotion={false}`.
 
-Omitting `animation` automatically selects the first clip; passing `animation={null}` explicitly disables clip selection. Playback starts paused. Clip selection resets when replacing an uncontrolled model, and pause/resume preserves playback position. Respecting reduced motion suppresses playback and auto-rotation; use `respectReducedMotion={false}` only when your application explicitly requests motion.
-
-The inspector reports source-model units and unique material/texture resources. Select a mesh in the hierarchy or click it in the scene to outline it without replacing its material. Animated framing uses a sampled envelope (17 poses per clip); unusually fast or procedural motion may extend beyond that envelope. Reset view includes the current pose in its bounds.
-
-## ✨ Feature set
-
-- Smooth camera controls, bounded zoom, and a single orthographic projection toggle
-- Optional orientation helper: Drei's labeled cube or Asset Studio's colored axes
-- Four fixed front/right/back/left views with independent pan and zoom, sharing one WebGL renderer
-- First-person fly camera with pointer-lock and drag-look fallback
-- Realistic, solid, normal, and wireframe shading
-- Procedural image-based studio lighting, day/night modes, and an optional fading grid
-- GLTF animation clip selection, playback, restart, looping, and speed controls
-- Clipboard and downloadable PNG captures
-- Fullscreen with an in-page fallback
-- Loading progress, posters, custom fallbacks, and error states
-- Performance-based pixel ratio (1–2×, without pixelated drag mode), reduced-motion support, and demand-driven rendering
-- Draco, Meshopt, and custom loader configuration
-- Optional UI-free mode for cards and compact previews
-- Model dimensions, triangle/material/texture counts, selectable meshes, and scene hierarchy
+Inspection uses source-model units and counts unique resources. Select meshes in the hierarchy or scene to outline them. Animation framing samples 17 poses per clip; fast or procedural motion can exceed those bounds.
 
 ## 📦 Add the component
 
@@ -387,30 +383,6 @@ bun add @react-three/fiber @react-three/drei three three-stdlib lucide-react
 bun add -d @types/three
 ```
 
-## 🛠️ Local development
-
-```sh
-bun install
-bun run dev
-```
-
-Production checks:
-
-```sh
-bun run verify
-```
-
-## ✅ Regression checks
-
-The included CC0 robot fixture exercises skinned animation and multiple clips. Start the demo, then run:
-
-```sh
-bunx playwright install --with-deps chromium
-VIEWER_TEST_URL=http://localhost:5173 bun run test
-```
-
-The suite covers extreme model scales, framing, shared-resource statistics, the real animated fixture, pane isolation, both helpers, the orthographic toggle, fly fallback, playback and replacement, and phone layout. For an existing Docker Chrome, set `VIEWER_TEST_CDP=http://127.0.0.1:9223` and a `VIEWER_TEST_URL` reachable from that container.
-
 ## 📝 Implementation notes
 
 - The demo intentionally accepts GLB only because standalone `.gltf` files can reference sidecar buffers and textures. The component itself can load any URL supported by `GLTFLoader`.
@@ -419,43 +391,3 @@ The suite covers extreme model scales, framing, shared-resource statistics, the 
 - Animation rendering stops when a non-looping clip finishes or playback speed is zero. Restarting or resuming playback wakes the demand loop; auto-rotation continues to request frames independently.
 - `enableCapture` controls PNG capture independently of the built-in UI and defaults to `showUi`. Use `<ModelViewer showUi={false} enableCapture>` for custom capture controls, or `enableCapture={false}` to reduce GPU overhead with the toolbar visible. `canCapture` stays false until the renderer supports capture and the model is ready. Changing `enableCapture` recreates the WebGL canvas because buffer preservation is fixed when its context is created.
 - First-person pointer lock may be blocked inside restrictive iframes; the component automatically falls back to focused-canvas drag look when the browser exposes that policy.
-
-## 📚 Storybook
-
-```sh
-bun run storybook        # http://localhost:6006
-bun run storybook:build  # static site in storybook-static/
-bun run storybook:test   # smoke tests against a running Storybook
-```
-
-The 26 examples cover the interactive playground, fixed four-view layout, Drei cube, night lighting, the bundled animated robot, model inspection, minimal embeds, loading/error customization, opt-in filenames, hidden feedback, retry and custom recovery, offscreen playback, on-demand loading, custom toolbars, compound viewer parts, Base UI `render` composition, compatibility button/tooltip overrides, styled overlays, and standalone inspector states. Viewer toolbar changes and Storybook Controls stay in sync. Docs pages render one live viewer at a time to stay within browser WebGL limits.
-
-Storybook shares `src/theme.css` with the demo but does not load the demo page layout. All model assets are served locally from `public/`, including in the static build. The error story deliberately requests a missing model.
-
-Use Storybook's **Theme** toolbar to preview every example in light or dark mode, including portaled menus and tooltips.
-
-## 🌐 Demo deployment
-
-The [demo](https://shadcn-3d-viewer.vercel.app/) and [Storybook](https://shadcn-3d-viewer.vercel.app/storybook/) share one static Vercel project at `/` and `/storybook/`. `bun run build:vercel` writes the demo to `dist/` and Storybook to `dist/storybook/`; `vercel.json` configures the build and redirects `/storybook` to `/storybook/` so Storybook's relative asset paths resolve correctly. The deployment includes the public registry JSON at `/r/model-viewer.json`.
-
-The Vercel project is connected to `michidk/shadcn-3d-viewer` with `main` as its production branch, so pushes to `main` deploy automatically. The production domain is `shadcn-3d-viewer.vercel.app`.
-
-For browser tests, install Chromium with `bunx playwright install --with-deps chromium`, or reuse Docker Chrome through `VIEWER_TEST_CDP`. Set `STORYBOOK_TEST_URL` if Storybook is not at `http://localhost:6006`; the Docker browser must be able to reach that URL. Storybook tests are separate from the demo's `bun run test` suite. CI runs both suites in separate jobs, starts their servers automatically, and uploads screenshots, traces, and HTML reports on failure. Local runs reuse your running servers through `VIEWER_TEST_URL` and `STORYBOOK_TEST_URL`. `bun run test:install` also packs the CLI, installs it into a clean Base UI consumer outside this repository, checks the host theme/configuration, and typechecks/builds the installed component. CI runs this consumer check before accepting the package.
-
-## 🚢 Publishing
-
-This package is MIT licensed and publishes the CLI plus generated registry JSON, not the demo, Storybook, test fixtures, or model assets. Maintainers need Bun and Node 20 or newer. `prepack` rebuilds the registry with the pinned shadcn CLI and runs typecheck, lint, production build, and package tests.
-
-```sh
-bun install --frozen-lockfile
-npm pack --dry-run
-npm publish --dry-run
-# After reviewing the tarball and configuring npm publishing access:
-npm publish --access public
-```
-
-The npm name must still be claimed by the first successful publish. Publishing is not performed by the repository build or CI. The GitHub repository and npm package are separate: pushing code does not publish a new package version.
-
-### GitHub release workflow
-
-The `Publish npm package` workflow runs only when a non-prerelease GitHub release is published. Before using it, configure a granular npm publish token as the repository secret `NPM_TOKEN`; the workflow cannot create or read that credential for you. Set the package version in `package.json`, merge the change to `main`, create a matching `v<version>` tag on that commit, then publish a GitHub release for the tag. The workflow checks that the tag matches the package version and belongs to `main`, installs from the lockfile, and runs `npm publish --access public --provenance` (which runs `prepack` verification). It never publishes from an ordinary push or pull request. The first npm release also claims the still-unpublished package name.
