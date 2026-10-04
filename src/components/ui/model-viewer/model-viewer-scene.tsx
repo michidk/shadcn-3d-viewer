@@ -24,7 +24,7 @@ import {
 } from "react";
 import type { Group, Object3D } from "three";
 import type { GLTFLoader } from "three-stdlib";
-import { FileWarning, LoaderCircle } from "lucide-react";
+import { FileWarning } from "lucide-react";
 import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
 import { cn } from "@/lib/utils";
 import { frameBounds, type ModelInspection } from "./model-inspection";
@@ -49,6 +49,7 @@ import {
 import { ScissorView, RedrawAfterResize } from "./scene-renderer";
 import { SceneObject } from "./scene-model";
 import { CameraRig, FitStaticCamera, DragLook, FirstPersonMovement } from "./scene-camera";
+import { ViewerLoader } from "./viewer-loader";
 import "./model-viewer.css";
 
 class ViewerErrorBoundary extends Component<
@@ -314,42 +315,6 @@ export function ModelViewerScene({
       )}
 
       {children}
-    </div>
-  );
-}
-
-function ViewerLoader({
-  fallback,
-  poster,
-  showFileName,
-  src,
-}: {
-  fallback?: ModelViewerProps["loadingFallback"];
-  poster: boolean;
-  showFileName: boolean;
-  src?: string;
-}) {
-  // Drei's useProgress observes the global loading manager, which also tracks
-  // assets belonging to other viewer instances. This is intentionally
-  // indeterminate until this viewer's own scene reports ready or error.
-  const data = { active: true, progress: 0, item: src ?? "", loaded: 0, total: 0 };
-  const custom = typeof fallback === "function" ? fallback(data) : fallback;
-  if (fallback !== undefined && custom == null) return null;
-  return (
-    <div
-      className={cn("viewer-loader", poster && "has-poster")}
-      role="status"
-      aria-live="polite"
-    >
-      {fallback !== undefined ? (
-        custom
-      ) : (
-        <>
-          <LoaderCircle className="viewer-loader-spinner" aria-hidden="true" />
-          <span>Loading model…</span>
-          {showFileName && src && <small>{fileName(src)}</small>}
-        </>
-      )}
     </div>
   );
 }
@@ -639,8 +604,4 @@ function StudioEnvironment({ lighting }: { lighting: ViewerLighting }) {
       />
     </Environment>
   );
-}
-
-function fileName(path: string) {
-  return path.split(/[?#]/)[0].split(/[\\/]/).pop() || "Model asset";
 }

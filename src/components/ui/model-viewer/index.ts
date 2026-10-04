@@ -29,6 +29,8 @@ export type {
   ModelViewerAnimationControlsProps,
 } from "./model-viewer-toolbar";
 export { ViewCube } from "./view-cube";
+export { ModelViewerSkeleton } from "./model-viewer-skeleton";
+export type { ModelViewerSkeletonProps } from "./model-viewer-skeleton";
 export { ModelInspector } from "./model-inspector";
 export type { ModelInspectorProps } from "./model-inspector";
 export { ViewerUiProvider, ViewerControlButton } from "./viewer-ui";

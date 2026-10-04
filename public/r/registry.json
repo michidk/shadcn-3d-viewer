@@ -32,6 +32,18 @@
           "type": "registry:ui"
         },
         {
+          "path": "src/components/ui/model-viewer/model-viewer-skeleton.tsx",
+          "type": "registry:ui"
+        },
+        {
+          "path": "src/components/ui/model-viewer/viewer-loader.tsx",
+          "type": "registry:ui"
+        },
+        {
+          "path": "src/components/ui/model-viewer/viewer-loader-spinner.tsx",
+          "type": "registry:ui"
+        },
+        {
           "path": "src/components/ui/model-viewer/model-viewer-orientation.tsx",
           "type": "registry:ui"
         },

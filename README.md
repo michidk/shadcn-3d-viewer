@@ -119,7 +119,20 @@ import { ModelViewer } from "@/components/ui/model-viewer/lazy";
 {open && <ModelViewer src="/models/chair.glb" height={420} />}
 ```
 
-The lazy entry defers the renderer until mount. Use `importFallback` during chunk loading and `loadingFallback` during model loading. Chunk failures call `onError` and offer a page reload; model failures use `errorFallback` and retry. Importing the eager barrel elsewhere can load the renderer early.
+For a placeholder shaped like the viewer, use `ModelViewerSkeleton`. It has no Three.js imports and fills its nearest positioned ancestor:
+
+```tsx
+import { ModelViewer, ModelViewerSkeleton } from "@/components/ui/model-viewer/lazy";
+
+<ModelViewer
+  src="/models/chair.glb"
+  loadingFallback={<ModelViewerSkeleton />}
+/>
+```
+
+Set `showToolbar={false}` or `showViewCube={false}` to match a minimal embed.
+
+The lazy entry defers the renderer until mount. `loadingFallback` and `poster` cover both the chunk download and model loading. Chunk failures call `onError` and offer a page reload; model failures use `errorFallback` and retry. Importing the eager barrel elsewhere can load the renderer early.
 
 ### Props
 

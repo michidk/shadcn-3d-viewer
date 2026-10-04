@@ -2,31 +2,28 @@
 
 // Keep this entry independent of the eager barrel: no Three/R3F runtime imports.
 import { Component, lazy, Suspense, type ReactNode } from "react";
-import { LoaderCircle } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { ModelViewerProps } from "./model-viewer-types";
+import { ViewerLoader } from "./viewer-loader";
 import "./model-viewer.css";
+
+export { ModelViewerSkeleton } from "./model-viewer-skeleton";
+export type { ModelViewerSkeletonProps } from "./model-viewer-skeleton";
 
 const Viewer = lazy(() => import("./model-viewer").then((module) => ({ default: module.ModelViewer })));
 
-export type LazyModelViewerProps = ModelViewerProps & {
-  /** Placeholder for the JavaScript download, before a viewer context exists. */
-  importFallback?: ReactNode;
-};
-
-/** Loads the renderer chunk only when mounted. Use this entry for optional embeds. */
-export function ModelViewer({ importFallback, ...props }: LazyModelViewerProps) {
-  const { className, height, style } = props;
+/**
+ * Loads the renderer chunk only when mounted. Use this entry for optional embeds.
+ * `loadingFallback` and `poster` cover the chunk download and model loading alike.
+ */
+export function ModelViewer(props: ModelViewerProps) {
+  const { className, height, style, poster, loadingFallback, showFileName = false, src } = props;
   return (
     <ImportErrorBoundary className={className} height={height} style={style} onError={props.onError}>
       <Suspense fallback={
         <div data-slot="model-viewer-lazy" className={cn("model-viewer", className)} style={{ height, ...style }}>
-          {importFallback !== undefined ? importFallback : (
-            <div className="viewer-loader" role="status">
-              <LoaderCircle className="viewer-loader-spinner" aria-hidden="true" />
-              <span>Loading viewer…</span>
-            </div>
-          )}
+          {poster && <img className="viewer-poster" src={poster} alt="" aria-hidden="true" />}
+          <ViewerLoader fallback={loadingFallback} poster={Boolean(poster)} showFileName={showFileName} src={src} />
         </div>
       }>
         <Viewer {...props} />

@@ -221,6 +221,63 @@
     place-items: center;
     padding: 24px;
   }
+  .viewer-skeleton {
+    --viewer-skeleton-fill: color-mix(in srgb, var(--muted-foreground) 16%, transparent);
+    position: absolute;
+    inset: 0;
+    z-index: 4;
+    display: grid;
+    place-items: center;
+    pointer-events: none;
+  }
+  .viewer-skeleton-block,
+  .viewer-skeleton-model {
+    animation: viewer-skeleton-pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+  }
+  .viewer-skeleton-block {
+    display: block;
+    height: 36px;
+    border-radius: calc(var(--radius) - 2px);
+    background: var(--viewer-skeleton-fill);
+  }
+  .viewer-skeleton-toolbar {
+    position: absolute;
+    top: 14px;
+    left: 14px;
+    display: flex;
+    gap: 8px;
+  }
+  .viewer-skeleton-cube {
+    position: absolute;
+    top: 14px;
+    right: 14px;
+    width: 56px;
+    height: 56px;
+  }
+  .viewer-skeleton-model {
+    width: min(40%, 180px);
+    height: auto;
+  }
+  .viewer-skeleton-face {
+    fill: var(--viewer-skeleton-fill);
+    stroke: color-mix(in srgb, var(--muted-foreground) 24%, transparent);
+    stroke-width: 1.5;
+    stroke-linejoin: round;
+  }
+  .viewer-skeleton-face.is-left {
+    fill: color-mix(in srgb, var(--muted-foreground) 24%, transparent);
+  }
+  .viewer-skeleton-face.is-right {
+    fill: color-mix(in srgb, var(--muted-foreground) 10%, transparent);
+  }
+  .viewer-skeleton-shadow {
+    fill: color-mix(in srgb, var(--muted-foreground) 10%, transparent);
+  }
+  @keyframes viewer-skeleton-pulse {
+    50% {
+      opacity: 0.5;
+    }
+  }
   @keyframes viewer-spin {
     to {
       transform: rotate(360deg);
@@ -533,7 +590,9 @@
     }
   }
   @media (prefers-reduced-motion: reduce) {
-    .viewer-loader-spinner {
+    .viewer-loader-spinner,
+    .viewer-skeleton-block,
+    .viewer-skeleton-model {
       animation: none;
     }
   }
