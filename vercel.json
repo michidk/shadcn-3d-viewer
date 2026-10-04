@@ -4,7 +4,5 @@
   "buildCommand": "bun run build:vercel",
   "outputDirectory": "dist",
   "installCommand": "bun install --frozen-lockfile",
-  "redirects": [
-    { "source": "/storybook", "destination": "/storybook/", "permanent": true }
-  ]
+  "redirects": [{ "source": "/storybook", "destination": "/storybook/", "permanent": true }]
 }

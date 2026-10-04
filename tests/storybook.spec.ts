@@ -1,20 +1,5 @@
-import { expect, test as base, type Page } from "@playwright/test";
-
-const test = base.extend({
-  browser: async ({ playwright }, provideBrowser) => {
-    const browser = process.env.VIEWER_TEST_CDP
-      ? await playwright.chromium.connectOverCDP(process.env.VIEWER_TEST_CDP)
-      : await playwright.chromium.launch({
-          args: [
-            "--use-gl=angle",
-            "--use-angle=swiftshader",
-            "--enable-unsafe-swiftshader",
-          ],
-        });
-    await provideBrowser(browser);
-    await browser.close();
-  },
-});
+import type { Page } from "@playwright/test";
+import { expect, test } from "./fixtures/browser";
 
 async function openStory(page: Page, id: string) {
   await page.goto(`/iframe.html?id=${id}&viewMode=story`);
@@ -30,7 +15,10 @@ for (const [story, label] of [
       attempts++;
       return attempts < 3
         ? route.fulfill({ status: 503, body: "Temporary failure" })
-        : route.fulfill({ path: "public/models/robot-expressive.glb", contentType: "model/gltf-binary" });
+        : route.fulfill({
+            path: "public/models/robot-expressive.glb",
+            contentType: "model/gltf-binary",
+          });
     });
     await openStory(page, story);
     const root = page.locator('[data-slot="model-viewer"]');
@@ -53,9 +41,11 @@ for (const [story, label] of [
   });
 }
 
-test("offscreen and hidden-tab viewers stop drawing and resume without changing playback intent", async ({ page }) => {
+test("offscreen and hidden-tab viewers stop drawing and resume without changing playback intent", async ({
+  page,
+}) => {
   await page.addInitScript(() => {
-    const counters = window as Window & { viewerDraws: number };
+    const counters = window as unknown as Window & { viewerDraws: number };
     counters.viewerDraws = 0;
     const original = WebGL2RenderingContext.prototype.drawElements;
     WebGL2RenderingContext.prototype.drawElements = function (...args) {
@@ -66,15 +56,18 @@ test("offscreen and hidden-tab viewers stop drawing and resume without changing 
   await openStory(page, "viewer-model-viewer--offscreen-playback");
   const root = page.locator('[data-slot="model-viewer"]');
   await expect(root).toHaveAttribute("data-state", "ready", { timeout: 30000 });
-  const draws = () => page.evaluate(() => (window as Window & { viewerDraws: number }).viewerDraws);
+  const draws = () =>
+    page.evaluate(() => (window as unknown as Window & { viewerDraws: number }).viewerDraws);
   async function pausedDraws() {
     // The DOM reports paused before the separate R3F root drains queued frames.
     // Require a full quiet interval instead of assuming a fixed settling delay.
-    await expect.poll(async () => {
-      const before = await draws();
-      await page.waitForTimeout(400);
-      return (await draws()) - before;
-    }).toBe(0);
+    await expect
+      .poll(async () => {
+        const before = await draws();
+        await page.waitForTimeout(400);
+        return (await draws()) - before;
+      })
+      .toBe(0);
     return draws();
   }
   await expect.poll(draws).toBeGreaterThan(0);
@@ -92,7 +85,10 @@ test("offscreen and hidden-tab viewers stop drawing and resume without changing 
   await expect(root).toHaveAttribute("data-rendering", "paused");
   const hidden = await pausedDraws();
   await page.evaluate(() => {
-    Object.defineProperty(document, "visibilityState", { configurable: true, get: () => "visible" });
+    Object.defineProperty(document, "visibilityState", {
+      configurable: true,
+      get: () => "visible",
+    });
     document.dispatchEvent(new Event("visibilitychange"));
   });
   await expect.poll(draws).toBeGreaterThan(hidden);
@@ -109,7 +105,11 @@ for (const story of ["playground", "drei-view-cube"]) {
     await expect(page.locator('[data-slot="model-viewer"]')).toHaveAttribute("data-state", "ready");
     const orient = page.getByRole("button", { name: "Orient view", exact: true });
     // Tab through the real focus order, not a programmatic focus shortcut.
-    for (let i = 0; i < 25 && !(await orient.evaluate((node) => node === document.activeElement)); i++) {
+    for (
+      let i = 0;
+      i < 25 && !(await orient.evaluate((node) => node === document.activeElement));
+      i++
+    ) {
       await page.keyboard.press("Tab");
     }
     await expect(orient).toBeFocused();
@@ -125,15 +125,19 @@ for (const story of ["playground", "drei-view-cube"]) {
     await page.keyboard.press("Enter");
     await expect(page.getByRole("menu")).toHaveCount(0);
     await expect(orient).toBeFocused();
-    await expect.poll(() => canvas.evaluate((node: HTMLCanvasElement) => node.toDataURL())).not.toBe(before);
+    await expect
+      .poll(() => canvas.evaluate((node: HTMLCanvasElement) => node.toDataURL()))
+      .not.toBe(before);
     await page.keyboard.press("ArrowDown");
     await page.keyboard.press("End");
     await expect(page.getByRole("menuitem", { name: "Isometric view" })).toBeFocused();
     await page.setViewportSize({ width: 390, height: 800 });
-    await expect.poll(async () => {
-      const menu = (await page.getByRole("menu").boundingBox())!;
-      return menu.x >= 0 && menu.x + menu.width <= 390;
-    }).toBe(true);
+    await expect
+      .poll(async () => {
+        const menu = (await page.getByRole("menu").boundingBox())!;
+        return menu.x >= 0 && menu.x + menu.width <= 390;
+      })
+      .toBe(true);
     await page.screenshot({ path: `test-results/orientation-${story}-phone.png` });
     await page.keyboard.press("Escape");
     await expect(orient).toBeFocused();
@@ -143,7 +147,8 @@ for (const story of ["playground", "drei-view-cube"]) {
 test("lazy entry does not request the renderer until opened", async ({ page }) => {
   const rendererRequests: string[] = [];
   page.on("request", (request) => {
-    if (/\/model-viewer\/model-viewer(?:-scene)?\.tsx/.test(request.url())) rendererRequests.push(request.url());
+    if (/\/model-viewer\/model-viewer(?:-scene)?\.tsx/.test(request.url()))
+      rendererRequests.push(request.url());
   });
   await openStory(page, "viewer-lazy-loading--on-demand");
   await expect(page.getByRole("button", { name: "Open viewer" })).toBeVisible();
@@ -157,7 +162,9 @@ test("lazy entry does not request the renderer until opened", async ({ page }) =
 });
 
 test("offscreen suspension can be disabled", async ({ page }) => {
-  await page.goto("/iframe.html?id=viewer-model-viewer--offscreen-playback&viewMode=story&args=pauseWhenHidden:!false");
+  await page.goto(
+    "/iframe.html?id=viewer-model-viewer--offscreen-playback&viewMode=story&args=pauseWhenHidden:!false",
+  );
   const root = page.locator('[data-slot="model-viewer"]');
   await expect(root).toHaveAttribute("data-state", "ready", { timeout: 30000 });
   await page.evaluate(() => window.scrollTo(0, document.body.scrollHeight));
@@ -176,24 +183,29 @@ test("Storybook manager and docs render the live viewer", async ({ page }) => {
   await expect(preview.locator("canvas")).toBeVisible({ timeout: 30000 });
   await expect(page.getByRole("tab", { name: "Controls" })).toBeVisible();
   await page.goto("/?path=/docs/viewer-model-viewer--docs");
-  await expect(
-    preview.getByRole("heading", { name: "Model Viewer", exact: true }),
-  ).toBeVisible({ timeout: 30000 });
+  await expect(preview.getByRole("heading", { name: "Model Viewer", exact: true })).toBeVisible({
+    timeout: 30000,
+  });
   await expect(preview.locator("canvas")).toHaveCount(1);
 });
 
-test("storybook indexes all examples and the playground controls stay interactive", async ({
+test("storybook indexes each example group and the playground controls stay interactive", async ({
   page,
   request,
 }) => {
   const response = await request.get("/index.json");
   expect(response.ok()).toBe(true);
   const index = await response.json();
-  expect(
-    Object.values(index.entries).filter(
-      (entry) => (entry as { type: string }).type === "story",
-    ),
-  ).toHaveLength(26);
+  // Check discoverable examples, not a total that changes whenever a story is added.
+  expect(index.entries).toMatchObject({
+    "viewer-model-viewer--playground": { type: "story" },
+    "viewer-lazy-loading--on-demand": { type: "story" },
+    "viewer-skeleton--default": { type: "story" },
+    "viewer-skeleton--without-chrome": { type: "story" },
+    "viewer-skeleton--lazy-viewer-fallback": { type: "story" },
+    "composition-custom-controls--compound-viewer": { type: "story" },
+    "inspector-model-inspector--hierarchy": { type: "story" },
+  });
   await openStory(page, "viewer-model-viewer--playground");
   await expect(page.locator("canvas")).toBeVisible();
   const grid = page.getByRole("button", { name: "Show grid", exact: true });
@@ -206,16 +218,10 @@ test("storybook indexes all examples and the playground controls stay interactiv
 
 test("animated example loads the bundled model and plays", async ({ page }) => {
   await openStory(page, "viewer-model-viewer--animated-model");
-  await expect(
-    page.getByRole("toolbar", { name: "Animation controls" }),
-  ).toBeVisible();
+  await expect(page.getByRole("toolbar", { name: "Animation controls" })).toBeVisible();
   await expect(page.locator(".viewer-animation-name")).toContainText("Walking");
-  await page
-    .getByRole("button", { name: "Play animation", exact: true })
-    .click();
-  await expect(
-    page.getByRole("button", { name: "Pause animation", exact: true }),
-  ).toBeVisible();
+  await page.getByRole("button", { name: "Play animation", exact: true }).click();
+  await expect(page.getByRole("button", { name: "Pause animation", exact: true })).toBeVisible();
 });
 
 test("named animation and rotation can both start automatically", async ({ page }) => {
@@ -236,7 +242,10 @@ test("outside story shows a sky and a model shadow on the floor", async ({ page 
   const viewer = page.locator('[data-slot="model-viewer"]');
   await expect(viewer).toHaveAttribute("data-state", "ready");
   await expect(viewer).toHaveClass(/is-outside/);
-  await expect(page.getByRole("button", { name: "Show floor" })).toHaveAttribute("aria-pressed", "true");
+  await expect(page.getByRole("button", { name: "Show floor" })).toHaveAttribute(
+    "aria-pressed",
+    "true",
+  );
   const pixels = await viewer.locator("canvas").evaluate((canvas: HTMLCanvasElement) => {
     const copy = document.createElement("canvas");
     copy.width = canvas.width;
@@ -270,13 +279,9 @@ test("default corner controls stay separated at desktop and phone widths", async
   }
 });
 
-test("custom toolbar and inspector examples support their controlled state", async ({
-  page,
-}) => {
+test("custom toolbar and inspector examples support their controlled state", async ({ page }) => {
   await openStory(page, "composition-custom-controls--custom-toolbar");
-  await expect(
-    page.getByRole("toolbar", { name: "Custom display controls" }),
-  ).toBeVisible();
+  await expect(page.getByRole("toolbar", { name: "Custom display controls" })).toBeVisible();
   await expect(page.getByRole("button", { name: "Fly camera" })).toHaveCount(0);
   const projection = page.getByRole("button", {
     name: "Orthographic view",
@@ -286,37 +291,39 @@ test("custom toolbar and inspector examples support their controlled state", asy
   await expect(projection).toHaveAttribute("aria-pressed", "true");
   await openStory(page, "inspector-model-inspector--hierarchy");
   await page.getByRole("textbox", { name: "Search hierarchy" }).fill("Seat");
-  await page
-    .getByRole("button", { name: "Seat cushion Mesh", exact: true })
-    .click();
-  await expect(page.locator(".inspector-selection")).toContainText(
-    "Seat cushion",
-  );
+  await page.getByRole("button", { name: "Seat cushion Mesh", exact: true }).click();
+  await expect(page.locator(".inspector-selection")).toContainText("Seat cushion");
 });
 
 test("error story shows a recoverable model error", async ({ page }) => {
   await openStory(page, "viewer-model-viewer--error-state");
-  await expect(page.getByRole("alert")).toContainText(
-    "Unable to load model",
-  );
+  await expect(page.getByRole("alert")).toContainText("Unable to load model");
   await expect(page.getByRole("alert")).not.toContainText("intentional-missing-model");
   await expect(page.getByRole("button", { name: "Retry loading model" })).toHaveCount(0);
-  await expect(
-    page.getByRole("button", { name: "Screenshot options" }),
-  ).toBeDisabled();
+  await expect(page.getByRole("button", { name: "Screenshot options" })).toBeDisabled();
 });
 
-for (const example of ["animated-model", "loading-file-name", "custom-feedback", "hidden-feedback"]) {
+for (const example of [
+  "animated-model",
+  "loading-file-name",
+  "custom-feedback",
+  "hidden-feedback",
+]) {
   test(`${example} loading feedback follows its props`, async ({ page }) => {
     let release!: () => void;
-    const blocked = new Promise<void>((resolve) => { release = resolve; });
+    const blocked = new Promise<void>((resolve) => {
+      release = resolve;
+    });
     await page.route("**/models/*.glb", async (route) => {
       await blocked;
       await route.abort();
     });
     try {
       await openStory(page, `viewer-model-viewer--${example}`);
-      await expect(page.locator('[data-slot="model-viewer"]')).toHaveAttribute("data-state", "loading");
+      await expect(page.locator('[data-slot="model-viewer"]')).toHaveAttribute(
+        "data-state",
+        "loading",
+      );
       const loader = page.locator(".viewer-loader");
       if (example === "hidden-feedback") {
         await expect(loader).toHaveCount(0);
@@ -345,7 +352,9 @@ for (const example of ["animated-model", "loading-file-name", "custom-feedback",
     if (example === "hidden-feedback") {
       await expect(page.locator(".viewer-error-wrap")).toHaveCount(0);
     } else if (example === "custom-feedback") {
-      await expect(page.getByRole("alert")).toHaveText("Preview unavailable. Choose another model.");
+      await expect(page.getByRole("alert")).toHaveText(
+        "Preview unavailable. Choose another model.",
+      );
     }
   });
 }
@@ -359,9 +368,7 @@ test("minimal embed has no orientation helper or toolbar", async ({ page }) => {
 });
 
 for (const theme of ["light", "dark"]) {
-  test(`Base UI menus, tooltips and keyboard focus work in ${theme} mode`, async ({
-    page,
-  }) => {
+  test(`Base UI menus, tooltips and keyboard focus work in ${theme} mode`, async ({ page }) => {
     await page.goto(
       `/iframe.html?id=viewer-model-viewer--playground&viewMode=story&globals=theme:${theme}`,
     );
@@ -376,34 +383,30 @@ for (const theme of ["light", "dark"]) {
     await page.keyboard.press("ArrowDown");
     const menu = page.getByRole("menu");
     await expect(menu).toBeVisible();
-    await expect(
-      page.getByRole("menuitemradio", { name: "Realistic", exact: true }),
-    ).toBeFocused();
+    await expect(page.getByRole("menuitemradio", { name: "Realistic", exact: true })).toBeFocused();
     await expect(
       page.getByRole("menuitemradio", { name: "Realistic", exact: true }),
     ).toHaveAttribute("aria-checked", "true");
-    await expect(
-      page.getByRole("menuitemradio", { name: "Solid", exact: true }),
-    ).toHaveAttribute("aria-checked", "false");
+    await expect(page.getByRole("menuitemradio", { name: "Solid", exact: true })).toHaveAttribute(
+      "aria-checked",
+      "false",
+    );
     await page.keyboard.press("ArrowDown");
     await page.keyboard.press("Enter");
     await expect(menu).not.toBeVisible();
-    await expect(
-      page.getByRole("button", { name: "Shading: solid" }),
-    ).toBeFocused();
+    await expect(page.getByRole("button", { name: "Shading: solid" })).toBeFocused();
     await page.keyboard.press("ArrowDown");
-    await expect(
-      page.getByRole("menuitemradio", { name: "Solid", exact: true }),
-    ).toHaveAttribute("aria-checked", "true");
+    await expect(page.getByRole("menuitemradio", { name: "Solid", exact: true })).toHaveAttribute(
+      "aria-checked",
+      "true",
+    );
     await page.keyboard.press("Escape");
 
     const cube = page.getByRole("button", { name: "View cube options" });
     await cube.click();
     const popover = await page
       .locator("html")
-      .evaluate((element) =>
-        getComputedStyle(element).getPropertyValue("--popover").trim(),
-      );
+      .evaluate((element) => getComputedStyle(element).getPropertyValue("--popover").trim());
     await expect(menu).toHaveCSS("background-color", popover);
     await page.keyboard.press("Escape");
     await expect(cube).toBeFocused();
@@ -412,71 +415,50 @@ for (const theme of ["light", "dark"]) {
     const grid = page.getByRole("button", { name: "Show grid", exact: true });
     await grid.hover();
     // Base UI tooltips are visual labels; accessible names live on the buttons.
-    await expect(
-      page.locator('[data-slot="tooltip-content"][data-open]'),
-    ).toHaveText("Show grid");
+    await expect(page.locator('[data-slot="tooltip-content"][data-open]')).toHaveText("Show grid");
     await grid.click();
     await expect(grid).toHaveAttribute("aria-pressed", "true");
     await expect(page.locator("button button")).toHaveCount(0);
   });
 }
 
-test("custom Base UI buttons and tooltips compose with menu triggers", async ({
-  page,
-}) => {
-  await openStory(
-    page,
-    "composition-custom-controls--custom-button-and-tooltip",
-  );
+test("custom Base UI buttons and tooltips compose with menu triggers", async ({ page }) => {
+  await openStory(page, "composition-custom-controls--custom-button-and-tooltip");
   const cube = page.getByRole("button", { name: "View cube options" });
   await expect(cube).toHaveClass(/rounded-full/);
   await cube.hover();
-  await expect(
-    page.locator('[data-slot="tooltip-content"][data-open]'),
-  ).toHaveText("View cube options");
+  await expect(page.locator('[data-slot="tooltip-content"][data-open]')).toHaveText(
+    "View cube options",
+  );
   await cube.click();
   await expect(
     page.getByRole("menuitemradio", { name: "Asset Studio", exact: true }),
   ).toHaveAttribute("aria-checked", "true");
-  await page
-    .getByRole("menuitemradio", { name: "Drei cube", exact: true })
-    .click();
+  await page.getByRole("menuitemradio", { name: "Drei cube", exact: true }).click();
   await expect(page.getByRole("menu")).not.toBeVisible();
   await expect(cube).toBeFocused();
   await expect(page.locator("button button")).toHaveCount(0);
 });
 
-test("compound parts render an animated scene and share inspector state", async ({
-  page,
-}) => {
+test("compound parts render an animated scene and share inspector state", async ({ page }) => {
   await openStory(page, "composition-custom-controls--compound-viewer");
-  await expect(
-    page.locator('[data-slot="model-viewer-scene"] canvas'),
-  ).toBeVisible();
-  await expect(
-    page.getByRole("toolbar", { name: "Animation controls" }),
-  ).toBeVisible();
+  await expect(page.locator('[data-slot="model-viewer-scene"] canvas')).toBeVisible();
+  await expect(page.getByRole("toolbar", { name: "Animation controls" })).toBeVisible();
   await page.locator(".viewer-animation-name").click();
-  await expect(
-    page.getByRole("menuitemradio", { name: "Walking", exact: true }),
-  ).toHaveAttribute("aria-checked", "true");
-  await page
-    .getByRole("menuitemradio", { name: "Running", exact: true })
-    .click();
+  await expect(page.getByRole("menuitemradio", { name: "Walking", exact: true })).toHaveAttribute(
+    "aria-checked",
+    "true",
+  );
+  await page.getByRole("menuitemradio", { name: "Running", exact: true }).click();
   await expect(page.locator(".viewer-animation-name")).toContainText("Running");
   await expect(page.getByRole("menu")).not.toBeVisible();
-  await page
-    .getByRole("button", { name: "Inspect model", exact: true })
-    .click();
-  await expect(
-    page.getByRole("complementary", { name: "Model inspector" }),
-  ).toBeVisible();
-  await page
-    .getByRole("button", { name: "Close inspector", exact: true })
-    .click();
-  await expect(
-    page.getByRole("button", { name: "Inspect model", exact: true }),
-  ).toHaveAttribute("aria-pressed", "false");
+  await page.getByRole("button", { name: "Inspect model", exact: true }).click();
+  await expect(page.getByRole("complementary", { name: "Model inspector" })).toBeVisible();
+  await page.getByRole("button", { name: "Close inspector", exact: true }).click();
+  await expect(page.getByRole("button", { name: "Inspect model", exact: true })).toHaveAttribute(
+    "aria-pressed",
+    "false",
+  );
 });
 
 test("render composition preserves state, refs, native props and button sizing", async ({
@@ -491,10 +473,7 @@ test("render composition preserves state, refs, native props and button sizing",
     // Default shadcn/Nova button height; viewer CSS must not shrink it.
     await expect(grid).toHaveCSS("height", "32px");
     await grid.click();
-    await expect(grid).toHaveAttribute(
-      "aria-pressed",
-      width === 1280 ? "true" : "false",
-    );
+    await expect(grid).toHaveAttribute("aria-pressed", width === 1280 ? "true" : "false");
     await expect(page.locator("button button")).toHaveCount(0);
   }
 });

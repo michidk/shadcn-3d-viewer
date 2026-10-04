@@ -33,20 +33,14 @@ export function useViewerCapture({
       const image = new Promise<Blob>((resolve, reject) => {
         source.toBlob(
           (blob) =>
-            blob
-              ? resolve(blob)
-              : reject(new Error("The viewer could not create a PNG.")),
+            blob ? resolve(blob) : reject(new Error("The viewer could not create a PNG.")),
           "image/png",
         );
       });
       if (action === "copy") {
         if (!navigator.clipboard?.write || typeof ClipboardItem === "undefined")
-          throw new Error(
-            "Image clipboard access is unavailable. Download the PNG instead.",
-          );
-        await navigator.clipboard.write([
-          new ClipboardItem({ "image/png": image }),
-        ]);
+          throw new Error("Image clipboard access is unavailable. Download the PNG instead.");
+        await navigator.clipboard.write([new ClipboardItem({ "image/png": image })]);
         report("Screenshot copied to clipboard.");
       } else {
         const blob = await image;
@@ -64,10 +58,7 @@ export function useViewerCapture({
         report("Screenshot downloaded as PNG.");
       }
     } catch (error) {
-      report(
-        error instanceof Error ? error.message : "Could not capture the view.",
-        true,
-      );
+      report(error instanceof Error ? error.message : "Could not capture the view.", true);
     }
   };
 }

@@ -1,20 +1,16 @@
 "use client";
 
 import {
-  createContext,
-  useContext,
-  useMemo,
   type ComponentProps,
   type ComponentType,
+  createContext,
   type ReactElement,
   type ReactNode,
+  useContext,
+  useMemo,
 } from "react";
 import { Button as ShadcnButton } from "@/components/ui/button";
-import {
-  Tooltip,
-  TooltipProvider,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
+import { Tooltip, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
 import { TooltipContent } from "./viewer-popups";
 
@@ -34,11 +30,7 @@ function DefaultTooltip({ children, content }: ViewerTooltipProps) {
       <TooltipContent>{content}</TooltipContent>
     </Tooltip>
   );
-  return hasProvider ? (
-    tooltip
-  ) : (
-    <TooltipProvider delay={350}>{tooltip}</TooltipProvider>
-  );
+  return hasProvider ? tooltip : <TooltipProvider delay={350}>{tooltip}</TooltipProvider>;
 }
 
 const defaultComponents: ViewerUiComponents = {
@@ -55,10 +47,7 @@ export function ViewerUiProvider({
   children: ReactNode;
 }) {
   const inherited = useContext(ViewerUiContext) ?? defaultComponents;
-  const value = useMemo(
-    () => ({ ...inherited, ...components }),
-    [inherited, components],
-  );
+  const value = useMemo(() => ({ ...inherited, ...components }), [inherited, components]);
   return (
     <ViewerUiContext.Provider value={value}>
       <TooltipProvider delay={350}>{children}</TooltipProvider>
@@ -77,10 +66,8 @@ export function ViewerControlButton({
   type = "button",
   ...props
 }: ViewerControlButtonProps) {
-  const { Button, Tooltip: TooltipImpl } =
-    useContext(ViewerUiContext) ?? defaultComponents;
-  const label =
-    tooltip === undefined ? (title ?? props["aria-label"]) : tooltip;
+  const { Button, Tooltip: TooltipImpl } = useContext(ViewerUiContext) ?? defaultComponents;
+  const label = tooltip === undefined ? (title ?? props["aria-label"]) : tooltip;
   const button = <Button type={type} {...props} />;
   return label ? <TooltipImpl content={label}>{button}</TooltipImpl> : button;
 }

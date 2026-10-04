@@ -13,7 +13,12 @@ export type ViewCubeProps = {
 };
 
 /** Compose inside an R3F Canvas with default camera controls. */
-export function ViewCube({ variant = "asset-studio", position = "top-right", margin = [64, 64], renderPriority = 1 }: ViewCubeProps) {
+export function ViewCube({
+  variant = "asset-studio",
+  position = "top-right",
+  margin = [64, 64],
+  renderPriority = 1,
+}: ViewCubeProps) {
   return (
     <GizmoHelper alignment={position} margin={margin} renderPriority={renderPriority}>
       {variant === "drei" ? <GizmoViewcube /> : <ViewHelper />}

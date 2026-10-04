@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, type RefObject } from "react";
+import { type RefObject, useEffect, useRef } from "react";
 
 const inertLocks = new WeakMap<HTMLElement, { count: number; previous: boolean }>();
 const scrollLocks = new WeakMap<Document, { count: number; previous: string }>();
@@ -33,7 +33,7 @@ export function useExpandedViewerFocus(
     function insideElements() {
       const inside = new Set<HTMLElement>([root!]);
       for (const element of inside) {
-        for (const trigger of element.querySelectorAll('[aria-controls], [aria-describedby]')) {
+        for (const trigger of element.querySelectorAll("[aria-controls], [aria-describedby]")) {
           const ids = `${trigger.getAttribute("aria-controls") ?? ""} ${trigger.getAttribute("aria-describedby") ?? ""}`;
           for (const id of ids.split(/\s+/).filter(Boolean)) {
             const popup = doc.getElementById(id);
@@ -45,10 +45,16 @@ export function useExpandedViewerFocus(
       return [...inside];
     }
     function tabbables() {
-      return insideElements().flatMap((element) => [...element.querySelectorAll<HTMLElement>(focusable)])
-        .filter((element) => element.tabIndex >= 0 && !element.matches(":disabled") &&
-          !element.closest("[inert]") && element.getClientRects().length > 0 &&
-          getComputedStyle(element).visibility !== "hidden");
+      return insideElements()
+        .flatMap((element) => [...element.querySelectorAll<HTMLElement>(focusable)])
+        .filter(
+          (element) =>
+            element.tabIndex >= 0 &&
+            !element.matches(":disabled") &&
+            !element.closest("[inert]") &&
+            element.getClientRects().length > 0 &&
+            getComputedStyle(element).visibility !== "hidden",
+        );
     }
     function releaseInert() {
       for (const element of inertElements) {
@@ -64,7 +70,8 @@ export function useExpandedViewerFocus(
       releaseInert();
       const inside = insideElements();
       for (const portal of inside.slice(1)) {
-        if (!portals.has(portal)) portals.set(portal, { position: portal.style.position, zIndex: portal.style.zIndex });
+        if (!portals.has(portal))
+          portals.set(portal, { position: portal.style.position, zIndex: portal.style.zIndex });
         portal.style.position = "relative";
         portal.style.zIndex = "101";
       }
@@ -85,10 +92,15 @@ export function useExpandedViewerFocus(
     }
     function containFocus(event: FocusEvent) {
       const target = event.target;
-      if (target instanceof HTMLElement && insideElements().some((element) => element.contains(target))) {
+      if (
+        target instanceof HTMLElement &&
+        insideElements().some((element) => element.contains(target))
+      ) {
         lastFocus = target;
       } else {
-        (lastFocus.isConnected && !lastFocus.closest("[inert]") ? lastFocus : root!).focus({ preventScroll: true });
+        (lastFocus.isConnected && !lastFocus.closest("[inert]") ? lastFocus : root!).focus({
+          preventScroll: true,
+        });
       }
     }
     function keyDown(event: KeyboardEvent) {
@@ -96,18 +108,27 @@ export function useExpandedViewerFocus(
       if (event.key === "Tab") {
         const elements = tabbables();
         const index = elements.indexOf(doc.activeElement as HTMLElement);
-        if (!elements.length || (event.shiftKey ? index <= 0 : index === -1 || index === elements.length - 1)) {
+        if (
+          !elements.length ||
+          (event.shiftKey ? index <= 0 : index === -1 || index === elements.length - 1)
+        ) {
           event.preventDefault();
-          (event.shiftKey ? elements.at(-1) ?? root! : elements[0] ?? root!).focus();
+          (event.shiftKey ? (elements.at(-1) ?? root!) : (elements[0] ?? root!)).focus();
         }
       }
     }
-    function escape(event: KeyboardEvent) {
+    function handleEscape(event: KeyboardEvent) {
       if (event.key !== "Escape") return;
       // Menus get the first Escape. Tooltips must not consume the viewer's
       // escape action merely because a toolbar button currently has focus.
-      if (insideElements().some(element => [...element.querySelectorAll('[role="menu"], [role="listbox"], [role="dialog"]')]
-        .some(popup => popup.getClientRects().length > 0 && !popup.hasAttribute("data-closed")))) return;
+      if (
+        insideElements().some((element) =>
+          [...element.querySelectorAll('[role="menu"], [role="listbox"], [role="dialog"]')].some(
+            (popup) => popup.getClientRects().length > 0 && !popup.hasAttribute("data-closed"),
+          ),
+        )
+      )
+        return;
       event.preventDefault();
       event.stopPropagation();
       close.current();
@@ -117,14 +138,19 @@ export function useExpandedViewerFocus(
     else (tabbables()[0] ?? root).focus({ preventScroll: true });
     doc.addEventListener("focusin", containFocus);
     doc.addEventListener("keydown", keyDown);
-    doc.addEventListener("keydown", escape, true);
+    doc.addEventListener("keydown", handleEscape, true);
     const observer = new MutationObserver(isolate);
-    observer.observe(doc.body, { subtree: true, childList: true, attributes: true, attributeFilter: ["aria-controls", "aria-describedby"] });
+    observer.observe(doc.body, {
+      subtree: true,
+      childList: true,
+      attributes: true,
+      attributeFilter: ["aria-controls", "aria-describedby"],
+    });
     return () => {
       observer.disconnect();
       doc.removeEventListener("focusin", containFocus);
       doc.removeEventListener("keydown", keyDown);
-      doc.removeEventListener("keydown", escape, true);
+      doc.removeEventListener("keydown", handleEscape, true);
       releaseInert();
       for (const [portal, style] of portals) Object.assign(portal.style, style);
       if (--locks.count === 0) {

@@ -2,12 +2,12 @@
 
 import { CameraControls, CameraControlsImpl } from "@react-three/drei";
 import { useFrame, useThree } from "@react-three/fiber";
-import { useCallback, useEffect, useRef, type RefObject } from "react";
+import { type RefObject, useCallback, useEffect, useRef } from "react";
 import {
-  Vector3,
   type Group,
-  type PerspectiveCamera as ThreePerspectiveCamera,
   type OrthographicCamera as ThreeOrthographicCamera,
+  type PerspectiveCamera as ThreePerspectiveCamera,
+  Vector3,
 } from "three";
 import { frameBounds } from "./model-inspection";
 import type { ViewerCameraStore } from "./model-viewer-camera";
@@ -68,13 +68,10 @@ export function CameraRig({
       camera.far = far;
       camera.updateProjectionMatrix();
       if ("isOrthographicCamera" in camera)
-        void controls.current.zoomTo(
-          Math.min(size.width, size.height) / (radius * 2.3),
-          false,
-        );
+        void controls.current.zoomTo(Math.min(size.width, size.height) / (radius * 2.3), false);
       const direction = new Vector3(
         ...(lighting === "outside" && preset === "isometric"
-          ? [1.7, 0.5, 1.7] as const
+          ? ([1.7, 0.5, 1.7] as const)
           : presetVectors[preset]),
       ).normalize();
       const position = center.clone().add(direction.multiplyScalar(distance));
@@ -104,26 +101,23 @@ export function CameraRig({
   useEffect(() => {
     if (!cameraStore) return;
     cameraStore.register((view, transition) => {
-      void controls.current?.setLookAt(
-        ...view.position,
-        ...view.target,
-        transition,
-      );
+      void controls.current?.setLookAt(...view.position, ...view.target, transition);
       // Imperative commands do not cause a React render. Wake the demand loop
       // so controls apply the new position and publish the live camera view.
       invalidate();
     });
     const current = controls.current;
-    if (current) cameraStore.publish({
-      position: current.getPosition(new Vector3()).toArray(),
-      target: current.getTarget(new Vector3()).toArray(),
-    });
+    if (current)
+      cameraStore.publish({
+        position: current.getPosition(new Vector3()).toArray(),
+        target: current.getTarget(new Vector3()).toArray(),
+      });
     return () => cameraStore.register(null);
   }, [cameraStore, invalidate]);
 
   useFrame((_, delta) => {
     if (autoRotate && controls.current)
-      controls.current.rotate(autoRotateSpeed * delta, 0, false);
+      void controls.current.rotate(autoRotateSpeed * delta, 0, false);
   });
 
   function readCamera(): ViewerCameraState | null {
@@ -148,9 +142,7 @@ export function CameraRig({
   return (
     <CameraControls
       ref={controls}
-      domElement={
-        document.querySelector<HTMLElement>(paneSelector) ?? undefined
-      }
+      domElement={document.querySelector<HTMLElement>(paneSelector) ?? undefined}
       makeDefault
       smoothTime={0.25}
       dollyToCursor
@@ -166,9 +158,7 @@ export function CameraRig({
       }}
       touches={{
         one: fixed ? actions.TOUCH_TRUCK : actions.TOUCH_ROTATE,
-        two: orthographic
-          ? actions.TOUCH_ZOOM_TRUCK
-          : actions.TOUCH_DOLLY_TRUCK,
+        two: orthographic ? actions.TOUCH_ZOOM_TRUCK : actions.TOUCH_DOLLY_TRUCK,
         three: actions.TOUCH_TRUCK,
       }}
     />
@@ -206,15 +196,7 @@ export function FitStaticCamera({
       camera.zoom = Math.min(size.width, size.height) / (radius * 2.3);
     camera.lookAt(center);
     camera.updateProjectionMatrix();
-  }, [
-    camera,
-    fitVersion,
-    objectRef,
-    preset,
-    resetToken,
-    size.width,
-    size.height,
-  ]);
+  }, [camera, fitVersion, objectRef, preset, resetToken, size.width, size.height]);
   return null;
 }
 
@@ -238,17 +220,13 @@ export function DragLook({ selector }: { selector: string }) {
       camera.rotation.y -= event.movementX * 0.002;
       camera.rotation.x = Math.max(
         -Math.PI / 2 + 0.05,
-        Math.min(
-          Math.PI / 2 - 0.05,
-          camera.rotation.x - event.movementY * 0.002,
-        ),
+        Math.min(Math.PI / 2 - 0.05, camera.rotation.x - event.movementY * 0.002),
       );
       invalidate();
     };
     const up = (event: globalThis.PointerEvent) => {
       dragging = false;
-      if (target.hasPointerCapture(event.pointerId))
-        target.releasePointerCapture(event.pointerId);
+      if (target.hasPointerCapture(event.pointerId)) target.releasePointerCapture(event.pointerId);
     };
     target.addEventListener("pointerdown", down);
     target.addEventListener("pointermove", move);
@@ -276,15 +254,10 @@ export function FirstPersonMovement({
   useEffect(() => {
     const target = document.querySelector<HTMLElement>(selector);
     const down = (event: KeyboardEvent) => {
-      if (
-        (event.target as HTMLElement)?.closest(
-          "input, textarea, select, [contenteditable]",
-        )
-      )
+      if ((event.target as HTMLElement)?.closest("input, textarea, select, [contenteditable]"))
         return;
       if (!requirePointerLock && event.target !== target) return;
-      if (requirePointerLock && document.pointerLockElement !== gl.domElement)
-        return;
+      if (requirePointerLock && document.pointerLockElement !== gl.domElement) return;
       pressed.current.add(event.code);
       invalidate();
       if (
@@ -322,9 +295,7 @@ export function FirstPersonMovement({
       Number(keys.has("KeyA") || keys.has("ArrowLeft"));
     const vertical =
       Number(keys.has("Space") || keys.has("KeyE")) -
-      Number(
-        keys.has("ShiftLeft") || keys.has("ShiftRight") || keys.has("KeyQ"),
-      );
+      Number(keys.has("ShiftLeft") || keys.has("ShiftRight") || keys.has("KeyQ"));
     if (!forward && !sideways && !vertical) return;
     const scale = 1 / Math.hypot(forward, sideways, vertical);
     camera.translateZ(-forward * speed * scale);

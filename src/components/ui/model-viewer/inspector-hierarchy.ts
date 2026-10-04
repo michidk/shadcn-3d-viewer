@@ -38,10 +38,16 @@ export function indexHierarchy(nodes: Node[]) {
         let id = node.id;
         let result = false;
         while (id) {
-          if (hidden.has(id)) { result = hidden.get(id)!; break; }
+          if (hidden.has(id)) {
+            result = hidden.get(id)!;
+            break;
+          }
           chain.push(id);
           const parent = parents.get(id) ?? parentPath(id);
-          if (collapsed.has(parent)) { result = true; break; }
+          if (collapsed.has(parent)) {
+            result = true;
+            break;
+          }
           id = parent;
         }
         for (const child of chain) hidden.set(child, result);

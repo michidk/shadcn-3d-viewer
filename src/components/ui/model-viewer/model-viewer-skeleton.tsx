@@ -23,11 +23,7 @@ export function ModelViewerSkeleton({
   ...props
 }: ModelViewerSkeletonProps) {
   return (
-    <div
-      data-slot="model-viewer-skeleton"
-      className={cn("viewer-skeleton", className)}
-      {...props}
-    >
+    <div data-slot="model-viewer-skeleton" className={cn("viewer-skeleton", className)} {...props}>
       {showToolbar && (
         <div className="viewer-skeleton-toolbar">
           <span className="viewer-skeleton-block" style={{ width: 104 }} />

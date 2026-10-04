@@ -14,12 +14,10 @@ export function DropdownMenuContent({
   className,
   ...props
 }: MenuPrimitive.Popup.Props &
-  Pick<
-    MenuPrimitive.Positioner.Props,
-    "align" | "alignOffset" | "side" | "sideOffset"
-  >) {
+  Pick<MenuPrimitive.Positioner.Props, "align" | "alignOffset" | "side" | "sideOffset">) {
   const runtime = useOptionalViewerRuntime();
-  const container = runtime?.state.fullscreen && !runtime.root.isExpanded ? runtime.viewerRef : undefined;
+  const container =
+    runtime?.state.fullscreen && !runtime.root.isExpanded ? runtime.viewerRef : undefined;
   return (
     <MenuPrimitive.Portal container={container}>
       <MenuPrimitive.Positioner
@@ -51,12 +49,10 @@ export function TooltipContent({
   children,
   ...props
 }: TooltipPrimitive.Popup.Props &
-  Pick<
-    TooltipPrimitive.Positioner.Props,
-    "align" | "alignOffset" | "side" | "sideOffset"
-  >) {
+  Pick<TooltipPrimitive.Positioner.Props, "align" | "alignOffset" | "side" | "sideOffset">) {
   const runtime = useOptionalViewerRuntime();
-  const container = runtime?.state.fullscreen && !runtime.root.isExpanded ? runtime.viewerRef : undefined;
+  const container =
+    runtime?.state.fullscreen && !runtime.root.isExpanded ? runtime.viewerRef : undefined;
   return (
     <TooltipPrimitive.Portal container={container}>
       <TooltipPrimitive.Positioner

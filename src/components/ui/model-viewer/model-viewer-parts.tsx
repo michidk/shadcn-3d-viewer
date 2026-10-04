@@ -1,20 +1,15 @@
 "use client";
 
-import type { ComponentProps } from "react";
 import { Maximize2, Minimize2 } from "lucide-react";
+import type { ComponentProps } from "react";
 import { cn } from "@/lib/utils";
-import { useModelViewer, useViewerRuntime } from "./model-viewer-context";
-import { ViewerControlButton } from "./viewer-ui";
-import {
-  ModelViewerControls,
-  ModelViewerAnimationControls,
-} from "./model-viewer-toolbar";
 import { ModelInspector, type ModelInspectorProps } from "./model-inspector";
+import { useModelViewer, useViewerRuntime } from "./model-viewer-context";
+import { ModelViewerAnimationControls, ModelViewerControls } from "./model-viewer-toolbar";
+import { ViewerControlButton } from "./viewer-ui";
 
 /** Ready-made toolbar connected to the nearest root. */
-export function ModelViewerDefaultToolbar(
-  props: Omit<ComponentProps<"div">, "onReset">,
-) {
+export function ModelViewerDefaultToolbar(props: Omit<ComponentProps<"div">, "onReset">) {
   const viewer = useModelViewer();
   return (
     <ModelViewerControls
@@ -69,10 +64,7 @@ export type ModelViewerInspectorProps = Omit<
 >;
 
 /** Connected inspector; ModelInspector remains available for standalone data. */
-export function ModelViewerInspector({
-  onClose,
-  ...props
-}: ModelViewerInspectorProps) {
+export function ModelViewerInspector({ onClose, ...props }: ModelViewerInspectorProps) {
   const viewer = useModelViewer();
   if (!viewer.inspectorOpen || !viewer.inspection) return null;
   return (
@@ -89,11 +81,7 @@ export function ModelViewerInspector({
   );
 }
 
-export function ModelViewerStatus({
-  className,
-  children,
-  ...props
-}: ComponentProps<"div">) {
+export function ModelViewerStatus({ className, children, ...props }: ComponentProps<"div">) {
   const { state: viewer, pointerLockAvailable, locked } = useViewerRuntime();
   const instructions =
     viewer.mode === "firstPerson"
@@ -146,10 +134,7 @@ export function ModelViewerFullscreen({
   );
 }
 
-export function ModelViewerOverlay({
-  className,
-  ...props
-}: ComponentProps<"div">) {
+export function ModelViewerOverlay({ className, ...props }: ComponentProps<"div">) {
   return (
     <div
       data-slot="model-viewer-overlay"

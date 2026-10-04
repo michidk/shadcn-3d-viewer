@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useState, type RefObject } from "react";
+import { type RefObject, useEffect, useState } from "react";
 
 /** True while the viewer is scrolled out of view or the page is hidden. */
 export function useViewerHidden(viewerRef: RefObject<HTMLElement | null>) {
@@ -9,9 +9,10 @@ export function useViewerHidden(viewerRef: RefObject<HTMLElement | null>) {
     const update = () => setPageVisible(document.visibilityState !== "hidden");
     update();
     document.addEventListener("visibilitychange", update);
-    const observer = typeof IntersectionObserver === "undefined"
-      ? null
-      : new IntersectionObserver(([entry]) => setInViewport(entry.isIntersecting));
+    const observer =
+      typeof IntersectionObserver === "undefined"
+        ? null
+        : new IntersectionObserver(([entry]) => setInViewport(entry.isIntersecting));
     if (viewerRef.current) observer?.observe(viewerRef.current);
     return () => {
       document.removeEventListener("visibilitychange", update);

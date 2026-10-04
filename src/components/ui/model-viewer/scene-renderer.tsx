@@ -1,13 +1,13 @@
 "use client";
 
-import { createPortal, useFrame, useThree, type ComputeFunction } from "@react-three/fiber";
+import { type ComputeFunction, createPortal, useFrame, useThree } from "@react-three/fiber";
 import {
+  type ReactNode,
+  type RefObject,
   useCallback,
   useEffect,
   useLayoutEffect,
   useState,
-  type RefObject,
-  type ReactNode,
 } from "react";
 import { Scene } from "three";
 
@@ -73,10 +73,7 @@ export function ScissorView({
     (event, state) => {
       const rect = track.current?.getBoundingClientRect();
       if (!rect || rect.width === 0 || rect.height === 0) return;
-      if (
-        !(event.target instanceof Node) ||
-        !track.current?.contains(event.target)
-      ) {
+      if (!(event.target instanceof Node) || !track.current?.contains(event.target)) {
         state.pointer.set(10000, 10000);
         state.raycaster.setFromCamera(state.pointer, state.camera);
         return;
@@ -91,12 +88,7 @@ export function ScissorView({
   );
 
   return createPortal(
-    <ScissorRenderer
-      track={track}
-      size={size}
-      index={index}
-      clearColor={clearColor}
-    >
+    <ScissorRenderer track={track} size={size} index={index} clearColor={clearColor}>
       {children}
     </ScissorRenderer>,
     scene,

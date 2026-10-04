@@ -1,6 +1,6 @@
 import { useGizmoContext } from "@react-three/drei";
 import { useThree } from "@react-three/fiber";
-import { useEffect, useMemo, useState, type PointerEvent } from "react";
+import { type PointerEvent, useEffect, useMemo, useState } from "react";
 import { CanvasTexture, Vector3 } from "three";
 
 const axes = [
@@ -20,7 +20,9 @@ export function ViewHelper() {
           </mesh>
         </group>
       ))}
-      {axes.map((axis) => <AxisPoint key={`positive-${axis.color}`} color={axis.color} position={axis.position} />)}
+      {axes.map((axis) => (
+        <AxisPoint key={`positive-${axis.color}`} color={axis.color} position={axis.position} />
+      ))}
       {axes.map((axis) => (
         <AxisPoint
           key={`negative-${axis.color}`}
@@ -33,7 +35,15 @@ export function ViewHelper() {
   );
 }
 
-function AxisPoint({ color, opacity = 1, position }: { color: string; opacity?: number; position: readonly [number, number, number] }) {
+function AxisPoint({
+  color,
+  opacity = 1,
+  position,
+}: {
+  color: string;
+  opacity?: number;
+  position: readonly [number, number, number];
+}) {
   const gl = useThree((state) => state.gl);
   const { tweenCamera } = useGizmoContext();
   const [hovered, setHovered] = useState(false);
@@ -63,11 +73,22 @@ function AxisPoint({ color, opacity = 1, position }: { color: string; opacity?: 
       position={position}
       scale={hovered ? 1.05 : 0.82}
       onPointerDown={activate}
-      onPointerOver={(event) => { event.stopPropagation(); setHovered(true); }}
-      onPointerOut={(event) => { event.stopPropagation(); setHovered(false); }}
+      onPointerOver={(event) => {
+        event.stopPropagation();
+        setHovered(true);
+      }}
+      onPointerOut={(event) => {
+        event.stopPropagation();
+        setHovered(false);
+      }}
     >
-      <spriteMaterial map={texture} alphaTest={0.15} opacity={opacity} transparent toneMapped={false} />
+      <spriteMaterial
+        map={texture}
+        alphaTest={0.15}
+        opacity={opacity}
+        transparent
+        toneMapped={false}
+      />
     </sprite>
   );
 }
-

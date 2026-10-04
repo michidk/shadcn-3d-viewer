@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useRef, useState, type RefObject } from "react";
+import { type RefObject, useEffect, useRef, useState } from "react";
 import { useExpandedViewerFocus } from "./use-expanded-viewer-focus";
 import type { ReportFeedback } from "./use-viewer-feedback";
 
@@ -39,10 +39,10 @@ export function useViewerFullscreen(
       }
       return;
     }
-    returnFocus.current = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+    returnFocus.current =
+      document.activeElement instanceof HTMLElement ? document.activeElement : null;
     try {
-      if (!document.fullscreenEnabled || !viewer)
-        throw new Error("Fullscreen unavailable");
+      if (!document.fullscreenEnabled || !viewer) throw new Error("Fullscreen unavailable");
       await viewer.requestFullscreen();
     } catch {
       if (document.fullscreenElement !== viewer) setIsExpanded(true);

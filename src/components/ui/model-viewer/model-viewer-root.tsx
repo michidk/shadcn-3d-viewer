@@ -1,10 +1,10 @@
 "use client";
 import type { CSSProperties } from "react";
 import { cn } from "@/lib/utils";
-import { ViewerUiProvider } from "./viewer-ui";
 import { ModelViewerContext } from "./model-viewer-context";
-import { useModelViewerRuntime } from "./use-model-viewer-runtime";
 import type { ModelViewerRootProps } from "./model-viewer-types";
+import { useModelViewerRuntime } from "./use-model-viewer-runtime";
+import { ViewerUiProvider } from "./viewer-ui";
 import "./model-viewer.css";
 
 /** Owns state and layout only. Mount exactly one ModelViewerScene inside it. */
@@ -14,6 +14,7 @@ export function ModelViewerRoot(props: ModelViewerRootProps) {
   return (
     <ModelViewerContext.Provider value={runtime}>
       <ViewerUiProvider components={root.components}>
+        {/* biome-ignore lint/a11y/useAriaPropsSupportedByRole: The runtime role is group or dialog, both of which support accessible naming. */}
         <div
           ref={viewerRef}
           data-slot="model-viewer"

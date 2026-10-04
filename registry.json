@@ -17,15 +17,8 @@
         "@base-ui/react",
         "class-variance-authority"
       ],
-      "devDependencies": [
-        "@types/three"
-      ],
-      "registryDependencies": [
-        "alert",
-        "button",
-        "tooltip",
-        "dropdown-menu"
-      ],
+      "devDependencies": ["@types/three"],
+      "registryDependencies": ["alert", "button", "tooltip", "dropdown-menu"],
       "files": [
         {
           "path": "src/components/ui/model-viewer/lazy.tsx",
@@ -169,6 +162,18 @@
         },
         {
           "path": "src/components/ui/model-viewer/model-resources.ts",
+          "type": "registry:ui"
+        },
+        {
+          "path": "src/components/ui/model-viewer/use-viewer-preferences.ts",
+          "type": "registry:ui"
+        },
+        {
+          "path": "src/components/ui/model-viewer/use-viewer-session.ts",
+          "type": "registry:ui"
+        },
+        {
+          "path": "src/components/ui/model-viewer/use-viewer-interactions.ts",
           "type": "registry:ui"
         }
       ]

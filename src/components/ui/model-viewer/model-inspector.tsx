@@ -11,15 +11,15 @@ import {
   Triangle,
   X,
 } from "lucide-react";
-import { useId, useMemo, useState, type ComponentProps } from "react";
+import { type ComponentProps, useId, useMemo, useState } from "react";
 import { cn } from "@/lib/utils";
 import { indexHierarchy } from "./inspector-hierarchy";
 import type { ModelInspection } from "./model-inspection";
 import type { ModelInspectorPosition } from "./model-viewer-types";
 import {
   ViewerControlButton as Button,
-  ViewerUiProvider,
   type ViewerUiComponents,
+  ViewerUiProvider,
 } from "./viewer-ui";
 import "./model-viewer.css";
 
@@ -83,12 +83,7 @@ export function ModelInspector({
             <h3 id={heading}>Model inspector</h3>
           </div>
           {onClose && (
-            <Button
-              variant="ghost"
-              size="icon-sm"
-              aria-label="Close inspector"
-              onClick={onClose}
-            >
+            <Button variant="ghost" size="icon-sm" aria-label="Close inspector" onClick={onClose}>
               <X size={16} />
             </Button>
           )}
@@ -112,7 +107,7 @@ export function ModelInspector({
           </div>
           <div className="inspector-axis-values">
             {inspection.dimensions.map((value, index) => (
-              <div key={index}>
+              <div key={["X", "Y", "Z"][index]}>
                 <span data-axis={index}>{["X", "Y", "Z"][index]}</span>
                 <strong>{Number(value.toPrecision(4))}</strong>
               </div>
@@ -121,9 +116,7 @@ export function ModelInspector({
         </section>
         <div className="inspector-hierarchy-heading">
           <span className="inspector-section-label">Hierarchy</span>
-          <span>
-            {inspection.nodes.filter((node) => node.mesh).length} meshes
-          </span>
+          <span>{inspection.nodes.filter((node) => node.mesh).length} meshes</span>
         </div>
         <label className="inspector-search">
           <Search size={14} />
@@ -177,9 +170,7 @@ export function ModelInspector({
                   size="sm"
                   className="inspector-node min-w-0 flex-1 justify-start"
                   disabled={!node.mesh}
-                  aria-pressed={
-                    node.mesh ? selectedMesh === node.id : undefined
-                  }
+                  aria-pressed={node.mesh ? selectedMesh === node.id : undefined}
                   onClick={() => onSelectMesh(node.id)}
                 >
                   {node.mesh ? <Box size={13} /> : <Layers size={13} />}
@@ -193,13 +184,15 @@ export function ModelInspector({
           })}
         </ul>
         {visible.length > limit && (
-          <Button variant="outline" size="sm" onClick={() => setPage({ nodes: inspection.nodes, query, limit: limit + 200 })}>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setPage({ nodes: inspection.nodes, query, limit: limit + 200 })}
+          >
             Show {Math.min(200, visible.length - limit)} more objects
           </Button>
         )}
-        {visible.length === 0 && (
-          <div className="inspector-empty">No objects match “{query}”.</div>
-        )}
+        {visible.length === 0 && <div className="inspector-empty">No objects match “{query}”.</div>}
         <footer className="inspector-selection">
           <Crosshair size={15} />
           <div>

@@ -23,11 +23,7 @@ export function ViewerLoader({
   const custom = typeof fallback === "function" ? fallback(data) : fallback;
   if (fallback !== undefined && custom == null) return null;
   return (
-    <div
-      className={cn("viewer-loader", poster && "has-poster")}
-      role="status"
-      aria-live="polite"
-    >
+    <div className={cn("viewer-loader", poster && "has-poster")} role="status" aria-live="polite">
       {fallback !== undefined ? (
         custom
       ) : (

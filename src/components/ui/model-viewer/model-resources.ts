@@ -14,11 +14,12 @@ export function retainModelResources(model: Object3D) {
       if ((value as Texture | null)?.isTexture) resources.add(value as Texture);
     }
   }
-  model.traverse(object => {
+  model.traverse((object) => {
     const mesh = object as Mesh;
     if (!mesh.isMesh) return;
     resources.add(mesh.geometry);
-    for (const material of Array.isArray(mesh.material) ? mesh.material : [mesh.material]) materialResources(material);
+    for (const material of Array.isArray(mesh.material) ? mesh.material : [mesh.material])
+      materialResources(material);
     const skinned = object as SkinnedMesh;
     if (skinned.isSkinnedMesh) resources.add(skinned.skeleton);
   });

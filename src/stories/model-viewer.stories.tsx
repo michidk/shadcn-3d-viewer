@@ -1,10 +1,7 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { useArgs } from "storybook/preview-api";
 import { fn } from "storybook/test";
-import {
-  ModelViewer,
-  type ModelViewerProps,
-} from "@/components/ui/model-viewer";
+import { ModelViewer, type ModelViewerProps } from "@/components/ui/model-viewer";
 
 const meta = {
   title: "Viewer/Model Viewer",
@@ -92,12 +89,8 @@ const meta = {
         onFloorChange={(showFloor) => updateArgs({ showFloor })}
         onAutoRotateChange={(autoRotate) => updateArgs({ autoRotate })}
         onAnimationChange={(animation) => updateArgs({ animation })}
-        onAnimationPlayingChange={(animationPlaying) =>
-          updateArgs({ animationPlaying })
-        }
-        onAnimationSpeedChange={(animationSpeed) =>
-          updateArgs({ animationSpeed })
-        }
+        onAnimationPlayingChange={(animationPlaying) => updateArgs({ animationPlaying })}
+        onAnimationSpeedChange={(animationSpeed) => updateArgs({ animationSpeed })}
       />
     );
   },
@@ -157,7 +150,8 @@ export const RotatingAnimatedModel: Story = {
   parameters: {
     docs: {
       description: {
-        story: "Starts orbiting the camera and playing the Walking clip. The toolbar can pause rotation or animation independently; reduced-motion preferences still suppress both movements.",
+        story:
+          "Starts orbiting the camera and playing the Walking clip. The toolbar can pause rotation or animation independently; reduced-motion preferences still suppress both movements.",
       },
     },
   },
@@ -174,7 +168,8 @@ export const OutsideWithFloor: Story = {
   parameters: {
     docs: {
       description: {
-        story: "Procedural atmospheric sky, sun lighting, and a ground plane matched to the horizon color. The model casts a soft shadow; set floorColor to override the ground color.",
+        story:
+          "Procedural atmospheric sky, sun lighting, and a ground plane matched to the horizon color. The model casts a soft shadow; set floorColor to override the ground color.",
       },
     },
   },
@@ -185,8 +180,7 @@ export const ModelInspection: Story = {
   parameters: {
     docs: {
       description: {
-        story:
-          "Search the hierarchy, select a mesh, and inspect dimensions and resource counts.",
+        story: "Search the hierarchy, select a mesh, and inspect dimensions and resource counts.",
       },
     },
   },
@@ -198,19 +192,35 @@ export const MinimalEmbed: Story = {
 
 export const CustomFeedback: Story = {
   parameters: {
-    docs: { description: { story: "Custom loading and error renderers. Throttle the network to inspect loading; set src to a missing model to inspect the custom error." } },
+    docs: {
+      description: {
+        story:
+          "Custom loading and error renderers. Throttle the network to inspect loading; set src to a missing model to inspect the custom error.",
+      },
+    },
   },
   args: {
     src: "/models/robot-expressive.glb",
-    loadingFallback: () => <span className="text-sm text-muted-foreground">Preparing your preview…</span>,
-    errorFallback: () => <p role="alert" className="text-sm text-muted-foreground">Preview unavailable. Choose another model.</p>,
+    loadingFallback: () => (
+      <span className="text-sm text-muted-foreground">Preparing your preview…</span>
+    ),
+    errorFallback: () => (
+      <p role="alert" className="text-sm text-muted-foreground">
+        Preview unavailable. Choose another model.
+      </p>
+    ),
   },
 };
 
 export const LoadingFileName: Story = {
   args: { src: "/models/robot-expressive.glb", showFileName: true },
   parameters: {
-    docs: { description: { story: "Opt in to the current asset filename. Throttle the network to inspect loading; filenames are hidden by default." } },
+    docs: {
+      description: {
+        story:
+          "Opt in to the current asset filename. Throttle the network to inspect loading; filenames are hidden by default.",
+      },
+    },
   },
 };
 
@@ -237,7 +247,12 @@ export const ErrorState: Story = {
 export const RetryError: Story = {
   args: { src: "/models/retry-example.glb", showRetry: true },
   parameters: {
-    docs: { description: { story: "Retry clears the loader cache and requests the same URL again. A permanently missing file will still fail; the host must replace invalid or expired URLs." } },
+    docs: {
+      description: {
+        story:
+          "Retry clears the loader cache and requests the same URL again. A permanently missing file will still fail; the host must replace invalid or expired URLs.",
+      },
+    },
   },
 };
 
@@ -248,5 +263,17 @@ export const OffscreenPlayback: Story = {
     animationPlaying: true,
     respectReducedMotion: false,
   },
-  decorators: [(Story) => <><Story /><div style={{ height: "120vh" }}><p className="p-4 text-sm text-muted-foreground">Scroll the viewer completely out of view, then return. Playback resumes without changing the play/pause setting.</p></div></>],
+  decorators: [
+    (Story) => (
+      <>
+        <Story />
+        <div style={{ height: "120vh" }}>
+          <p className="p-4 text-sm text-muted-foreground">
+            Scroll the viewer completely out of view, then return. Playback resumes without changing
+            the play/pause setting.
+          </p>
+        </div>
+      </>
+    ),
+  ],
 };

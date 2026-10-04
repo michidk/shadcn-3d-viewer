@@ -8,13 +8,19 @@ export function createViewerCameraStore() {
   const getSnapshot = () => snapshot;
   const subscribe = (listener: () => void) => {
     listeners.add(listener);
-    return () => { listeners.delete(listener); };
+    return () => {
+      listeners.delete(listener);
+    };
   };
   const publish = (view: ViewerCameraState | null) => {
     const current = snapshot;
-    if (view && current &&
+    if (
+      view &&
+      current &&
       view.position.every((n, i) => Math.abs(n - current.position[i]) < 1e-6) &&
-      view.target.every((n, i) => Math.abs(n - current.target[i]) < 1e-6)) return;
+      view.target.every((n, i) => Math.abs(n - current.target[i]) < 1e-6)
+    )
+      return;
     if (!view && !snapshot) return;
     snapshot = view;
     listeners.forEach((listener) => listener());
@@ -35,6 +41,8 @@ export type ViewerCameraStore = ReturnType<typeof createViewerCameraStore>;
 
 function validCameraView(view: ViewerCameraState) {
   const values = [...view.position, ...view.target];
-  return values.every(Number.isFinite) &&
-    view.position.some((n, i) => Math.abs(n - view.target[i]) > 1e-9);
+  return (
+    values.every(Number.isFinite) &&
+    view.position.some((n, i) => Math.abs(n - view.target[i]) > 1e-9)
+  );
 }

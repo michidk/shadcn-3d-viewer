@@ -10,7 +10,9 @@ const packageJson = JSON.parse(readFileSync(packageFile, "utf8"));
 const [command, ...args] = process.argv.slice(2);
 
 if (!command || command === "--help" || command === "-h") {
-  process.stdout.write("Install the source-owned model viewer into a Base UI shadcn project.\n\nUsage: npx shadcn-3d-viewer@latest add [shadcn add options]\n\nExamples:\n  npx shadcn-3d-viewer@latest add\n  npx shadcn-3d-viewer@latest add --dry-run\n");
+  process.stdout.write(
+    "Install the source-owned model viewer into a Base UI shadcn project.\n\nUsage: npx shadcn-3d-viewer@latest add [shadcn add options]\n\nExamples:\n  npx shadcn-3d-viewer@latest add\n  npx shadcn-3d-viewer@latest add --dry-run\n",
+  );
   process.exit(0);
 }
 
@@ -36,9 +38,7 @@ if (!/^\d+\.\d+\.\d+$/.test(shadcnVersion ?? "")) {
   process.exit(1);
 }
 const shadcn = `shadcn@${shadcnVersion}`;
-const npmCli = process.env.npm_execpath?.endsWith("npm-cli.js")
-  ? process.env.npm_execpath
-  : null;
+const npmCli = process.env.npm_execpath?.endsWith("npm-cli.js") ? process.env.npm_execpath : null;
 const executable = npmCli ? process.execPath : process.platform === "win32" ? "npm.cmd" : "npm";
 const npmArgs = npmCli
   ? [npmCli, "exec", "--yes", "--", shadcn, "add", registryFile, ...args]

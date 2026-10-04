@@ -1,28 +1,28 @@
 "use client";
-import type { ModelViewerProps } from "./model-viewer-types";
+import {
+  ModelViewerAnimationBar,
+  ModelViewerDefaultToolbar,
+  ModelViewerFullscreen,
+  ModelViewerInspector,
+  ModelViewerOverlay,
+  ModelViewerStatus,
+} from "./model-viewer-parts";
 import { ModelViewerRoot } from "./model-viewer-root";
 import { ModelViewerScene } from "./model-viewer-scene";
-import {
-  ModelViewerDefaultToolbar,
-  ModelViewerAnimationBar,
-  ModelViewerInspector,
-  ModelViewerStatus,
-  ModelViewerFullscreen,
-  ModelViewerOverlay,
-} from "./model-viewer-parts";
+import type { ModelViewerProps } from "./model-viewer-types";
 
 // Keep existing direct type imports working.
 export type {
-  ModelViewerProps,
   ModelInspectorPosition,
-  ViewerMode,
-  ViewerLighting,
-  ViewerShading,
-  ViewerViewCube,
+  ModelViewerProps,
+  ViewerCameraOptions,
   ViewerCameraPreset,
   ViewerCameraState,
-  ViewerCameraOptions,
+  ViewerLighting,
+  ViewerMode,
   ViewerProgress,
+  ViewerShading,
+  ViewerViewCube,
 } from "./model-viewer-types";
 
 /** Drop-in preset built entirely from the exported compound parts. */

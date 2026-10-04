@@ -402,6 +402,18 @@ bun add @react-three/fiber @react-three/drei three three-stdlib lucide-react
 bun add -d @types/three
 ```
 
+## Development checks
+
+Install dependencies with `bun install --frozen-lockfile`, then install the browser and its system dependencies with `bunx playwright install --with-deps chromium`.
+
+Run `bun run check:ci` for the same checks used by CI: registry freshness, typechecking, Biome, production build, package tests, installation into an independent consumer, viewer tests, Storybook tests, and the Storybook build. The browser suites start and stop their own servers. Set `VIEWER_TEST_URL` or `STORYBOOK_TEST_URL` to test an existing server instead; `VIEWER_TEST_CDP` optionally connects to an existing Chromium instance.
+
+For a faster development loop, use `bun run test:unit` (no browser or server required), `bun run test:viewer`, or `bun run verify`. Typechecking includes the app, test suites, and build/test configuration. Tests live in `tests/unit/` for pure logic and `tests/viewer/` for browser behavior grouped by feature. Shared browser setup lives in `tests/fixtures/browser.ts`.
+
+Biome owns formatting, import organization, React hook checks, and promise linting. Run `bun run format` to format files or `bunx biome check --write .` to apply safe lint fixes. Promise rules use Biome's type inference and complement the strict TypeScript check. Effect dependencies may deliberately trigger scene resets or redraws without being read by the callback. Non-null assertions and CSS cascade choices remain permitted; the Three.js scene has a scoped DOM-accessibility exception because its JSX renders WebGL objects.
+
+After changing viewer sources, run `bun run registry:build` and commit the generated `public/r/` files. `bun run registry:check` rebuilds and fails if the previous artifacts were stale, so run it before packaging. The runtime composes preference, model-session, and browser-interaction hooks; keep load-derived resets in `use-viewer-session.ts` and cover lifecycle transitions in `tests/unit/lifecycle.spec.ts`.
+
 ## 📝 Implementation notes
 
 - The demo intentionally accepts GLB only because standalone `.gltf` files can reference sidecar buffers and textures. The component itself can load any URL supported by `GLTFLoader`.

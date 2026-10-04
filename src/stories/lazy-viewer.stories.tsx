@@ -1,5 +1,5 @@
-import { useState } from "react";
 import type { Meta, StoryObj } from "@storybook/react-vite";
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { ModelViewer } from "@/components/ui/model-viewer/lazy";
 
@@ -16,10 +16,12 @@ const meta = {
   },
   render: function Example(args) {
     const [open, setOpen] = useState(false);
-    return <div className="space-y-4">
-      <Button onClick={() => setOpen(!open)}>{open ? "Close viewer" : "Open viewer"}</Button>
-      {open && <ModelViewer {...args} />}
-    </div>;
+    return (
+      <div className="space-y-4">
+        <Button onClick={() => setOpen(!open)}>{open ? "Close viewer" : "Open viewer"}</Button>
+        {open && <ModelViewer {...args} />}
+      </div>
+    );
   },
 } satisfies Meta<typeof ModelViewer>;
 

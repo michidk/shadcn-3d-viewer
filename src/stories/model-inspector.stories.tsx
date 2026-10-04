@@ -1,10 +1,7 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { useArgs } from "storybook/preview-api";
 import { fn } from "storybook/test";
-import {
-  ModelInspector,
-  type ModelInspectorProps,
-} from "@/components/ui/model-viewer";
+import { ModelInspector, type ModelInspectorProps } from "@/components/ui/model-viewer";
 
 const meta = {
   title: "Inspector/Model Inspector",

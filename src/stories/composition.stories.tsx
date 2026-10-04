@@ -1,28 +1,24 @@
+import { GizmoHelper, GizmoViewcube } from "@react-three/drei";
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { Grid2X2, ScanSearch } from "lucide-react";
-import { GizmoHelper, GizmoViewcube } from "@react-three/drei";
+import { Button } from "@/components/ui/button";
 import {
   ModelViewer,
+  ModelViewerAnimationBar,
+  ModelViewerDefaultToolbar,
+  ModelViewerFullscreen,
+  ModelViewerInspector,
   ModelViewerRoot,
   ModelViewerScene,
-  ModelViewerDefaultToolbar,
-  ModelViewerAnimationBar,
-  ModelViewerInspector,
   ModelViewerStatus,
-  ModelViewerFullscreen,
-  useModelViewer,
-  useModelViewerCamera,
   ModelViewerToolbar,
   ModelViewerToolbarButton,
   ModelViewerToolbarGroup,
+  useModelViewer,
+  useModelViewerCamera,
   type ViewerUiComponents,
 } from "@/components/ui/model-viewer";
-import { Button } from "@/components/ui/button";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 
 function CompactToolbar() {
   const { showGrid, setShowGrid, projection, setProjection } = useModelViewer();
@@ -40,9 +36,7 @@ function CompactToolbar() {
           label="Orthographic view"
           active={projection === "orthographic"}
           onClick={() =>
-            setProjection(
-              projection === "orthographic" ? "perspective" : "orthographic",
-            )
+            setProjection(projection === "orthographic" ? "perspective" : "orthographic")
           }
         >
           <ScanSearch />
@@ -100,14 +94,21 @@ function CustomCameraButton() {
   const camera = useModelViewerCamera();
   return (
     <div className="absolute bottom-4 left-4 z-10 rounded-md border bg-background p-2 text-xs shadow-sm">
-      <Button type="button" size="sm" disabled={!camera} onClick={() => {
-        if (!camera) return;
-        const [x, y, z] = camera.target;
-        viewer.setCameraView({ position: [x + 3, y + 2, z + 4], target: camera.target });
-      }}>
+      <Button
+        type="button"
+        size="sm"
+        disabled={!camera}
+        onClick={() => {
+          if (!camera) return;
+          const [x, y, z] = camera.target;
+          viewer.setCameraView({ position: [x + 3, y + 2, z + 4], target: camera.target });
+        }}
+      >
         Custom angle
       </Button>
-      <span className="ml-2">{camera ? `Camera x: ${camera.position[0].toFixed(1)}` : "Camera unavailable"}</span>
+      <span className="ml-2">
+        {camera ? `Camera x: ${camera.position[0].toFixed(1)}` : "Camera unavailable"}
+      </span>
     </div>
   );
 }
@@ -130,10 +131,12 @@ export const CustomSceneViewCube: Story = {
 
 function RetryNotice() {
   const { retry } = useModelViewer();
-  return <div role="alert" className="space-y-3 text-center text-sm">
-    <p>The preview could not be loaded.</p>
-    <Button onClick={retry}>Try again</Button>
-  </div>;
+  return (
+    <div role="alert" className="space-y-3 text-center text-sm">
+      <p>The preview could not be loaded.</p>
+      <Button onClick={retry}>Try again</Button>
+    </div>
+  );
 }
 
 export const CustomRecovery: Story = {
@@ -142,11 +145,7 @@ export const CustomRecovery: Story = {
 
 export const CompoundViewer: Story = {
   render: ({ height }) => (
-    <ModelViewerRoot
-      height={height}
-      src="/models/robot-expressive.glb"
-      defaultAnimation="Walking"
-    >
+    <ModelViewerRoot height={height} src="/models/robot-expressive.glb" defaultAnimation="Walking">
       <ModelViewerScene />
       <ModelViewerDefaultToolbar />
       <ModelViewerAnimationBar />
@@ -167,7 +166,7 @@ function RenderToolbar() {
           size="default"
           active={viewer.showGrid}
           onClick={() => viewer.setShowGrid(!viewer.showGrid)}
-          render={<button data-custom-render="grid" className="rounded-full" />}
+          render={<button type="button" data-custom-render="grid" className="rounded-full" />}
         >
           <Grid2X2 /> Grid
         </ModelViewerToolbarButton>

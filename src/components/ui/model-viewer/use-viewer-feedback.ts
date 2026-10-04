@@ -8,19 +8,22 @@ export type ReportFeedback = (message: string, error?: boolean) => void;
 export function useViewerFeedback() {
   const [feedback, setFeedback] = useState<ViewerFeedback | null>(null);
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const clearTimer = () => {
+  const clearTimer = useCallback(() => {
     if (timer.current) clearTimeout(timer.current);
     timer.current = null;
-  };
-  useEffect(() => clearTimer, []);
-  const report = useCallback<ReportFeedback>((message, error = false) => {
-    setFeedback({ message, error });
-    clearTimer();
-    timer.current = setTimeout(() => setFeedback(null), 4500);
   }, []);
+  useEffect(() => clearTimer, [clearTimer]);
+  const report = useCallback<ReportFeedback>(
+    (message, error = false) => {
+      setFeedback({ message, error });
+      clearTimer();
+      timer.current = setTimeout(() => setFeedback(null), 4500);
+    },
+    [clearTimer],
+  );
   const clearFeedback = useCallback(() => {
     clearTimer();
     setFeedback(null);
-  }, []);
+  }, [clearTimer]);
   return { feedback, report, clearFeedback };
 }

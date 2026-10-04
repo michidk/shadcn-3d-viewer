@@ -26,12 +26,8 @@ jobs:
           node-version: 24
       - name: Install dependencies
         run: bun install --frozen-lockfile
-      - name: Verify and package sources
-        run: npm pack --dry-run
-      - name: Install packed CLI into a clean consumer app
-        run: bun run test:install
-      - name: Check generated registry is current
-        run: git diff --exit-code -- public/r
+      - name: Verify package, generated registry and clean consumer installation
+        run: bun run check:package
 
   browser:
     runs-on: ubuntu-latest
@@ -54,13 +50,10 @@ jobs:
         run: bunx playwright install --with-deps chromium
       - name: Test viewer
         if: matrix.suite == 'viewer'
-        run: bun run test
+        run: bun run check:viewer
       - name: Test Storybook
         if: matrix.suite == 'storybook'
-        run: bun run storybook:test
-      - name: Build Storybook
-        if: matrix.suite == 'storybook'
-        run: bun run storybook:build
+        run: bun run check:storybook
       - name: Upload failure diagnostics
         if: failure()
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1

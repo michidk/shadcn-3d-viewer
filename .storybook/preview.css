@@ -1,2 +1,4 @@
 /* Let embedded stories fit narrow iframes without a horizontal page scrollbar. */
-body { min-width: 0; }
+body {
+  min-width: 0;
+}

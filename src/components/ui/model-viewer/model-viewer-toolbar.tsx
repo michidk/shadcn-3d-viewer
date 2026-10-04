@@ -1,14 +1,6 @@
 "use client";
 
 import {
-  useImperativeHandle,
-  useLayoutEffect,
-  useRef,
-  useState,
-  type ComponentProps,
-  type ReactNode,
-} from "react";
-import {
   Box,
   Camera,
   ChevronDown,
@@ -28,7 +20,14 @@ import {
   RotateCw,
   ScanSearch,
 } from "lucide-react";
-import { cn } from "@/lib/utils";
+import {
+  type ComponentProps,
+  type ReactNode,
+  useImperativeHandle,
+  useLayoutEffect,
+  useRef,
+  useState,
+} from "react";
 import {
   DropdownMenu,
   DropdownMenuItem,
@@ -36,15 +35,11 @@ import {
   DropdownMenuRadioItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { cn } from "@/lib/utils";
+import type { ViewerLighting, ViewerMode, ViewerShading, ViewerViewCube } from "./model-viewer";
+import { useOptionalViewerRuntime } from "./model-viewer-context";
 import { DropdownMenuContent } from "./viewer-popups";
 import { ViewerControlButton as Button } from "./viewer-ui";
-import { useOptionalViewerRuntime } from "./model-viewer-context";
-import type {
-  ViewerMode,
-  ViewerLighting,
-  ViewerShading,
-  ViewerViewCube,
-} from "./model-viewer";
 import "./model-viewer.css";
 
 const shadingLabels: Record<ViewerShading, string> = {
@@ -73,10 +68,7 @@ export function ModelViewerToolbar({
       const root = viewerRef.current;
       if (!root) return;
       const rect = element.getBoundingClientRect();
-      reportToolbar(
-        element,
-        Math.ceil(rect.bottom - root.getBoundingClientRect().top + 12),
-      );
+      reportToolbar(element, Math.ceil(rect.bottom - root.getBoundingClientRect().top + 12));
     };
     const observer = new ResizeObserver(measure);
     observer.observe(element);
@@ -102,23 +94,13 @@ export function ModelViewerToolbar({
       {...props}
       onKeyDown={(event) => {
         onKeyDown?.(event);
-        if (
-          event.defaultPrevented ||
-          event.altKey ||
-          event.ctrlKey ||
-          event.metaKey
-        )
-          return;
-        if (!["ArrowLeft", "ArrowRight", "Home", "End"].includes(event.key))
-          return;
+        if (event.defaultPrevented || event.altKey || event.ctrlKey || event.metaKey) return;
+        if (!["ArrowLeft", "ArrowRight", "Home", "End"].includes(event.key)) return;
         // Ignore events from portaled menus and editable controls.
         const target = event.target as HTMLElement;
-        if (!event.currentTarget.contains(target) || !target.closest("button"))
-          return;
+        if (!event.currentTarget.contains(target) || !target.closest("button")) return;
         const buttons = [
-          ...event.currentTarget.querySelectorAll<HTMLButtonElement>(
-            "button:not(:disabled)",
-          ),
+          ...event.currentTarget.querySelectorAll<HTMLButtonElement>("button:not(:disabled)"),
         ];
         const current = buttons.indexOf(target.closest("button")!);
         if (current < 0 || buttons.length === 0) return;
@@ -127,10 +109,7 @@ export function ModelViewerToolbar({
             ? 0
             : event.key === "End"
               ? buttons.length - 1
-              : (current +
-                  (event.key === "ArrowRight" ? 1 : -1) +
-                  buttons.length) %
-                buttons.length;
+              : (current + (event.key === "ArrowRight" ? 1 : -1) + buttons.length) % buttons.length;
         event.preventDefault();
         buttons[next].focus();
       }}
@@ -138,11 +117,9 @@ export function ModelViewerToolbar({
   );
 }
 
-export function ModelViewerToolbarGroup({
-  className,
-  ...props
-}: ComponentProps<"div">) {
+export function ModelViewerToolbarGroup({ className, ...props }: ComponentProps<"div">) {
   return (
+    // biome-ignore lint/a11y/useSemanticElements: This groups toolbar commands, not form inputs.
     <div
       data-slot="model-viewer-toolbar-group"
       role="group"
@@ -184,10 +161,7 @@ export function ModelViewerToolbarButton({
   );
 }
 
-export type ModelViewerControlsProps = Omit<
-  ComponentProps<"div">,
-  "onReset"
-> & {
+export type ModelViewerControlsProps = Omit<ComponentProps<"div">, "onReset"> & {
   mode: ViewerMode;
   onModeChange: (mode: ViewerMode) => void;
   shading: ViewerShading;
@@ -255,27 +229,17 @@ export function ModelViewerControls({
               </Button>
             }
           />
-          <DropdownMenuContent
-            align="start"
-            sideOffset={6}
-            className="min-w-40"
-          >
+          <DropdownMenuContent align="start" sideOffset={6} className="min-w-40">
             <DropdownMenuRadioGroup
               aria-label="Shading"
               value={shading}
               onValueChange={onShadingChange}
             >
-              {(["realistic", "solid", "normals", "wireframe"] as const).map(
-                (option) => (
-                  <DropdownMenuRadioItem
-                    key={option}
-                    value={option}
-                    closeOnClick
-                  >
-                    {shadingLabels[option]}
-                  </DropdownMenuRadioItem>
-                ),
-              )}
+              {(["realistic", "solid", "normals", "wireframe"] as const).map((option) => (
+                <DropdownMenuRadioItem key={option} value={option} closeOnClick>
+                  {shadingLabels[option]}
+                </DropdownMenuRadioItem>
+              ))}
             </DropdownMenuRadioGroup>
           </DropdownMenuContent>
         </DropdownMenu>
@@ -313,16 +277,30 @@ export function ModelViewerControls({
         <DropdownMenu modal={false}>
           <DropdownMenuTrigger
             render={
-              <Button type="button" size="icon-sm" variant="ghost" aria-label={`Lighting: ${lighting}`} tooltip="Lighting">
+              <Button
+                type="button"
+                size="icon-sm"
+                variant="ghost"
+                aria-label={`Lighting: ${lighting}`}
+                tooltip="Lighting"
+              >
                 <CloudSun />
               </Button>
             }
           />
           <DropdownMenuContent className="min-w-40">
-            <DropdownMenuRadioGroup aria-label="Lighting" value={lighting} onValueChange={onLightingChange}>
+            <DropdownMenuRadioGroup
+              aria-label="Lighting"
+              value={lighting}
+              onValueChange={onLightingChange}
+            >
               {(["day", "night", "outside"] as const).map((value) => (
                 <DropdownMenuRadioItem key={value} value={value} closeOnClick>
-                  {value === "outside" ? "Outside sky" : value === "day" ? "Day studio" : "Night studio"}
+                  {value === "outside"
+                    ? "Outside sky"
+                    : value === "day"
+                      ? "Day studio"
+                      : "Night studio"}
                 </DropdownMenuRadioItem>
               ))}
             </DropdownMenuRadioGroup>
@@ -347,20 +325,13 @@ export function ModelViewerControls({
           label="Orthographic view"
           active={projection === "orthographic"}
           onClick={() =>
-            onProjectionChange(
-              projection === "orthographic" ? "perspective" : "orthographic",
-            )
+            onProjectionChange(projection === "orthographic" ? "perspective" : "orthographic")
           }
         />
         <DropdownMenu modal={false}>
           <DropdownMenuTrigger
             render={
-              <Button
-                type="button"
-                size="icon-sm"
-                variant="ghost"
-                aria-label="View cube options"
-              >
+              <Button type="button" size="icon-sm" variant="ghost" aria-label="View cube options">
                 <Box />
               </Button>
             }
@@ -372,16 +343,8 @@ export function ModelViewerControls({
               onValueChange={onViewCubeChange}
             >
               {([false, "drei", "asset-studio"] as const).map((value) => (
-                <DropdownMenuRadioItem
-                  key={String(value)}
-                  value={value}
-                  closeOnClick
-                >
-                  {value === false
-                    ? "Off"
-                    : value === "drei"
-                      ? "Drei cube"
-                      : "Asset Studio"}
+                <DropdownMenuRadioItem key={String(value)} value={value} closeOnClick>
+                  {value === false ? "Off" : value === "drei" ? "Drei cube" : "Asset Studio"}
                 </DropdownMenuRadioItem>
               ))}
             </DropdownMenuRadioGroup>
@@ -393,11 +356,7 @@ export function ModelViewerControls({
           active={inspectorOpen}
           onClick={() => onInspectorChange(!inspectorOpen)}
         />
-        <ModelViewerToolbarButton
-          icon={<RotateCcw />}
-          label="Reset view"
-          onClick={onReset}
-        />
+        <ModelViewerToolbarButton icon={<RotateCcw />} label="Reset view" onClick={onReset} />
         <DropdownMenu modal={false} open={captureMenuOpen} onOpenChange={setCaptureMenuOpen}>
           <DropdownMenuTrigger
             render={
@@ -460,10 +419,7 @@ export function ModelViewerAnimationControls({
       placement="animation"
       data-slot="model-viewer-animation-controls"
       aria-label="Animation controls"
-      className={cn(
-        "rounded-lg border bg-popover p-1 text-popover-foreground",
-        className,
-      )}
+      className={cn("rounded-lg border bg-popover p-1 text-popover-foreground", className)}
       {...props}
     >
       <ModelViewerToolbarButton
@@ -475,12 +431,7 @@ export function ModelViewerAnimationControls({
       <DropdownMenu modal={false}>
         <DropdownMenuTrigger
           render={
-            <Button
-              type="button"
-              size="sm"
-              variant="ghost"
-              className="viewer-animation-name"
-            >
+            <Button type="button" size="sm" variant="ghost" className="viewer-animation-name">
               <span className="truncate">{animation ?? "No animation"}</span>
               <ChevronDown />
             </Button>
@@ -513,9 +464,7 @@ export function ModelViewerAnimationControls({
         title={`Animation speed ${speed}×`}
         onClick={() =>
           onSpeedChange(
-            animationSpeeds[
-              (animationSpeeds.indexOf(speed) + 1) % animationSpeeds.length
-            ] ?? 1,
+            animationSpeeds[(animationSpeeds.indexOf(speed) + 1) % animationSpeeds.length] ?? 1,
           )
         }
       >

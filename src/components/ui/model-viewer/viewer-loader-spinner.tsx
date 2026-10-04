@@ -12,11 +12,5 @@ export function ViewerLoaderSpinner() {
     if (animation) animation.startTime = 0;
   }, []);
 
-  return (
-    <LoaderCircle
-      ref={spinner}
-      className="viewer-loader-spinner"
-      aria-hidden="true"
-    />
-  );
+  return <LoaderCircle ref={spinner} className="viewer-loader-spinner" aria-hidden="true" />;
 }

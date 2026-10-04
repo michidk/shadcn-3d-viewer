@@ -3,53 +3,53 @@
 import {
   Center,
   Environment,
-  OrthographicCamera,
   Grid,
   Lightformer,
+  OrthographicCamera,
   PerformanceMonitor,
   PerspectiveCamera,
   PointerLockControls,
   Preload,
 } from "@react-three/drei";
 import { Canvas, useThree } from "@react-three/fiber";
+import { FileWarning } from "lucide-react";
 import {
   Component,
+  type ComponentProps,
+  type ReactNode,
   Suspense,
   useCallback,
   useEffect,
   useRef,
   useState,
-  type ComponentProps,
-  type ReactNode,
 } from "react";
 import type { Group, Object3D } from "three";
 import type { GLTFLoader } from "three-stdlib";
-import { FileWarning } from "lucide-react";
-import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { cn } from "@/lib/utils";
 import { frameBounds, type ModelInspection } from "./model-inspection";
-import { viewerBackgroundColor } from "./model-viewer-colors";
 import type { ViewerCameraStore } from "./model-viewer-camera";
-import { OutsideSky } from "./outside-sky";
-import { ViewerControlButton } from "./viewer-ui";
-import { ModelViewerOrientationControls } from "./model-viewer-orientation";
-import { ViewCube, type ViewCubePosition } from "./view-cube";
+import { viewerBackgroundColor } from "./model-viewer-colors";
 import { useViewerRuntime } from "./model-viewer-context";
+import { ModelViewerOrientationControls } from "./model-viewer-orientation";
 import {
-  splitPanes,
-  type ViewFace,
   type ModelViewerProps,
-  type ViewerMode,
-  type ViewerLighting,
-  type ViewerShading,
-  type ViewerViewCube,
+  splitPanes,
   type ViewerCameraPreset,
   type ViewerCameraState,
+  type ViewerLighting,
+  type ViewerMode,
+  type ViewerShading,
+  type ViewerViewCube,
+  type ViewFace,
 } from "./model-viewer-types";
-import { ScissorView, RedrawAfterResize } from "./scene-renderer";
+import { OutsideSky } from "./outside-sky";
+import { CameraRig, DragLook, FirstPersonMovement, FitStaticCamera } from "./scene-camera";
 import { SceneObject } from "./scene-model";
-import { CameraRig, FitStaticCamera, DragLook, FirstPersonMovement } from "./scene-camera";
+import { RedrawAfterResize, ScissorView } from "./scene-renderer";
+import { ViewCube, type ViewCubePosition } from "./view-cube";
 import { ViewerLoader } from "./viewer-loader";
+import { ViewerControlButton } from "./viewer-ui";
 import "./model-viewer.css";
 
 class ViewerErrorBoundary extends Component<
@@ -173,11 +173,7 @@ export function ModelViewerScene({
   }, [setSceneMounted, canvasRef]);
   const panes = mode === "split" ? splitPanes : [{}];
   return (
-    <div
-      data-slot="model-viewer-scene"
-      className={cn("viewer-stage", className)}
-      {...props}
-    >
+    <div data-slot="model-viewer-scene" className={cn("viewer-stage", className)} {...props}>
       {poster && !loaded && (
         <img className="viewer-poster" src={poster} alt="" aria-hidden="true" />
       )}
@@ -194,17 +190,11 @@ export function ModelViewerScene({
               <div
                 className={cn(
                   "viewer-scene",
-                  index === 0
-                    ? "viewer-scene-primary"
-                    : "viewer-scene-secondary",
+                  index === 0 ? "viewer-scene-primary" : "viewer-scene-secondary",
                 )}
                 key={`${mode}-${pane.face ?? "primary"}`}
               >
-                <div
-                  ref={paneTracks[index]}
-                  className="viewer-view"
-                  data-viewer-pane={paneKey}
-                />
+                <div ref={paneTracks[index]} className="viewer-view" data-viewer-pane={paneKey} />
                 {showUi && mode === "split" && (
                   <span className="viewer-pane-label">{pane.label}</span>
                 )}
@@ -217,13 +207,7 @@ export function ModelViewerScene({
           className="viewer-canvas"
           shadows={floor}
           dpr={quality}
-          frameloop={
-            renderingPaused
-              ? "never"
-              : effectiveAutoRotate
-                ? "always"
-                : "demand"
-          }
+          frameloop={renderingPaused ? "never" : effectiveAutoRotate ? "always" : "demand"}
           gl={{
             antialias: true,
             alpha: true,
@@ -267,9 +251,7 @@ export function ModelViewerScene({
                   resetToken={resetToken}
                   autoRotate={index === 0 && effectiveAutoRotate}
                   autoRotateSpeed={autoRotateSpeed}
-                  showOrientation={
-                    index === 0 && showOrientation && mode !== "split"
-                  }
+                  showOrientation={index === 0 && showOrientation && mode !== "split"}
                   viewCube={viewCube}
                   viewCubePosition={viewCubePosition}
                   viewCubeMargin={viewCubeMargin}
@@ -404,39 +386,23 @@ function ViewerScene({
   const paneWidth = useThree((state) => state.size.width);
   const cubeMargin: [number, number] = viewCubeMargin ?? [
     64,
-    toolbarVisible && paneWidth <= 680 && viewCubePosition.startsWith("top-")
-      ? 148
-      : 64,
+    toolbarVisible && paneWidth <= 680 && viewCubePosition.startsWith("top-") ? 148 : 64,
   ];
   const [fitVersion, setFitVersion] = useState(0);
   const [gridScale, setGridScale] = useState(1);
-  const handleCentered = useCallback(
-    ({ container }: { container: Object3D }) => {
-      // Include the animation envelope, and keep grid density relative to the asset.
-      setGridScale(frameBounds(container, 1).radius / 2);
-      setFitVersion((value) => value + 1);
-    },
-    [],
-  );
+  const handleCentered = useCallback(({ container }: { container: Object3D }) => {
+    // Include the animation envelope, and keep grid density relative to the asset.
+    setGridScale(frameBounds(container, 1).radius / 2);
+    setFitVersion((value) => value + 1);
+  }, []);
   const background = viewerBackgroundColor(lighting);
 
   return (
     <>
       {projection === "orthographic" ? (
-        <OrthographicCamera
-          makeDefault
-          position={[3, 3, 3]}
-          near={0.001}
-          far={1000}
-        />
+        <OrthographicCamera makeDefault position={[3, 3, 3]} near={0.001} far={1000} />
       ) : (
-        <PerspectiveCamera
-          makeDefault
-          position={[3, 3, 3]}
-          fov={42}
-          near={0.01}
-          far={1000}
-        />
+        <PerspectiveCamera makeDefault position={[3, 3, 3]} fov={42} near={0.01} far={1000} />
       )}
       <color attach="background" args={[background]} />
       {lighting === "outside" && <OutsideSky />}
@@ -460,24 +426,36 @@ function ViewerScene({
         intensity={lighting === "night" ? 1.4 : 0.45}
         color={lighting === "night" ? "#688db3" : "#dcebdc"}
       />
-      {environment && (
-        lighting === "outside" ? (
+      {environment &&
+        (lighting === "outside" ? (
           <Environment resolution={128} frames={1} background={false} environmentIntensity={0.8}>
             <OutsideSky />
           </Environment>
         ) : (
           <StudioEnvironment key={lighting} lighting={lighting} />
-        )
-      )}
+        ))}
       {floor && (
         <>
-          <mesh name="Viewer floor" rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.002 * gridScale, 0]}>
+          <mesh
+            name="Viewer floor"
+            rotation={[-Math.PI / 2, 0, 0]}
+            position={[0, -0.002 * gridScale, 0]}
+          >
             <planeGeometry args={[2000 * gridScale, 2000 * gridScale]} />
             <meshBasicMaterial color={floorColor ?? background} toneMapped={false} />
           </mesh>
-          <mesh name="Viewer floor shadows" rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.001 * gridScale, 0]} receiveShadow>
+          <mesh
+            name="Viewer floor shadows"
+            rotation={[-Math.PI / 2, 0, 0]}
+            position={[0, -0.001 * gridScale, 0]}
+            receiveShadow
+          >
             <planeGeometry args={[2000 * gridScale, 2000 * gridScale]} />
-            <shadowMaterial transparent opacity={lighting === "night" ? 0.5 : 0.28} depthWrite={false} />
+            <shadowMaterial
+              transparent
+              opacity={lighting === "night" ? 0.5 : 0.28}
+              depthWrite={false}
+            />
           </mesh>
         </>
       )}
@@ -536,10 +514,7 @@ function ViewerScene({
           ) : (
             <DragLook selector={paneSelector} />
           )}
-          <FirstPersonMovement
-            requirePointerLock={pointerLockAvailable}
-            selector={paneSelector}
-          />
+          <FirstPersonMovement requirePointerLock={pointerLockAvailable} selector={paneSelector} />
         </>
       ) : (
         <>

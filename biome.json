@@ -1,0 +1,54 @@
+{
+  "$schema": "https://biomejs.dev/schemas/2.5.15/schema.json",
+  "vcs": { "enabled": true, "clientKind": "git", "useIgnoreFile": true },
+  "files": {
+    "includes": [
+      "src/**",
+      "tests/**",
+      "bin/**",
+      "scripts/**",
+      ".storybook/**",
+      "*.json",
+      "*.ts",
+      "!bun.lock",
+      "!public/r"
+    ]
+  },
+  "formatter": { "indentStyle": "space", "indentWidth": 2, "lineWidth": 100 },
+  "css": { "parser": { "tailwindDirectives": true } },
+  "linter": {
+    "rules": {
+      "preset": "recommended",
+      "correctness": {
+        "useExhaustiveDependencies": {
+          "level": "error",
+          "options": { "reportUnnecessaryDependencies": false }
+        },
+        "useHookAtTopLevel": "error"
+      },
+      "style": {
+        "noNonNullAssertion": "off",
+        "noDescendingSpecificity": "off",
+        "useComponentExportOnlyModules": {
+          "level": "error",
+          "options": { "allowConstantExport": true, "allowExportNames": ["buttonVariants"] }
+        }
+      },
+      "complexity": { "noImportantStyles": "off" },
+      "suspicious": {
+        "useIterableCallbackReturn": { "level": "error", "options": { "checkForEach": false } }
+      },
+      "nursery": { "noFloatingPromises": "error", "noMisusedPromises": "error" }
+    }
+  },
+  "overrides": [
+    {
+      "includes": ["src/stories/**", "tests/fixtures/consumer/**"],
+      "linter": { "rules": { "style": { "useComponentExportOnlyModules": "off" } } }
+    },
+    {
+      "includes": ["src/components/ui/model-viewer/scene-model.tsx"],
+      "linter": { "rules": { "a11y": { "noStaticElementInteractions": "off" } } }
+    }
+  ]
+}

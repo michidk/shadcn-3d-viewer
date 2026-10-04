@@ -7,7 +7,9 @@ import { test } from "node:test";
 import { fileURLToPath } from "node:url";
 
 const packageJson = JSON.parse(readFileSync(new URL("../package.json", import.meta.url), "utf8"));
-const registry = JSON.parse(readFileSync(new URL("../public/r/model-viewer.json", import.meta.url), "utf8"));
+const registry = JSON.parse(
+  readFileSync(new URL("../public/r/model-viewer.json", import.meta.url), "utf8"),
+);
 const cli = fileURLToPath(new URL("../bin/shadcn-3d-viewer.mjs", import.meta.url));
 
 test("npm package installs a complete source-owned registry item", () => {
@@ -23,8 +25,14 @@ test("npm package installs a complete source-owned registry item", () => {
 });
 
 test("CLI reports its version and rejects unknown commands", () => {
-  assert.equal(execFileSync(process.execPath, [cli, "--version"], { encoding: "utf8" }).trim(), packageJson.version);
-  assert.match(execFileSync(process.execPath, [cli, "--help"], { encoding: "utf8" }), /npx shadcn-3d-viewer@latest add/);
+  assert.equal(
+    execFileSync(process.execPath, [cli, "--version"], { encoding: "utf8" }).trim(),
+    packageJson.version,
+  );
+  assert.match(
+    execFileSync(process.execPath, [cli, "--help"], { encoding: "utf8" }),
+    /npx shadcn-3d-viewer@latest add/,
+  );
   const invalid = spawnSync(process.execPath, [cli, "publish"], { encoding: "utf8" });
   assert.equal(invalid.status, 2);
   assert.match(invalid.stderr, /Unknown command/);

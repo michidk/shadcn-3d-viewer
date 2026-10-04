@@ -2,21 +2,21 @@
 
 import { Outlines, useGLTF } from "@react-three/drei";
 import { createPortal, useFrame, useThree } from "@react-three/fiber";
-import { retainModelResources } from "./model-resources";
 import { useEffect, useMemo, useRef } from "react";
 import {
   AnimationMixer,
+  type Group,
   LoopOnce,
   LoopRepeat,
-  MeshStandardMaterial,
+  type Mesh,
   MeshBasicMaterial,
   MeshNormalMaterial,
-  type Mesh,
-  type Group,
+  MeshStandardMaterial,
 } from "three";
-import type { GLTFLoader } from "three-stdlib";
 import { clone } from "three/addons/utils/SkeletonUtils.js";
-import { inspectModel, prepareAnimationBounds, type ModelInspection } from "./model-inspection";
+import type { GLTFLoader } from "three-stdlib";
+import { inspectModel, type ModelInspection, prepareAnimationBounds } from "./model-inspection";
+import { retainModelResources } from "./model-resources";
 import type { ViewerShading } from "./model-viewer-types";
 
 export function SceneObject({
@@ -92,17 +92,9 @@ export function SceneObject({
       )}
       {cubes && (
         <>
-          <mesh
-            name="Cube"
-            castShadow
-            position={[-1.25, 0.45, 0]}
-            rotation={[0, 0.25, 0.08]}
-          >
+          <mesh name="Cube" castShadow position={[-1.25, 0.45, 0]} rotation={[0, 0.25, 0.08]}>
             <boxGeometry args={[0.9, 0.9, 0.9]} />
-            <ViewerMaterial
-              shading={shading}
-              color="#b3c899"
-            />
+            <ViewerMaterial shading={shading} color="#b3c899" />
             {selectedMesh === "0/0" && <SelectionOutline />}
           </mesh>
           <mesh
@@ -112,18 +104,12 @@ export function SceneObject({
             rotation={[0, -0.35, 0]}
           >
             <dodecahedronGeometry args={[0.55, 0]} />
-            <ViewerMaterial
-              shading={shading}
-              color="#d19a78"
-            />
+            <ViewerMaterial shading={shading} color="#d19a78" />
             {selectedMesh === "0/1" && <SelectionOutline />}
           </mesh>
           <mesh name="Sphere" castShadow position={[0.15, 0.42, 1]}>
             <sphereGeometry args={[0.42, 48, 48]} />
-            <ViewerMaterial
-              shading={shading}
-              color="#7fa7a7"
-            />
+            <ViewerMaterial shading={shading} color="#7fa7a7" />
             {selectedMesh === "0/2" && <SelectionOutline />}
           </mesh>
         </>
@@ -188,20 +174,27 @@ function LoadedModel({
     const mixer = new AnimationMixer(model);
     return {
       mixer,
-      names: gltf.animations.map(clip => clip.name),
-      actions: Object.fromEntries(gltf.animations.map(clip => [clip.name, mixer.clipAction(clip)])),
+      names: gltf.animations.map((clip) => clip.name),
+      actions: Object.fromEntries(
+        gltf.animations.map((clip) => [clip.name, mixer.clipAction(clip)]),
+      ),
     };
   }, [gltf.animations, model]);
-  useEffect(() => () => {
-    mixer.stopAllAction();
-  }, [mixer]);
+  useEffect(
+    () => () => {
+      mixer.stopAllAction();
+    },
+    [mixer],
+  );
   const activeAction = animation ? actions[animation] : undefined;
   const advancing = useRef(false);
   useFrame((_, delta) => {
     // The first demand frame may include seconds spent idle. Do not apply that
     // elapsed time to a newly resumed or restarted action.
     mixer.update(advancing.current ? delta : 0);
-    advancing.current = Boolean(activeAction?.isRunning() && activeAction.getEffectiveTimeScale() !== 0);
+    advancing.current = Boolean(
+      activeAction?.isRunning() && activeAction.getEffectiveTimeScale() !== 0,
+    );
     if (advancing.current) invalidate();
   });
   const playback = useRef({ animationPlaying, animationSpeed });
@@ -213,7 +206,8 @@ function LoadedModel({
       if (!mesh.isMesh) return;
       if (shading === "realistic") return;
       const original = mesh.material;
-      const material = shading === "normals"
+      const material =
+        shading === "normals"
           ? new MeshNormalMaterial()
           : shading === "wireframe"
             ? new MeshBasicMaterial({ color: "#34483f", wireframe: true })
@@ -236,10 +230,7 @@ function LoadedModel({
     if (!activeAction) return;
     activeAction.reset();
     activeAction.clampWhenFinished = !loopAnimation;
-    activeAction.setLoop(
-      loopAnimation ? LoopRepeat : LoopOnce,
-      loopAnimation ? Infinity : 1,
-    );
+    activeAction.setLoop(loopAnimation ? LoopRepeat : LoopOnce, loopAnimation ? Infinity : 1);
     activeAction.play();
     advancing.current = false;
     invalidate();
@@ -288,8 +279,7 @@ function ViewerMaterial({
   color?: string;
 }) {
   if (shading === "normals") return <meshNormalMaterial />;
-  if (shading === "wireframe")
-    return <meshBasicMaterial color="#34483f" wireframe />;
+  if (shading === "wireframe") return <meshBasicMaterial color="#34483f" wireframe />;
   return (
     <meshStandardMaterial
       color={shading === "solid" ? "#a7aaa5" : color}
@@ -301,11 +291,6 @@ function ViewerMaterial({
 
 function SelectionOutline() {
   return (
-    <Outlines
-      name="Viewer selection outline"
-      color="#f2a93b"
-      thickness={3}
-      toneMapped={false}
-    />
+    <Outlines name="Viewer selection outline" color="#f2a93b" thickness={3} toneMapped={false} />
   );
 }

@@ -323,9 +323,7 @@
     z-index: 4;
     top: max(14px, var(--viewer-toolbar-offset, 0px));
     width: min(330px, calc(100% - 28px));
-    max-height: calc(
-      100% - max(14px, var(--viewer-toolbar-offset, 0px)) - 80px
-    );
+    max-height: calc(100% - max(14px, var(--viewer-toolbar-offset, 0px)) - 80px);
     display: flex;
     flex-direction: column;
     overflow: hidden;
@@ -556,9 +554,7 @@
   }
   @container viewer (max-width: 680px) {
     .viewer-inspector {
-      max-height: calc(
-        100% - max(9px, var(--viewer-toolbar-offset, 0px)) - 64px
-      );
+      max-height: calc(100% - max(9px, var(--viewer-toolbar-offset, 0px)) - 64px);
     }
     .viewer-inspector[data-position="left"] {
       left: 9px;
