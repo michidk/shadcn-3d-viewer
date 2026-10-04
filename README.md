@@ -152,12 +152,17 @@ The lazy entry defers the renderer until mount. `loadingFallback` and `poster` c
 | `floorColor` | CSS color | current background/horizon color |
 | `showUi` | `boolean` | `true` |
 | `showOrientation` | `boolean` | follows `showUi` |
-| `viewCube` | `"drei" \| "asset-studio" \| false` | `"asset-studio"` |
+| `viewCube` | `"drei" \| "asset-studio" \| false` | controlled; use `defaultViewCube` for an initial value |
+| `defaultViewCube` | `"drei" \| "asset-studio" \| false` | `"asset-studio"` |
+| `onViewCubeChange` | `(viewCube) => void` | none |
 | `viewCubePosition` | Gizmo alignment, e.g. `"top-right"`, `"bottom-left"` | `"top-right"` |
 | `viewCubeMargin` | `[horizontal, vertical]` pixels | `[64, 64]`; toolbar clearance on narrow viewers |
 | `sceneContent` | R3F nodes | none; primary orbit scene only |
 | `projection` | `"perspective" \| "orthographic"` | `"perspective"` |
-| `showInspector` | `boolean` | `false` |
+| `inspectorOpen` | `boolean` | controlled; use `defaultInspectorOpen` for an initial value |
+| `defaultInspectorOpen` | `boolean` | `false` |
+| `onInspectorOpenChange` | `(open) => void` | none |
+| `showInspector` | `boolean` | legacy; prefer `inspectorOpen` or `defaultInspectorOpen` |
 | `onInspect` | `(inspection: ModelInspection) => void` | none |
 | `autoRotate` | `boolean` | `false` |
 | `defaultAutoRotate` | `boolean` | `false`; initial uncontrolled rotation |
@@ -324,33 +329,37 @@ function CompactToolbar() {
 <ModelViewer toolbar={<CompactToolbar />} />
 ```
 
-`render` preserves Base UI refs, handlers, and ARIA attributes. Custom components must forward them. Use `className`, `variant`, and `size` for styling.
+Custom components passed through `render` must forward the Base UI refs, handlers, and ARIA attributes they receive. Use `className`, `variant`, and `size` to style them.
 
-The hook exposes viewer state and setters, camera commands, `resetView`, `restartAnimation`, `capture`, `toggleFullscreen`, and status. Each root is independent; hooks require a root. `status` is `idle | loading | ready | error`.
+The hook exposes viewer state and setters, camera commands, `resetView`, `restartAnimation`, `capture`, `toggleFullscreen`, and `status`. Hooks must be used within a root; each root keeps independent state. Status is `idle | loading | ready | error`.
 
-Controlled actions report change callbacks; the owner must update the prop. Prefer `inspectorOpen` / `onInspectorOpenChange` or `defaultInspectorOpen`; legacy `showInspector` still works.
+#### State and layout
 
-Top toolbars reserve space automatically. Use `placement="static"` to opt out.
+Controlled props report changes through their corresponding callbacks; the owner must update the prop. For example, use `inspectorOpen` with `onInspectorOpenChange`, or use `defaultInspectorOpen` for uncontrolled state. The legacy `showInspector` prop remains supported.
 
-Custom tooltip portals must target the fullscreen element. Built-in menus and tooltips do this automatically.
+Top toolbars reserve space automatically; set `placement="static"` to opt out. Pass `toolbar={null}` to hide the main toolbar or `showUi={false}` to hide all built-in controls. Use the exported `ModelViewerControls` and `ModelViewerAnimationControls` for custom layouts. Toolbar focus supports arrow keys and Home/End.
 
-The fullscreen fallback traps focus, makes background content inert, exits with Escape, and restores focus.
+#### Fullscreen and overlays
 
-Fullscreen defaults to bottom-right, beside animation controls. Reposition parts with `className` or `style`; use `viewCubeMargin` for cube spacing.
+Fullscreen controls appear at the bottom-right beside animation controls. Reposition parts with `className` or `style`, and use `viewCubeMargin` to adjust cube spacing.
 
-`toolbar={null}` hides the main toolbar; `showUi={false}` hides built-in controls. Exported `ModelViewerControls` and `ModelViewerAnimationControls` support custom layouts. Toolbar focus uses arrows and Home/End.
+Built-in menus and tooltips automatically portal into the fullscreen element; custom tooltip portals must target it explicitly. The fullscreen fallback traps focus, makes background content inert, exits with Escape, and restores focus on exit.
 
-DOM parts forward native props, React 19 refs, `className`, and `style`. Viewer `onLoad`/`onError` are model callbacks. Use positioned `children` for DOM overlays and `sceneContent` for R3F nodes.
+DOM parts forward native props, React 19 refs, `className`, and `style`. Viewer `onLoad` and `onError` are model callbacks. Use positioned `children` for DOM overlays and `sceneContent` for R3F nodes.
 
-Style parts through stable `data-slot` attributes. The root exposes `data-state="idle|loading|ready|error"`; toggle buttons expose `data-state="on|off"`.
+#### Styling controls
 
-Styles use Tailwind’s `components` layer and shadcn tokens, so utilities can override them. Width fills the parent; default height is 620px. Explicit `height` or inline height overrides height utilities.
+Parts expose stable `data-slot` attributes. The root also exposes `data-state="idle|loading|ready|error"`, while toggle buttons expose `data-state="on|off"`.
 
-`ViewerControlButton` supports custom `tooltip` content or `false`. Controls default to `type="button"`.
+Styles use Tailwind's `components` layer and shadcn tokens, so utilities can override them. The viewer fills its parent's width and defaults to 620px tall; an explicit `height` prop or inline height overrides height utilities.
 
-Omitting `animation` selects the first clip; `null` disables selection. Playback starts paused. Reduced motion suppresses playback and rotation unless `respectReducedMotion={false}`.
+`ViewerControlButton` accepts custom `tooltip` content or `false`. Controls default to `type="button"`.
 
-Inspection uses source-model units and counts unique resources. Select meshes in the hierarchy or scene to outline them. Animation framing samples 17 poses per clip; fast or procedural motion can exceed those bounds.
+#### Animation and inspection
+
+Omitting `animation` selects the first clip; passing `null` disables selection. Playback starts paused. Reduced motion suppresses playback and rotation unless `respectReducedMotion={false}`.
+
+Inspection uses source-model units and counts unique resources. Select meshes in the hierarchy or scene to outline them. Animation framing samples 17 poses per clip, so fast or procedural motion can exceed the calculated bounds.
 
 ## 📦 Add the component
 
@@ -401,24 +410,3 @@ Or copy `src/components/ui/model-viewer/` into an existing shadcn project and in
 bun add @react-three/fiber @react-three/drei three three-stdlib lucide-react
 bun add -d @types/three
 ```
-
-## Development checks
-
-Install dependencies with `bun install --frozen-lockfile`, then install the browser and its system dependencies with `bunx playwright install --with-deps chromium`.
-
-Run `bun run check:ci` for the same checks used by CI: registry freshness, typechecking, Biome, production build, package tests, installation into an independent consumer, viewer tests, Storybook tests, and the Storybook build. The browser suites start and stop their own servers. Set `VIEWER_TEST_URL` or `STORYBOOK_TEST_URL` to test an existing server instead; `VIEWER_TEST_CDP` optionally connects to an existing Chromium instance.
-
-For a faster development loop, use `bun run test:unit` (no browser or server required), `bun run test:viewer`, or `bun run verify`. Typechecking includes the app, test suites, and build/test configuration. Tests live in `tests/unit/` for pure logic and `tests/viewer/` for browser behavior grouped by feature. Shared browser setup lives in `tests/fixtures/browser.ts`.
-
-Biome owns formatting, import organization, React hook checks, and promise linting. Run `bun run format` to format files or `bunx biome check --write .` to apply safe lint fixes. Promise rules use Biome's type inference and complement the strict TypeScript check. Effect dependencies may deliberately trigger scene resets or redraws without being read by the callback. Non-null assertions and CSS cascade choices remain permitted; the Three.js scene has a scoped DOM-accessibility exception because its JSX renders WebGL objects.
-
-After changing viewer sources, run `bun run registry:build` and commit the generated `public/r/` files. `bun run registry:check` rebuilds and fails if the previous artifacts were stale, so run it before packaging. The runtime composes preference, model-session, and browser-interaction hooks; keep load-derived resets in `use-viewer-session.ts` and cover lifecycle transitions in `tests/unit/lifecycle.spec.ts`.
-
-## 📝 Implementation notes
-
-- The demo intentionally accepts GLB only because standalone `.gltf` files can reference sidecar buffers and textures. The component itself can load any URL supported by `GLTFLoader`.
-- Draco and Meshopt are enabled by default. Pass a self-hosted Draco decoder path through `useDraco`, or configure KTX2 and other extensions with `extendLoader`.
-- GPU geometry, material, texture, and skeleton allocations are released after their last mounted viewer or pane unmounts. Cached model objects and image sources remain reusable. Blob URLs also clear Drei's loader cache on unmount by default; set `clearCacheOnUnmount` explicitly for other short-lived URLs.
-- Animation rendering stops when a non-looping clip finishes or playback speed is zero. Restarting or resuming playback wakes the demand loop; auto-rotation continues to request frames independently.
-- `enableCapture` controls PNG capture independently of the built-in UI and defaults to `showUi`. Use `<ModelViewer showUi={false} enableCapture>` for custom capture controls, or `enableCapture={false}` to reduce GPU overhead with the toolbar visible. `canCapture` stays false until the renderer supports capture and the model is ready. Changing `enableCapture` recreates the WebGL canvas because buffer preservation is fixed when its context is created.
-- First-person pointer lock may be blocked inside restrictive iframes; the component automatically falls back to focused-canvas drag look when the browser exposes that policy.
