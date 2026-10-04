@@ -349,13 +349,19 @@ npx shadcn-3d-viewer@latest add
 
 The npm package is a small installer for the included shadcn registry item. It runs the exact `shadcn` version this release was built and tested with (not `shadcn@latest`) and copies the component source into your project; it is **not** a compiled library to import from `shadcn-3d-viewer`. Pass shadcn options through—for example, `npx shadcn-3d-viewer@latest add --dry-run`—and review changes before accepting prompts.
 
-You can also install the registry item directly from GitHub:
+You can also install the registry item directly from GitHub without configuring a registry:
 
 ```sh
-npx shadcn@latest add https://raw.githubusercontent.com/michidk/shadcn-3d-viewer/main/public/r/model-viewer.json
+npx shadcn@latest add michidk/shadcn-3d-viewer/model-viewer
 ```
 
-To use a short namespace, add this to your app's `components.json` and then run `npx shadcn@latest add @viewer/model-viewer`:
+For a version-pinned install, use the generated registry item from a release tag:
+
+```sh
+npx shadcn@latest add https://raw.githubusercontent.com/michidk/shadcn-3d-viewer/v0.2.0/public/r/model-viewer.json
+```
+
+You can also configure the hosted registry under a short local namespace. Add this to your app's `components.json`, then run `npx shadcn@latest add @viewer/model-viewer`:
 
 ```json
 {
@@ -365,7 +371,7 @@ To use a short namespace, add this to your app's `components.json` and then run 
 }
 ```
 
-This is a self-hosted shadcn registry item, not a listing in a central shadcn catalog. For a version-pinned install, replace `main` in the URL with a release tag. The npm installer uses the same generated item from its tarball.
+The npm installer uses the same generated item from its tarball.
 
 To install from a local checkout, build the shadcn registry item, then add it from another shadcn project:
 
