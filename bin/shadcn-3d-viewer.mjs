@@ -10,7 +10,7 @@ const packageJson = JSON.parse(readFileSync(packageFile, "utf8"));
 const [command, ...args] = process.argv.slice(2);
 
 if (!command || command === "--help" || command === "-h") {
-  process.stdout.write("Install the source-owned model viewer into a Base UI shadcn project.\n\nUsage: npx shadcn-3d-viewer add [shadcn add options]\n\nExamples:\n  npx shadcn-3d-viewer add\n  npx shadcn-3d-viewer add --dry-run\n");
+  process.stdout.write("Install the source-owned model viewer into a Base UI shadcn project.\n\nUsage: npx shadcn-3d-viewer@latest add [shadcn add options]\n\nExamples:\n  npx shadcn-3d-viewer@latest add\n  npx shadcn-3d-viewer@latest add --dry-run\n");
   process.exit(0);
 }
 

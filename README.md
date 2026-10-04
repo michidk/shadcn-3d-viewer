@@ -40,10 +40,10 @@
 
 ## 🚀 Quick start
 
-Add the registry item directly to a Base UI shadcn project:
+Install the viewer into a Base UI shadcn project:
 
 ```sh
-bunx shadcn@latest add https://raw.githubusercontent.com/michidk/shadcn-3d-viewer/main/public/r/model-viewer.json
+npx shadcn-3d-viewer@latest add
 ```
 
 Then render it from the source now owned by your app:
@@ -67,7 +67,7 @@ export function Preview() {
 }
 ```
 
-The registry installs the viewer's React Three Fiber dependencies and required shadcn primitives. Review the CLI diff before accepting any overwrite prompts. See [Add the component](#-add-the-component) for namespace, version-pinned, and manual installation options.
+The npm installer uses the shadcn version tested with this release and installs the viewer's React Three Fiber dependencies and required shadcn primitives. Review the CLI diff before accepting any overwrite prompts. See [Add the component](#-add-the-component) for registry URL, namespace, version-pinned, and local installation options.
 
 Use compatible **Base UI** shadcn primitives with the `render` composition API. The viewer inherits your theme; 3D lighting is independent of light/dark mode.
 
@@ -341,19 +341,19 @@ Inspection uses source-model units and counts unique resources. Select meshes in
 
 ## 📦 Add the component
 
-The public repository already serves a registry item through GitHub's raw file URL. No npm release is needed for this path:
+Install the published package into a Base UI shadcn project:
+
+```sh
+npx shadcn-3d-viewer@latest add
+```
+
+The npm package is a small installer for the included shadcn registry item. It runs the exact `shadcn` version this release was built and tested with (not `shadcn@latest`) and copies the component source into your project; it is **not** a compiled library to import from `shadcn-3d-viewer`. Pass shadcn options through—for example, `npx shadcn-3d-viewer@latest add --dry-run`—and review changes before accepting prompts.
+
+You can also install the registry item directly from GitHub:
 
 ```sh
 npx shadcn@latest add https://raw.githubusercontent.com/michidk/shadcn-3d-viewer/main/public/r/model-viewer.json
 ```
-
-After the npm release, the shorter installer command will be available too:
-
-```sh
-npx shadcn-3d-viewer add
-```
-
-The npm package is a small installer for the included shadcn registry item. It runs the exact `shadcn` version this release was built and tested with (not `shadcn@latest`) and copies the component source into your project; it is **not** a compiled library to import from `shadcn-3d-viewer`. Pass shadcn options through—for example, `npx shadcn-3d-viewer add --dry-run`—and review changes before accepting prompts.
 
 To use a short namespace, add this to your app's `components.json` and then run `npx shadcn@latest add @viewer/model-viewer`:
 
@@ -367,7 +367,7 @@ To use a short namespace, add this to your app's `components.json` and then run 
 
 This is a self-hosted shadcn registry item, not a listing in a central shadcn catalog. For a version-pinned install, replace `main` in the URL with a release tag. The npm installer uses the same generated item from its tarball.
 
-To install from a local checkout before the npm release, build the shadcn registry item, then add it from another shadcn project:
+To install from a local checkout, build the shadcn registry item, then add it from another shadcn project:
 
 ```sh
 bun run registry:build

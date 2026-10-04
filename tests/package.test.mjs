@@ -24,7 +24,7 @@ test("npm package installs a complete source-owned registry item", () => {
 
 test("CLI reports its version and rejects unknown commands", () => {
   assert.equal(execFileSync(process.execPath, [cli, "--version"], { encoding: "utf8" }).trim(), packageJson.version);
-  assert.match(execFileSync(process.execPath, [cli, "--help"], { encoding: "utf8" }), /npx shadcn-3d-viewer add/);
+  assert.match(execFileSync(process.execPath, [cli, "--help"], { encoding: "utf8" }), /npx shadcn-3d-viewer@latest add/);
   const invalid = spawnSync(process.execPath, [cli, "publish"], { encoding: "utf8" });
   assert.equal(invalid.status, 2);
   assert.match(invalid.stderr, /Unknown command/);
