@@ -2,7 +2,7 @@ import { ArrowUpRight, BookOpen, Bot, Box, Check, Clipboard, CloudSun, GitBranch
 import { useEffect, useRef, useState } from "react";
 
 import { Button } from "@/components/ui/button";
-import { ModelViewer } from "@/components/ui/model-viewer/lazy";
+import { ModelViewer, ModelViewerSkeleton } from "@/components/ui/model-viewer/lazy";
 
 const installCommand = "npx shadcn-3d-viewer@latest add";
 const storybookBase = import.meta.env.DEV
@@ -174,11 +174,24 @@ function LandingPage() {
             <div>
               <p className="section-kicker">Interactive demo</p>
               <h2 id="demo-heading">{model?.name ?? "Material study 01"}</h2>
+              <p className="demo-subtitle">Try it here, then browse every state and composition in Storybook.</p>
             </div>
-            <div className="file-actions">
-              {model && <Button type="button" variant="ghost" size="sm" onClick={clearModel}><X /> Clear</Button>}
-              <Button type="button" variant="outline" size="sm" onClick={() => fileInput.current?.click()}><Upload /> Open model</Button>
-              <input ref={fileInput} className="sr-only" type="file" accept=".glb,model/gltf-binary" onChange={(event) => openFile(event.target.files?.[0])} />
+            <div className="demo-actions">
+              <Button
+                className="storybook-demo-link"
+                nativeButton={false}
+                size="sm"
+                render={<a href={storybookBase} target="_blank" rel="noopener noreferrer" />}
+              >
+                <BookOpen aria-hidden="true" />
+                Explore Storybook
+                <ArrowUpRight aria-hidden="true" />
+              </Button>
+              <div className="file-actions">
+                {model && <Button type="button" variant="ghost" size="sm" onClick={clearModel}><X /> Clear</Button>}
+                <Button type="button" variant="outline" size="sm" onClick={() => fileInput.current?.click()}><Upload /> Open model</Button>
+                <input ref={fileInput} className="sr-only" type="file" accept=".glb,model/gltf-binary" onChange={(event) => openFile(event.target.files?.[0])} />
+              </div>
             </div>
           </div>
           <div
@@ -188,7 +201,13 @@ function LandingPage() {
             onDragLeave={(event) => { if (!event.currentTarget.contains(event.relatedTarget as Node)) setDragging(false); }}
             onDrop={(event) => { event.preventDefault(); setDragging(false); openFile(event.dataTransfer.files[0]); }}
           >
-            <ModelViewer src={model?.url} aria-label={model?.name ?? "Abstract sample objects"} showCubes={!model} defaultAutoRotate />
+            <ModelViewer
+              src={model?.url}
+              aria-label={model?.name ?? "Abstract sample objects"}
+              showCubes={!model}
+              defaultAutoRotate
+              loadingFallback={<ModelViewerSkeleton />}
+            />
             {dragging && <div className="drop-overlay"><Upload /><span>Drop a GLB to inspect</span></div>}
           </div>
           <p className="local-note">Models stay in your browser. Drop a local GLB onto the viewer to try your own asset.</p>
