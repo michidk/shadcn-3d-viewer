@@ -145,7 +145,7 @@ test("lazy entry does not request the renderer until opened", async ({ page }) =
   page.on("request", (request) => {
     if (/\/model-viewer\/model-viewer(?:-scene)?\.tsx/.test(request.url())) rendererRequests.push(request.url());
   });
-  await openStory(page, "viewer-lazy-viewer--on-demand");
+  await openStory(page, "viewer-lazy-loading--on-demand");
   await expect(page.getByRole("button", { name: "Open viewer" })).toBeVisible();
   expect(rendererRequests).toHaveLength(0);
   await expect(page.locator("canvas")).toHaveCount(0);

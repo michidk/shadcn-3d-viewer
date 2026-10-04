@@ -39,7 +39,7 @@ const preview: Preview = {
   parameters: {
     layout: "padded",
     controls: { expanded: true },
-    options: { storySort: { order: ["Viewer", "Composition", "Inspector"] } },
+    options: { storySort: { order: ["Viewer", ["Model Viewer", "Lazy Loading"], "Composition", "Inspector"] } },
     docs: {
       // Keep docs to one live Canvas. Rendering every example at once can
       // exhaust a browser's WebGL context limit.
