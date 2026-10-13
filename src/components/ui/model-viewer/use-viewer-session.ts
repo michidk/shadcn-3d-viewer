@@ -4,6 +4,7 @@ import { useCallback, useEffect, useReducer, useRef, useState } from "react";
 import type { ModelInspection } from "./model-inspection";
 import { initialViewerLifecycle, viewerLifecycleReducer } from "./model-viewer-lifecycle";
 import { type ModelViewerRootProps, splitPanes, type ViewerMode } from "./model-viewer-types";
+import { useControlledState } from "./use-controlled-state";
 
 /** Owns scene generations and data that must be cleared together on replacement/retry. */
 export function useViewerSession({
@@ -15,14 +16,25 @@ export function useViewerSession({
   onLoad,
   onError,
   onInspect,
-}: Pick<ModelViewerRootProps, "src" | "onLoad" | "onError" | "onInspect"> & {
+  selectedMesh: controlledMesh,
+  onSelectedMeshChange,
+}: Pick<
+  ModelViewerRootProps,
+  "src" | "onLoad" | "onError" | "onInspect" | "selectedMesh" | "onSelectedMeshChange"
+> & {
   mode: ViewerMode;
   enableCapture: boolean;
   clearCacheOnUnmount: boolean;
   clearFeedback: () => void;
 }) {
   const [inspection, setInspection] = useState<ModelInspection | null>(null);
-  const [selectedMesh, setSelectedMesh] = useState<string | null>(null);
+  const [selectedMesh, setSelectedMesh] = useControlledState(
+    controlledMesh,
+    null,
+    onSelectedMeshChange,
+  );
+  const selection = useRef({ selectedMesh, setSelectedMesh });
+  selection.current = { selectedMesh, setSelectedMesh };
   const [animationNames, setAnimationNames] = useState<string[]>([]);
   const [lifecycle, dispatchLifecycle] = useReducer(viewerLifecycleReducer, initialViewerLifecycle);
   const loaded = lifecycle.status === "ready" || lifecycle.status === "error";
@@ -37,7 +49,7 @@ export function useViewerSession({
   const resetModelSession = useCallback(() => {
     setAnimationNames([]);
     setInspection(null);
-    setSelectedMesh(null);
+    if (selection.current.selectedMesh !== null) selection.current.setSelectedMesh(null);
     setLocked(false);
   }, []);
   const setSceneMounted = useCallback(

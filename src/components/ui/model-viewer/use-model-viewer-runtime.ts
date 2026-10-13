@@ -60,6 +60,8 @@ export function useModelViewerRuntime(input: ModelViewerRootProps) {
     viewCubePosition = "top-right",
     viewCubeMargin,
     onInspect,
+    selectedMesh: controlledMesh,
+    onSelectedMeshChange,
     autoRotateSpeed = 0.15,
     onCameraChange,
     loopAnimation = true,
@@ -112,6 +114,8 @@ export function useModelViewerRuntime(input: ModelViewerRootProps) {
     onLoad,
     onError,
     onInspect,
+    selectedMesh: controlledMesh,
+    onSelectedMeshChange,
   });
   const {
     pointerLockAvailable,
