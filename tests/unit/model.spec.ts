@@ -79,3 +79,16 @@ test("real skinned fixture retains its skeleton and a finite animation envelope"
   expect(bounds.radius).toBeGreaterThan(3);
   expect(bounds.radius).toBeLessThan(10);
 });
+
+test("selection helpers do not change the inspected hierarchy or mesh counts", () => {
+  const root = new Group();
+  const mesh = new Mesh(new BoxGeometry(), new MeshStandardMaterial());
+  mesh.name = "body_panel";
+  root.add(mesh);
+  const before = inspectModel(root);
+  const helper = new Group();
+  helper.userData.viewerHelper = true;
+  helper.add(new Mesh(new BoxGeometry(), new MeshStandardMaterial()));
+  mesh.add(helper);
+  expect(inspectModel(root)).toEqual(before);
+});
