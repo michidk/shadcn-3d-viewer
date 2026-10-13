@@ -14,7 +14,7 @@ export function ModelViewerRoot(props: ModelViewerRootProps) {
   return (
     <ModelViewerContext.Provider value={runtime}>
       <ViewerUiProvider components={root.components}>
-        {/* biome-ignore lint/a11y/useAriaPropsSupportedByRole: The runtime role is group or dialog, both of which support accessible naming. */}
+        {/* biome-ignore lint/a11y/useAriaPropsSupportedByRole lint/a11y/noStaticElementInteractions: The runtime role is group or dialog, with keyboard selection controls. */}
         <div
           ref={viewerRef}
           data-slot="model-viewer"
@@ -40,9 +40,22 @@ export function ModelViewerRoot(props: ModelViewerRootProps) {
             } as CSSProperties
           }
           {...root.props}
+          onKeyDown={(event) => {
+            root.props.onKeyDown?.(event);
+            if (
+              event.key === "Escape" &&
+              !event.defaultPrevented &&
+              !(
+                event.target instanceof Element &&
+                event.target.closest("input, textarea, [contenteditable=true]")
+              )
+            ) {
+              state.setSelectedMesh(null);
+            }
+          }}
           role={root.isExpanded ? "dialog" : (root.props.role ?? "group")}
           aria-modal={root.isExpanded ? true : root.props["aria-modal"]}
-          tabIndex={root.isExpanded ? -1 : root.props.tabIndex}
+          tabIndex={root.isExpanded ? -1 : (root.props.tabIndex ?? 0)}
         >
           {root.children}
         </div>

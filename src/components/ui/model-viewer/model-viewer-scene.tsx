@@ -215,6 +215,11 @@ export function ModelViewerScene({
             powerPreference: "high-performance",
           }}
           eventSource={viewerRef}
+          onPointerMissed={(event) => {
+            if (event.target instanceof Element && event.target.closest("[data-viewer-pane]")) {
+              setSelectedMesh(null);
+            }
+          }}
           onCreated={({ gl }) => {
             canvasRef.current = gl.domElement;
             setCaptureReady(gl.getContext().getContextAttributes()?.preserveDrawingBuffer === true);

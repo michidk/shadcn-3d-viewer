@@ -410,3 +410,19 @@ Or copy `src/components/ui/model-viewer/` into an existing shadcn project and in
 bun add @react-three/fiber @react-three/drei three three-stdlib lucide-react
 bun add -d @types/three
 ```
+
+### Mesh selection
+
+Use `selectedMesh` and `onSelectedMeshChange` for controlled selection, or omit `selectedMesh` to let the viewer manage it. The callback receives the selected mesh ID or `null`. Resolve IDs against `onInspect`'s `inspection.nodes` to show the name and ancestor hierarchy in your application. IDs belong to the current source; snapshot the source URL/version along with any reference you keep.
+
+```tsx
+const [selectedMesh, setSelectedMesh] = useState<string | null>(null);
+<ModelViewer
+  src={src}
+  selectedMesh={selectedMesh}
+  onSelectedMeshChange={setSelectedMesh}
+  onInspect={setInspection}
+/>
+```
+
+Click a mesh or choose it in the inspector to select it. Click empty space, use the inspector's clear button, or press Escape with the viewer focused to clear it. Orbit drags do not select objects. Replacing the source, retrying, changing camera mode or unmounting the scene clears selection and reports `null` when there was a selection; controlled owners must accept that update. Selection outlines remain overlays across shading modes and never appear as model parts in inspection.

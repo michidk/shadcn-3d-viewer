@@ -5,6 +5,9 @@ import { defineConfig } from "vite";
 
 export default defineConfig({
   plugins: [react(), tailwindcss()],
+  optimizeDeps: {
+    entries: ["index.html", "tests/fixtures/viewer-runtime.ts"],
+  },
   resolve: {
     alias: { "@": path.resolve(import.meta.dirname, "./src") },
   },

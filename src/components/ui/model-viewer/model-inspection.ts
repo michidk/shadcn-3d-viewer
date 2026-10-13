@@ -53,6 +53,7 @@ export function inspectModel(root: Object3D): ModelInspection {
   let triangles = 0;
   const nodes: ModelInspection["nodes"] = [];
   function visit(object: Object3D, path: string, depth: number) {
+    if (object.userData.viewerHelper) return;
     object.userData.viewerNodeId = path;
     const mesh = object as Mesh;
     nodes.push({
