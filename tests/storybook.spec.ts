@@ -402,6 +402,7 @@ for (const theme of ["light", "dark"]) {
     );
     await page.keyboard.press("Escape");
 
+    await expect(menu).toHaveCount(0);
     const cube = page.getByRole("button", { name: "View cube options" });
     await cube.click();
     const popover = await page
