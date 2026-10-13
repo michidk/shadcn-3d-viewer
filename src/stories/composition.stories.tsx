@@ -14,9 +14,9 @@ import {
   ModelViewerToolbar,
   ModelViewerToolbarButton,
   ModelViewerToolbarGroup,
+  ModelViewerViewCubeMenu,
   useModelViewer,
   useModelViewerCamera,
-  type ViewerUiComponents,
 } from "@/components/ui/model-viewer";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 
@@ -46,26 +46,6 @@ function CompactToolbar() {
   );
 }
 
-// Keep component identities stable and forward all native props, including ref.
-const customComponents: ViewerUiComponents = {
-  Button: function AppButton({ className, ...props }) {
-    return <Button {...props} className={`rounded-full ${className ?? ""}`} />;
-  },
-  Tooltip: function AppTooltip({ children, content }) {
-    return (
-      <Tooltip>
-        <TooltipTrigger render={children} />
-        <TooltipContent
-          side="bottom"
-          className="border border-primary bg-primary text-primary-foreground"
-        >
-          {content}
-        </TooltipContent>
-      </Tooltip>
-    );
-  },
-};
-
 const meta = {
   title: "Composition/Custom Controls",
   component: ModelViewer,
@@ -76,7 +56,7 @@ const meta = {
     docs: {
       description: {
         component:
-          "Compose viewer parts and access the nearest root with useModelViewer. Local shadcn primitives and Base UI render are the primary customization path; component overrides remain a compatibility escape hatch.",
+          "Compose viewer parts and access the nearest root with useModelViewer. Local shadcn primitives and Base UI render are the primary customization path; edit local primitives or compose a custom trigger and tooltip.",
       },
     },
   },
@@ -186,7 +166,7 @@ export const RenderComposition: Story = {
 };
 
 export const CustomButtonAndTooltip: Story = {
-  args: { components: customComponents },
+  render: (args) => <ModelViewer {...args} toolbar={<CustomStyledToolbar />} />,
 };
 
 export const StyledEmbed: Story = {
@@ -202,3 +182,28 @@ export const StyledEmbed: Story = {
     </ModelViewer>
   ),
 };
+
+function CustomStyledToolbar() {
+  const viewer = useModelViewer();
+  return (
+    <ModelViewerToolbar>
+      <ModelViewerToolbarGroup>
+        <Tooltip>
+          <ModelViewerViewCubeMenu
+            viewCube={viewer.viewCube}
+            onViewCubeChange={viewer.setViewCube}
+            tooltip={false}
+            render={<TooltipTrigger />}
+            className="rounded-full"
+          />
+          <TooltipContent
+            side="bottom"
+            className="border border-primary bg-primary text-primary-foreground"
+          >
+            View cube options
+          </TooltipContent>
+        </Tooltip>
+      </ModelViewerToolbarGroup>
+    </ModelViewerToolbar>
+  );
+}

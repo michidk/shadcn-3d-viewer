@@ -176,7 +176,7 @@ export const OutsideWithFloor: Story = {
 };
 
 export const ModelInspection: Story = {
-  args: { showInspector: true },
+  args: { defaultInspectorOpen: true },
   parameters: {
     docs: {
       description: {

@@ -22,7 +22,7 @@ test("viewer menus do not lock scrolling or change the viewer width", async ({ p
   }
 });
 
-test("viewer accepts standard ARIA naming and description with legacy alt fallback", async ({
+test("viewer accepts standard ARIA naming and description with a default accessible name", async ({
   page,
 }) => {
   await ready(page);
@@ -42,7 +42,7 @@ test("viewer accepts standard ARIA naming and description with legacy alt fallba
         h('h2', { id: 'model-name' }, 'Visible model name'),
         h('p', { id: 'model-description' }, 'A low-backed chair with curved arms.'),
         h('button', { onClick: () => setPhase((value) => value + 1) }, 'Change naming'),
-        h(ModelViewer, { ...naming, alt: 'Legacy name', 'aria-describedby': 'model-description', height: 240, showCubes: false }));
+        h(ModelViewer, { ...naming, 'aria-describedby': 'model-description', height: 240, showCubes: false }));
     }
     ReactDOM.createRoot(host).render(h(Example));
   })()`);
@@ -54,7 +54,7 @@ test("viewer accepts standard ARIA naming and description with legacy alt fallba
   await expect(host.getByRole("group", { name: "Visible model name" })).toBeVisible();
   await expect(viewer).not.toHaveAttribute("aria-label");
   await host.getByRole("button", { name: "Change naming" }).click();
-  await expect(host.getByRole("group", { name: "Legacy name" })).toBeVisible();
+  await expect(host.getByRole("group", { name: "3D model" })).toBeVisible();
 });
 
 test("phone layout keeps the upload button and toolbar inside the component", async ({ page }) => {

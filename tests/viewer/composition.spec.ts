@@ -138,3 +138,51 @@ test("compound roots isolate state, respect controlled updates and mount scenes 
   await expect(first).toHaveAttribute("data-state", "idle");
   await expect(first.getByRole("button", { name: "Screenshot options" })).toBeDisabled();
 });
+
+test("individual menus can be reordered, styled, and controlled without the default toolbar", async ({
+  page,
+}) => {
+  await ready(page);
+  await page.evaluate(`(async () => {
+    const { React, ReactDOM } = await import('/tests/fixtures/viewer-runtime.ts');
+    const { ModelViewerToolbar, ModelViewerToolbarGroup, ModelViewerShadingMenu, ModelViewerLightingMenu, ModelViewerCaptureMenu, ModelViewerCameraControls } = await import('/src/components/ui/model-viewer/controls.ts');
+    const h = React.createElement;
+    const host = document.createElement('div');
+    host.id = 'individual-controls';
+    host.style.cssText = 'position:fixed;inset:0;z-index:40;background:white;padding:16px';
+    document.body.append(host);
+    function Controls() {
+      const [shading, setShading] = React.useState('realistic');
+      const [lighting, setLighting] = React.useState('day');
+      const [mode, setMode] = React.useState('orbit');
+      return h(ModelViewerToolbar, { placement: 'static' },
+        h(ModelViewerCameraControls, { mode, onModeChange: setMode }),
+        h(ModelViewerToolbarGroup, null,
+          h(ModelViewerCaptureMenu, { onCapture: action => host.dataset.capture = action }),
+          h(ModelViewerLightingMenu, { lighting, onLightingChange: setLighting }),
+          h(ModelViewerShadingMenu, { shading, onShadingChange: setShading, className: 'rounded-none', render: h('button', { 'data-custom-trigger': 'shading' }), ref: element => host.dataset.ref = String(!!element) })));
+    }
+    ReactDOM.createRoot(host).render(h(Controls));
+  })()`);
+  const host = page.locator("#individual-controls");
+  await expect(host).toHaveAttribute("data-ref", "true");
+  await expect(host.getByRole("button").first()).toHaveAccessibleName("Orbit camera");
+  const shading = host.locator('[data-custom-trigger="shading"]');
+  await expect(shading).toHaveCSS("border-radius", "0px");
+  await shading.click();
+  await page.getByRole("menuitemradio", { name: "Wireframe", exact: true }).click();
+  await expect(shading).toHaveAccessibleName("Shading: wireframe");
+  await expect(shading).toBeFocused();
+  await host.getByRole("button", { name: "Lighting: day" }).click();
+  await page.getByRole("menuitemradio", { name: "Night studio" }).click();
+  await expect(host.getByRole("button", { name: "Lighting: night" })).toBeVisible();
+  await host.getByRole("button", { name: "Four-view split" }).click();
+  await expect(host.getByRole("button", { name: "Four-view split" })).toHaveAttribute(
+    "aria-pressed",
+    "true",
+  );
+  await host.getByRole("button", { name: "Screenshot options" }).click();
+  await page.getByRole("menuitem", { name: "Download image" }).click();
+  await expect(host).toHaveAttribute("data-capture", "download");
+  await expect(host.locator("button button")).toHaveCount(0);
+});

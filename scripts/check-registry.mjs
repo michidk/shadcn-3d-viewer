@@ -1,7 +1,11 @@
 import { execFileSync } from "node:child_process";
 import { readFileSync } from "node:fs";
 
-const files = ["public/r/model-viewer.json", "public/r/registry.json"];
+const registry = JSON.parse(readFileSync("registry.json", "utf8"));
+const files = [
+  "public/r/registry.json",
+  ...registry.items.map((item) => `public/r/${item.name}.json`),
+];
 const before = files.map((file) => readFileSync(file, "utf8"));
 execFileSync("bun", ["run", "registry:build"], { stdio: "inherit" });
 const stale = files.filter((file, index) => readFileSync(file, "utf8") !== before[index]);

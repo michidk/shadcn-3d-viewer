@@ -4,14 +4,21 @@ import { spawnSync } from "node:child_process";
 import { existsSync, readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 
-const registryFile = fileURLToPath(new URL("../public/r/model-viewer.json", import.meta.url));
+const items = [
+  "model-viewer",
+  "model-viewer-core",
+  "model-viewer-controls",
+  "model-viewer-inspector",
+];
 const packageFile = fileURLToPath(new URL("../package.json", import.meta.url));
 const packageJson = JSON.parse(readFileSync(packageFile, "utf8"));
 const [command, ...args] = process.argv.slice(2);
+const item = args[0] && !args[0].startsWith("-") ? args.shift() : "model-viewer";
+const registryFile = fileURLToPath(new URL(`../public/r/${item}.json`, import.meta.url));
 
 if (!command || command === "--help" || command === "-h") {
   process.stdout.write(
-    "Install the source-owned model viewer into a Base UI shadcn project.\n\nUsage: npx shadcn-3d-viewer@latest add [shadcn add options]\n\nExamples:\n  npx shadcn-3d-viewer@latest add\n  npx shadcn-3d-viewer@latest add --dry-run\n",
+    "Install the source-owned model viewer into a Base UI shadcn project.\n\nUsage: npx shadcn-3d-viewer@latest add [model-viewer|model-viewer-core|model-viewer-controls|model-viewer-inspector] [shadcn add options]\n\nExamples:\n  npx shadcn-3d-viewer@latest add\n  npx shadcn-3d-viewer@latest add --dry-run\n",
   );
   process.exit(0);
 }
@@ -23,6 +30,11 @@ if (command === "--version" || command === "-v") {
 
 if (command !== "add") {
   process.stderr.write(`Unknown command: ${command}. Run shadcn-3d-viewer --help.\n`);
+  process.exit(2);
+}
+
+if (!items.includes(item)) {
+  process.stderr.write(`Unknown viewer item: ${item}. Choose ${items.join(", ")}.\n`);
   process.exit(2);
 }
 

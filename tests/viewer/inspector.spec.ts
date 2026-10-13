@@ -1,6 +1,8 @@
 import { expect, ready, test } from "../fixtures/browser";
 
-test("standalone inspector accepts custom button and tooltip implementations", async ({ page }) => {
+test("standalone inspector uses local buttons and supports selection and close", async ({
+  page,
+}) => {
   await ready(page);
   await page.evaluate(`(async () => {
     const { React, ReactDOM } = await import('/tests/fixtures/viewer-runtime.ts');
@@ -15,14 +17,11 @@ test("standalone inspector accepts custom button and tooltip implementations", a
       inspection: { triangles: 12, materials: 1, textures: 0, dimensions: [1, 2, 3], nodes: [{ id: '0', name: 'Custom mesh', type: 'Mesh', depth: 0, mesh: true }] },
       onSelectMesh: id => host.dataset.selected = id,
       onClose: () => host.dataset.closed = 'true',
-      components: {
-        Button: ({ variant, size, ...props }) => h('button', { ...props, 'data-custom-button': 'true', 'data-variant': variant, 'data-size': size }),
-        Tooltip: ({ content, children }) => h('span', { 'data-custom-tooltip': content }, children),
-      },
+
     }));
   })()`);
   const inspector = page.locator("#custom-inspector");
-  await expect(inspector.locator('[data-custom-tooltip="Close inspector"]')).toBeVisible();
+  await expect(inspector.getByRole("button", { name: "Close inspector" })).toBeVisible();
   await inspector.getByRole("button", { name: "Custom mesh" }).click();
   await expect(inspector).toHaveAttribute("data-selected", "0");
   await inspector.getByRole("button", { name: "Close inspector" }).click();

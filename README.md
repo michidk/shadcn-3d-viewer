@@ -108,7 +108,7 @@ Name the viewer with `aria-label` or `aria-labelledby`. Use `aria-describedby` t
 </p>
 ```
 
-`alt` remains a fallback accessible name and screenshot filename. Toolbars and orientation controls support keyboards; provide essential model details outside the canvas.
+Toolbars and orientation controls support keyboards. Provide essential model details outside the canvas. Screenshots use `aria-label` as their filename, or `3D model` when it is absent.
 
 ### Load the renderer on demand
 
@@ -141,7 +141,6 @@ The lazy entry defers the renderer until mount. `loadingFallback` and `poster` c
 | `src` | `string` | built-in sample |
 | `aria-label` / `aria-labelledby` | accessible name | `"3D model"` when neither is supplied |
 | `aria-describedby` | IDs of text describing the model | none |
-| `alt` | legacy accessible-name fallback | deprecated; use ARIA naming props |
 | `height` | CSS height | `620` |
 | `mode` | `orbit \| split \| firstPerson` | `orbit` |
 | `lighting` | `day \| night \| outside` | `day` |
@@ -162,7 +161,6 @@ The lazy entry defers the renderer until mount. `loadingFallback` and `poster` c
 | `inspectorOpen` | `boolean` | controlled; use `defaultInspectorOpen` for an initial value |
 | `defaultInspectorOpen` | `boolean` | `false` |
 | `onInspectorOpenChange` | `(open) => void` | none |
-| `showInspector` | `boolean` | legacy; prefer `inspectorOpen` or `defaultInspectorOpen` |
 | `onInspect` | `(inspection: ModelInspection) => void` | none |
 | `autoRotate` | `boolean` | `false` |
 | `defaultAutoRotate` | `boolean` | `false`; initial uncontrolled rotation |
@@ -252,17 +250,11 @@ function CustomDirectionButton() {
 
 Tab to **Orient view** for keyboard direction controls. The menu supports Enter/Space, arrows, Home/End, and Escape. `ModelViewerScene` includes it automatically when the cube is enabled in orbit mode; standalone `ViewCube` needs host DOM controls.
 
-### Compatibility component overrides
+### Customize local components
 
-Prefer local primitives and composed parts. Use `components` for application-wide overrides:
+Edit your local `button`, `tooltip`, and `dropdown-menu` components to change shared defaults. Use `className`, composed children, and Base UI's `render` prop for individual controls. Custom components passed through `render` must forward refs, handlers, and ARIA attributes.
 
-```tsx
-<ModelViewer components={{ Button: AppButton, Tooltip: AppTooltip }} />
-```
-
-`Button` must forward Base UI props, refs, handlers, ARIA attributes, and `className`. `Tooltip` receives `{ content, children }`; compose with `<TooltipTrigger render={children} />`. See `ViewerUiComponents` and `ViewerTooltipProps`. Define overrides outside render.
-
-`ModelInspector` accepts `inspection`, `selectedMesh`, `onSelectMesh`, optional `onClose`, `position` (`left` or `right`), `className`, and `components`. The preset uses `inspectorPosition`. Search includes collapsed nodes; large hierarchies show 200 rows per batch. `ViewerUiProvider` shares overrides across controls.
+`ModelInspector` accepts `inspection`, `selectedMesh`, `onSelectMesh`, optional `onClose`, `position` (`left` or `right`), and native aside props. The preset uses `inspectorPosition`. Search includes collapsed nodes; large hierarchies show 200 rows per batch.
 
 ### Compose viewer parts
 
@@ -292,6 +284,41 @@ import {
 The root owns state and its DOM container. Mount exactly one `ModelViewerScene`; add other parts as needed. The scene handles rendering and loading/error states. Animation and inspector parts appear when their data is available.
 
 `ModelViewerRoot` accepts state props, native DOM props, and refs. Compose children instead of preset-only `toolbar`, `overlay`, and `showAnimationControls`. Root `showUi` does not hide explicitly mounted children.
+
+### Reuse individual controls
+
+The default toolbar uses the same exported menus and camera controls available to your application. Reorder them or leave out features without copying menu markup:
+
+```tsx
+import { useModelViewer } from "@/components/ui/model-viewer/core";
+import {
+  ModelViewerToolbar,
+  ModelViewerToolbarGroup,
+  ModelViewerShadingMenu,
+  ModelViewerCaptureMenu,
+} from "@/components/ui/model-viewer/controls";
+
+function CompactControls() {
+  const viewer = useModelViewer();
+  return (
+    <ModelViewerToolbar>
+      <ModelViewerToolbarGroup aria-label="Preview">
+        <ModelViewerCaptureMenu
+          captureDisabled={!viewer.canCapture}
+          onCapture={viewer.capture}
+        />
+        <ModelViewerShadingMenu
+          shading={viewer.shading}
+          onShadingChange={viewer.setShading}
+          className="rounded-none"
+        />
+      </ModelViewerToolbarGroup>
+    </ModelViewerToolbar>
+  );
+}
+```
+
+Also exported: `ModelViewerLightingMenu`, `ModelViewerViewCubeMenu`, and `ModelViewerCameraControls`. Menus forward button props, refs, and `render` to their trigger. Camera controls forward div props to their group. Each accepts explicit state and change callbacks, so they also work outside a viewer root. Wrap standalone controls in your local `TooltipProvider` to share tooltip timing.
 
 ### Build controls with shared state
 
@@ -335,7 +362,7 @@ The hook exposes viewer state and setters, camera commands, `resetView`, `restar
 
 #### State and layout
 
-Controlled props report changes through their corresponding callbacks; the owner must update the prop. For example, use `inspectorOpen` with `onInspectorOpenChange`, or use `defaultInspectorOpen` for uncontrolled state. The legacy `showInspector` prop remains supported.
+Controlled props report changes through their corresponding callbacks; the owner must update the prop. For example, use `inspectorOpen` with `onInspectorOpenChange`, or use `defaultInspectorOpen` for uncontrolled state.
 
 Top toolbars reserve space automatically; set `placement="static"` to opt out. Pass `toolbar={null}` to hide the main toolbar or `showUi={false}` to hide all built-in controls. Use the exported `ModelViewerControls` and `ModelViewerAnimationControls` for custom layouts. Toolbar focus supports arrow keys and Home/End.
 
@@ -351,7 +378,7 @@ DOM parts forward native props, React 19 refs, `className`, and `style`. Viewer 
 
 Parts expose stable `data-slot` attributes. The root also exposes `data-state="idle|loading|ready|error"`, while toggle buttons expose `data-state="on|off"`.
 
-Styles use Tailwind's `components` layer and shadcn tokens, so utilities can override them. The viewer fills its parent's width and defaults to 620px tall; an explicit `height` prop or inline height overrides height utilities.
+Control and inspector presentation uses Tailwind classes beside the JSX. Canvas geometry, fullscreen layout, and animation rules remain in `model-viewer.css`, in Tailwind's `components` layer so utilities can override them. The viewer fills its parent's width and defaults to 620px tall; an explicit `height` prop or inline height overrides height utilities.
 
 `ViewerControlButton` accepts custom `tooltip` content or `false`. Controls default to `type="button"`.
 
@@ -370,6 +397,37 @@ npx shadcn-3d-viewer@latest add
 ```
 
 The npm package is a small installer for the included shadcn registry item. It runs the exact `shadcn` version this release was built and tested with (not `shadcn@latest`) and copies the component source into your project; it is **not** a compiled library to import from `shadcn-3d-viewer`. Pass shadcn options through—for example, `npx shadcn-3d-viewer@latest add --dry-run`—and review changes before accepting prompts.
+
+### Install selected features
+
+Choose an item when you do not need the complete preset:
+
+```sh
+npx shadcn-3d-viewer@latest add model-viewer-core
+npx shadcn-3d-viewer@latest add model-viewer-controls
+npx shadcn-3d-viewer@latest add model-viewer-inspector
+```
+
+The core provides the renderer, shared state, loading and error states, keyboard orientation, fullscreen, and overlays. It excludes the toolbar and inspector UI. Controls and inspector bundles each include their required core sources, so they can also be installed directly. All items are self-contained within their release and do not fetch a different core version from the main branch. Keep your local changes when the installer prompts about existing files.
+
+Use these imports for a core-only installation:
+
+```tsx
+import {
+  ModelViewerRoot,
+  ModelViewerScene,
+  ModelViewerFullscreen,
+} from "@/components/ui/model-viewer/core";
+
+<ModelViewerRoot src="/models/chair.glb" aria-label="Lounge chair">
+  <ModelViewerScene />
+  <ModelViewerFullscreen />
+</ModelViewerRoot>
+```
+
+Import optional controls from `@/components/ui/model-viewer/controls` and inspector components from `@/components/ui/model-viewer/inspector`. The root barrel and `lazy` preset entry belong to the complete `model-viewer` item. All four bundles currently need the same rendering and shadcn dependencies because the core retains accessible error and orientation controls. The smaller installation reduces source files to maintain, not the renderer's dependency requirements.
+
+### Install from a registry
 
 You can also install the registry item directly from GitHub without configuring a registry:
 
@@ -426,3 +484,25 @@ const [selectedMesh, setSelectedMesh] = useState<string | null>(null);
 ```
 
 Click a mesh or choose it in the inspector to select it. Click empty space, use the inspector's clear button, or press Escape with the viewer focused to clear it. Orbit drags do not select objects. Replacing the source, retrying, changing camera mode or unmounting the scene clears selection and reports `null` when there was a selection; controlled owners must accept that update. Selection outlines remain overlays across shading modes and never appear as model parts in inspection.
+
+## Migrating to 0.3
+
+Version 0.3 removes the compatibility APIs in favor of local components and composition:
+
+- Replace viewer `alt` with `aria-label` or `aria-labelledby`. Use `aria-label` to customize screenshot filenames.
+- Replace initial `showInspector` with `defaultInspectorOpen`. For application-controlled visibility, use `inspectorOpen` and `onInspectorOpenChange` together.
+- Remove `components` from `ModelViewer`, `ModelViewerRoot`, and `ModelInspector`. Edit local shadcn components, or compose controls using `render`, children, and `className`.
+- Replace `ViewerUiProvider`, `ViewerUiComponents`, and `ViewerTooltipProps` with your local shadcn components. A custom tooltip can wrap a menu whose trigger uses `render={<TooltipTrigger />}` and `tooltip={false}`. See the `CustomButtonAndTooltip` composition story.
+- Import public parts from the root barrel, `core`, `controls`, or `inspector`. Internal files are not stable entry points.
+
+The complete `ModelViewer` preset and its normal installation command remain available. As with other source-owned components, review the installation diff before replacing customized files.
+
+## Verify consumer compatibility
+
+Run `bun run test:install` to build the registry, pack the installer, and install it into isolated applications outside this repository. The checks build:
+
+- A Vite `base-nova` application with a customized button that must remain unchanged.
+- A Vite `base-lyra` application with core alone, then controls, then inspector.
+- A Next.js App Router `base-lyra` application that imports eager and lazy viewers from a server page.
+
+The checks also verify that installation preserves the host theme and shadcn configuration. `bun run test:unit` checks every registry item's relative imports and optional-feature boundaries. `bun run test:viewer` and `bun run storybook:test` cover browser behavior and composition.

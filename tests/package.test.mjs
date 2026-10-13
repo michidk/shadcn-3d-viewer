@@ -57,3 +57,25 @@ test("CLI delegates to the exact shadcn version that built the registry", () => 
     rmSync(directory, { recursive: true, force: true });
   }
 });
+
+test("CLI selects optional source bundles and rejects unknown items", () => {
+  const directory = mkdtempSync(path.join(tmpdir(), "viewer-cli-items-"));
+  try {
+    const npmCli = path.join(directory, "npm-cli.js");
+    writeFileSync(npmCli, "console.log(JSON.stringify(process.argv.slice(2)));\n");
+    for (const name of ["model-viewer-core", "model-viewer-controls", "model-viewer-inspector"]) {
+      const output = execFileSync(process.execPath, [cli, "add", name, "--dry-run"], {
+        encoding: "utf8",
+        env: { ...process.env, npm_execpath: npmCli },
+      });
+      const args = JSON.parse(output);
+      assert.equal(path.basename(args[5]), `${name}.json`);
+      assert.deepEqual(args.slice(6), ["--dry-run"]);
+    }
+    const invalid = spawnSync(process.execPath, [cli, "add", "unknown"], { encoding: "utf8" });
+    assert.equal(invalid.status, 2);
+    assert.match(invalid.stderr, /Unknown viewer item/);
+  } finally {
+    rmSync(directory, { recursive: true, force: true });
+  }
+});
