@@ -83,6 +83,10 @@ export interface ModelViewerProps extends Omit<ComponentProps<"div">, "onLoad" |
   inspectorPosition?: ModelInspectorPosition;
   onInspectorOpenChange?: (open: boolean) => void;
   onInspect?: (inspection: ModelInspection) => void;
+  /** Controlled mesh ID from onInspect. IDs belong to the current source only. */
+  selectedMesh?: string | null;
+  /** Reports canvas/inspector selection and null when the scene is replaced or cleared. */
+  onSelectedMeshChange?: (id: string | null) => void;
   showAnimationControls?: boolean;
   /** Controlled camera orbit around the model. Active only in orbit mode. */
   autoRotate?: boolean;

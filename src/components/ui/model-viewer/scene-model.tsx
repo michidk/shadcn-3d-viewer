@@ -2,7 +2,7 @@
 
 import { Outlines, useGLTF } from "@react-three/drei";
 import { createPortal, useFrame, useThree } from "@react-three/fiber";
-import { useEffect, useMemo, useRef } from "react";
+import { useEffect, useLayoutEffect, useMemo, useRef } from "react";
 import {
   AnimationMixer,
   type Group,
@@ -68,6 +68,7 @@ export function SceneObject({
     <group
       ref={group}
       onClick={(event) => {
+        if (event.delta > 2) return;
         event.stopPropagation();
         onSelectMesh(event.object.userData.viewerNodeId ?? null);
       }}
@@ -159,15 +160,17 @@ function LoadedModel({
     result.updateMatrixWorld(true);
     return result;
   }, [gltf.scene]);
+  const meshes = useMemo(() => {
+    const result: Mesh[] = [];
+    model.traverse((object) => {
+      if ("isMesh" in object && object.isMesh) result.push(object as Mesh);
+    });
+    return result;
+  }, [model]);
   const selectedObject = useMemo(() => {
     if (!selectedMesh) return null;
-    let match: Mesh | null = null;
-    model.traverse((object) => {
-      if ((object as Mesh).isMesh && object.userData.viewerNodeId === selectedMesh)
-        match = object as Mesh;
-    });
-    return match;
-  }, [model, selectedMesh]);
+    return meshes.find((mesh) => mesh.userData.viewerNodeId === selectedMesh) ?? null;
+  }, [meshes, selectedMesh]);
   useEffect(() => retainModelResources(model), [model]);
   const invalidate = useThree((state) => state.invalidate);
   const { mixer, actions, names } = useMemo(() => {
@@ -201,9 +204,7 @@ function LoadedModel({
   playback.current = { animationPlaying, animationSpeed };
   useEffect(() => {
     const restore: (() => void)[] = [];
-    model.traverse((object) => {
-      const mesh = object as Mesh;
-      if (!mesh.isMesh) return;
+    meshes.forEach((mesh) => {
       if (shading === "realistic") return;
       const original = mesh.material;
       const material =
@@ -219,7 +220,7 @@ function LoadedModel({
       });
     });
     return () => restore.forEach((reset) => reset());
-  }, [model, shading]);
+  }, [meshes, shading]);
 
   useEffect(() => {
     onAnimations(names);
@@ -262,6 +263,7 @@ function LoadedModel({
       <primitive
         object={model}
         onClick={(event: import("@react-three/fiber").ThreeEvent<MouseEvent>) => {
+          if (event.delta > 2) return;
           event.stopPropagation();
           onSelectMesh(event.object.userData.viewerNodeId ?? null);
         }}
@@ -290,7 +292,23 @@ function ViewerMaterial({
 }
 
 function SelectionOutline() {
+  const outline = useRef<Group | null>(null);
+  useLayoutEffect(() => {
+    // Drei creates its helper mesh in a child layout effect. It must never intercept picks.
+    outline.current?.traverse((object) => {
+      object.raycast = () => {};
+    });
+  }, []);
   return (
-    <Outlines name="Viewer selection outline" color="#f2a93b" thickness={3} toneMapped={false} />
+    <Outlines
+      name="Viewer selection outline"
+      userData={{ viewerHelper: true }}
+      onUpdate={(object) => {
+        outline.current = object;
+      }}
+      color="#f2a93b"
+      thickness={3}
+      toneMapped={false}
+    />
   );
 }
