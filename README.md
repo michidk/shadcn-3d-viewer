@@ -485,18 +485,6 @@ const [selectedMesh, setSelectedMesh] = useState<string | null>(null);
 
 Click a mesh or choose it in the inspector to select it. Click empty space, use the inspector's clear button, or press Escape with the viewer focused to clear it. Orbit drags do not select objects. Replacing the source, retrying, changing camera mode or unmounting the scene clears selection and reports `null` when there was a selection; controlled owners must accept that update. Selection outlines remain overlays across shading modes and never appear as model parts in inspection.
 
-## Migrating to 0.3
-
-Version 0.3 removes the compatibility APIs in favor of local components and composition:
-
-- Replace viewer `alt` with `aria-label` or `aria-labelledby`. Use `aria-label` to customize screenshot filenames.
-- Replace initial `showInspector` with `defaultInspectorOpen`. For application-controlled visibility, use `inspectorOpen` and `onInspectorOpenChange` together.
-- Remove `components` from `ModelViewer`, `ModelViewerRoot`, and `ModelInspector`. Edit local shadcn components, or compose controls using `render`, children, and `className`.
-- Replace `ViewerUiProvider`, `ViewerUiComponents`, and `ViewerTooltipProps` with your local shadcn components. A custom tooltip can wrap a menu whose trigger uses `render={<TooltipTrigger />}` and `tooltip={false}`. See the `CustomButtonAndTooltip` composition story.
-- Import public parts from the root barrel, `core`, `controls`, or `inspector`. Internal files are not stable entry points.
-
-The complete `ModelViewer` preset and its normal installation command remain available. As with other source-owned components, review the installation diff before replacing customized files.
-
 ## Verify consumer compatibility
 
 Run `bun run test:install` to build the registry, pack the installer, and install it into isolated applications outside this repository. The checks build:
