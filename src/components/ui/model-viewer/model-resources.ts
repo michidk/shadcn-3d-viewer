@@ -2,6 +2,23 @@ import type { Material, Mesh, Object3D, SkinnedMesh, Texture } from "three";
 
 type Resource = { dispose: () => void };
 const users = new WeakMap<Resource, number>();
+const cacheUsers = new Map<string, number>();
+
+/** Keep a shared loader entry until its last viewer leaves, including Strict Mode remounts. */
+export function retainModelCache(src: string, clear: () => void) {
+  cacheUsers.set(src, (cacheUsers.get(src) ?? 0) + 1);
+  let released = false;
+  return () => {
+    if (released) return;
+    released = true;
+    cacheUsers.set(src, cacheUsers.get(src)! - 1);
+    queueMicrotask(() => {
+      if (cacheUsers.get(src) !== 0) return;
+      cacheUsers.delete(src);
+      clear();
+    });
+  };
+}
 
 /** Release GPU allocations after the last mounted clone stops using them.
  * Cached Three objects and image sources remain reusable on a later mount.

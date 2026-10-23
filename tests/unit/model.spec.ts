@@ -1,10 +1,19 @@
 import { readFile } from "node:fs/promises";
 import { expect, test } from "@playwright/test";
-import { BoxGeometry, Group, Mesh, MeshStandardMaterial, Texture } from "three";
+import {
+  BoxGeometry,
+  Group,
+  Mesh,
+  MeshStandardMaterial,
+  OrthographicCamera,
+  Texture,
+  Vector3,
+} from "three";
 import { GLTFLoader } from "three-stdlib";
 import {
   frameBounds,
   inspectModel,
+  orthographicZoom,
   prepareAnimationBounds,
 } from "../../src/components/ui/model-viewer/model-inspection";
 import { createViewerCameraStore } from "../../src/components/ui/model-viewer/model-viewer-camera";
@@ -60,6 +69,32 @@ test("inspection counts shared resources once and preserves hierarchy", () => {
   expect(info.textures).toBe(1);
   expect(info.nodes.filter((node) => node.mesh)).toHaveLength(2);
   expect(new Set(info.nodes.map((node) => node.id)).size).toBe(3);
+});
+
+test("orthographic framing ignores depth end-on and fits rotated bounds at every scale", () => {
+  for (const scale of [1e-6, 1, 1e6]) {
+    const shaft = new Mesh(new BoxGeometry(10 * scale, 10 * scale, 200 * scale));
+    shaft.position.set(30 * scale, -10 * scale, 50 * scale);
+    const { box, center, distance } = frameBounds(shaft, 2);
+    for (const direction of [new Vector3(0, 0, 1), new Vector3(1, 0, 0), new Vector3(1, 1, 1)]) {
+      const camera = new OrthographicCamera(-400, 400, 200, -200, 1e-10, distance * 10);
+      camera.zoom = orthographicZoom(box, camera, direction);
+      camera.position.copy(center).addScaledVector(direction.clone().normalize(), distance);
+      camera.lookAt(center);
+      camera.updateMatrixWorld(true);
+      camera.updateProjectionMatrix();
+      let extent = 0;
+      for (const x of [box.min.x, box.max.x])
+        for (const y of [box.min.y, box.max.y])
+          for (const z of [box.min.z, box.max.z]) {
+            const point = new Vector3(x, y, z).project(camera);
+            extent = Math.max(extent, Math.abs(point.x), Math.abs(point.y));
+          }
+      expect(extent).toBeCloseTo(1 / 1.15, 5);
+      if (direction.z === 1 && direction.x === 0)
+        expect(camera.zoom * scale).toBeCloseTo(400 / (10 * 1.15), 5);
+    }
+  }
 });
 
 test("real skinned fixture retains its skeleton and a finite animation envelope", async () => {

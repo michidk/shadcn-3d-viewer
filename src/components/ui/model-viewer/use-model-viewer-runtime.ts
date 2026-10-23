@@ -73,7 +73,7 @@ export function useModelViewerRuntime(input: ModelViewerRootProps) {
     useDraco = true,
     useMeshopt = true,
     extendLoader,
-    clearCacheOnUnmount = src?.startsWith("blob:") ?? false,
+    clearCacheOnUnmount = true,
     respectReducedMotion = true,
     onPerformanceChange,
     onLoad,

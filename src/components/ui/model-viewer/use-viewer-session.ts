@@ -2,6 +2,7 @@
 import { useGLTF } from "@react-three/drei";
 import { useCallback, useEffect, useReducer, useRef, useState } from "react";
 import type { ModelInspection } from "./model-inspection";
+import { retainModelCache } from "./model-resources";
 import { initialViewerLifecycle, viewerLifecycleReducer } from "./model-viewer-lifecycle";
 import { type ModelViewerRootProps, splitPanes, type ViewerMode } from "./model-viewer-types";
 import { useControlledState } from "./use-controlled-state";
@@ -70,12 +71,12 @@ export function useViewerSession({
     resetModelSession();
   }, [src, mode, enableCapture, clearFeedback, resetModelSession]);
 
-  useEffect(
-    () => () => {
-      if (src && clearCacheOnUnmount) useGLTF.clear(src);
-    },
-    [src, clearCacheOnUnmount],
-  );
+  useEffect(() => {
+    if (!src) return;
+    return retainModelCache(src, () => {
+      if (clearCacheOnUnmount) useGLTF.clear(src);
+    });
+  }, [src, clearCacheOnUnmount]);
 
   useEffect(() => {
     if (lifecycle.status === "ready" && loadReportedGeneration.current !== lifecycle.generation) {

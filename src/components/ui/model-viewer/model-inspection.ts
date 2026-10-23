@@ -3,8 +3,10 @@ import {
   AnimationMixer,
   Box3,
   type Material,
+  Matrix4,
   type Mesh,
   type Object3D,
+  type OrthographicCamera,
   Sphere,
   type Texture,
   Vector3,
@@ -104,10 +106,33 @@ export function frameBounds(object: Object3D, aspect: number, fov = 42) {
   const limitingAngle = Math.min(halfFov, Math.atan(Math.tan(halfFov) * Math.max(aspect, 0.001)));
   const distance = (radius / Math.sin(limitingAngle)) * 1.15;
   return {
+    box,
     center,
     radius,
     distance,
     near: Math.max(radius / 1000, 1e-8),
     far: distance + radius * 100,
   };
+}
+
+/** Fit the bounds projected onto the camera plane, independent of their depth. */
+export function orthographicZoom(box: Box3, camera: OrthographicCamera, direction: Vector3) {
+  const basis = new Matrix4().lookAt(direction, new Vector3(), camera.up);
+  const right = new Vector3().setFromMatrixColumn(basis, 0);
+  const up = new Vector3().setFromMatrixColumn(basis, 1);
+  const projected = new Box3();
+  if (!box.isEmpty()) {
+    for (const x of [box.min.x, box.max.x])
+      for (const y of [box.min.y, box.max.y])
+        for (const z of [box.min.z, box.max.z]) {
+          const corner = new Vector3(x, y, z);
+          projected.expandByPoint(new Vector3(corner.dot(right), corner.dot(up), 0));
+        }
+  }
+  const size = projected.getSize(new Vector3());
+  const minimum = (Math.max(size.x, size.y) || 0.001) * 1e-6;
+  return Math.min(
+    (camera.right - camera.left) / (Math.max(size.x, minimum) * 1.15),
+    (camera.top - camera.bottom) / (Math.max(size.y, minimum) * 1.15),
+  );
 }

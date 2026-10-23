@@ -9,7 +9,7 @@ import {
   type PerspectiveCamera as ThreePerspectiveCamera,
   Vector3,
 } from "three";
-import { frameBounds } from "./model-inspection";
+import { frameBounds, orthographicZoom } from "./model-inspection";
 import type { ViewerCameraStore } from "./model-viewer-camera";
 import type { ViewerCameraPreset, ViewerCameraState, ViewerLighting } from "./model-viewer-types";
 
@@ -59,7 +59,7 @@ export function CameraRig({
     (transition: boolean) => {
       const object = objectRef.current;
       if (!object || !controls.current) return;
-      const { center, radius, distance, near, far } = frameBounds(
+      const { box, center, radius, distance, near, far } = frameBounds(
         object,
         size.width / size.height,
         "fov" in camera ? camera.fov : 42,
@@ -67,13 +67,13 @@ export function CameraRig({
       camera.near = near;
       camera.far = far;
       camera.updateProjectionMatrix();
-      if ("isOrthographicCamera" in camera)
-        void controls.current.zoomTo(Math.min(size.width, size.height) / (radius * 2.3), false);
       const direction = new Vector3(
         ...(lighting === "outside" && preset === "isometric"
           ? ([1.7, 0.5, 1.7] as const)
           : presetVectors[preset]),
       ).normalize();
+      if ("isOrthographicCamera" in camera)
+        void controls.current.zoomTo(orthographicZoom(box, camera, direction), false);
       const position = center.clone().add(direction.multiplyScalar(distance));
       controls.current.minDistance = radius * 0.05;
       controls.current.maxDistance = distance * 10;
@@ -99,7 +99,7 @@ export function CameraRig({
   }, [resetToken, frameObject]);
 
   useEffect(() => {
-    if (!cameraStore) return;
+    if (!cameraStore || !objectRef.current || fitVersion === 0) return;
     cameraStore.register((view, transition) => {
       void controls.current?.setLookAt(...view.position, ...view.target, transition);
       // Imperative commands do not cause a React render. Wake the demand loop
@@ -113,7 +113,7 @@ export function CameraRig({
         target: current.getTarget(new Vector3()).toArray(),
       });
     return () => cameraStore.register(null);
-  }, [cameraStore, invalidate]);
+  }, [cameraStore, invalidate, objectRef, fitVersion]);
 
   useFrame((_, delta) => {
     if (autoRotate && controls.current)
@@ -121,7 +121,7 @@ export function CameraRig({
   });
 
   function readCamera(): ViewerCameraState | null {
-    if (!controls.current) return null;
+    if (!controls.current || !objectRef.current || fitVersion === 0) return null;
     const position = controls.current.getPosition(new Vector3());
     const target = controls.current.getTarget(new Vector3());
     return { position: position.toArray(), target: target.toArray() };
@@ -183,17 +183,16 @@ export function FitStaticCamera({
   useEffect(() => {
     const object = objectRef.current;
     if (!object) return;
-    const { center, radius, distance, near, far } = frameBounds(
+    const { box, center, distance, near, far } = frameBounds(
       object,
       size.width / size.height,
       "fov" in camera ? camera.fov : 42,
     );
     const direction = new Vector3(...presetVectors[preset]).normalize();
-    camera.position.copy(center).add(direction.multiplyScalar(distance));
+    camera.position.copy(center).addScaledVector(direction, distance);
     camera.near = near;
     camera.far = far;
-    if ("isOrthographicCamera" in camera)
-      camera.zoom = Math.min(size.width, size.height) / (radius * 2.3);
+    if ("isOrthographicCamera" in camera) camera.zoom = orthographicZoom(box, camera, direction);
     camera.lookAt(center);
     camera.updateProjectionMatrix();
   }, [camera, fitVersion, objectRef, preset, resetToken, size.width, size.height]);

@@ -184,6 +184,8 @@ Set `showFileName` to show the source in the default loader. Custom loaders rece
 
 `showRetry` or `useModelViewer().retry()` retries a failed model, clears its loader cache, and remounts the renderer. Replace `src` to fix an invalid or expired URL.
 
+Models release GPU resources when their last mounted consumer leaves. Loader cache entries also clear by default on source replacement or unmount, after the last viewer using that URL leaves. Set `clearCacheOnUnmount={false}` to retain the loader cache for later reuse.
+
 `pauseWhenHidden` pauses rendering, animation, and rotation offscreen or in a hidden tab, preserving playback state. Loading continues. Read `renderingPaused` or `data-rendering="paused|active"` for the effective state.
 
 ```tsx
@@ -234,7 +236,7 @@ Replace the cube with custom R3F content:
 
 `sceneContent` renders in the primary orbit pane only. `children` and `overlay` are DOM content. Custom gizmos need equivalent keyboard controls.
 
-`getCameraView()` and `setCameraView({ position, target }, { transition?: boolean })` use world-space coordinates. Transitions default to enabled; the setter returns `false` for invalid views or unmounted orbit controls. `useModelViewerCamera()` subscribes to live movement (initially `null`); `onCameraChange` fires after movement settles.
+`getCameraView()` and `setCameraView({ position, target }, { transition?: boolean })` use world-space coordinates. Transitions default to enabled; the setter returns `false` for invalid views or orbit controls that are not ready. `useModelViewerCamera()` subscribes to live movement and stays `null` until the model has been framed. Use `cameraPreset` for an initial direction, or wait for a non-null camera before sending an arbitrary view. `onCameraChange` fires after movement settles.
 
 ```tsx
 function CustomDirectionButton() {

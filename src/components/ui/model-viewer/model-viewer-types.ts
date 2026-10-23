@@ -119,6 +119,7 @@ export interface ModelViewerProps extends Omit<ComponentProps<"div">, "onLoad" |
   useDraco?: boolean | string;
   useMeshopt?: boolean;
   extendLoader?: (loader: GLTFLoader) => void;
+  /** Clear unused loader entries on source replacement/unmount. Defaults to true. */
   clearCacheOnUnmount?: boolean;
   respectReducedMotion?: boolean;
   onPerformanceChange?: (factor: number) => void;
@@ -151,7 +152,7 @@ export interface ModelViewerState {
   cameraPreset: ViewerCameraPreset;
   setCameraPreset: (preset: ViewerCameraPreset) => void;
   resetView: () => void;
-  /** Latest primary orbit camera view, or null before camera controls mount. */
+  /** Latest primary orbit camera view, or null until the model has been framed. */
   getCameraView: () => ViewerCameraState | null;
   /** Returns false when orbit controls are unavailable or the view is invalid. */
   setCameraView: (view: ViewerCameraState, options?: ViewerCameraOptions) => boolean;

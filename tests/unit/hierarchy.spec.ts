@@ -1,6 +1,27 @@
 import { expect, test } from "@playwright/test";
 import { indexHierarchy } from "../../src/components/ui/model-viewer/inspector-hierarchy";
 import type { ModelInspection } from "../../src/components/ui/model-viewer/model-inspection";
+import { retainModelCache } from "../../src/components/ui/model-viewer/model-resources";
+
+test("loader cache clears once after the last viewer leaves, including Strict Mode remounts", async () => {
+  const cleared: string[] = [];
+  const retain = (src: string) => retainModelCache(src, () => cleared.push(src));
+  const first = retain("first.glb");
+  const second = retain("first.glb");
+  const other = retain("other.glb");
+  first();
+  await Promise.resolve();
+  expect(cleared).toEqual([]);
+  second();
+  const remount = retain("first.glb");
+  await Promise.resolve();
+  expect(cleared).toEqual([]);
+  remount();
+  remount();
+  other();
+  await Promise.resolve();
+  expect(cleared).toEqual(["first.glb", "other.glb"]);
+});
 
 test("hierarchy search reveals matches and ancestors regardless of collapse", () => {
   const nodes: ModelInspection["nodes"] = [
