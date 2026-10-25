@@ -17,7 +17,7 @@ import { useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { ModelViewer, ModelViewerSkeleton } from "@/components/ui/model-viewer/lazy";
 
-const installCommand = "npx shadcn-3d-viewer@latest add";
+const installCommand = "npx shadcn@latest add @3d-viewer/model-viewer";
 const storybookBase = import.meta.env.DEV
   ? "https://shadcn-3d-viewer.vercel.app/storybook/"
   : "/storybook/";
