@@ -1,6 +1,6 @@
 {
   "name": "shadcn-3d-viewer",
-  "version": "0.3.0",
+  "version": "0.3.1",
   "description": "Source-owned shadcn 3D model viewer built with React Three Fiber",
   "license": "MIT",
   "repository": {
