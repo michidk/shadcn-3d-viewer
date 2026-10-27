@@ -18,6 +18,7 @@
 
 <p align="center">
   <a href="https://github.com/michidk/shadcn-3d-viewer/actions/workflows/ci.yml"><img alt="CI" src="https://github.com/michidk/shadcn-3d-viewer/actions/workflows/ci.yml/badge.svg"></a>
+  <a href="https://www.npmjs.com/package/shadcn-3d-viewer"><img alt="npm" src="https://img.shields.io/npm/v/shadcn-3d-viewer.svg"></a>
   <a href="LICENSE"><img alt="License: MIT" src="https://img.shields.io/badge/license-MIT-blue.svg"></a>
   <img alt="React 19" src="https://img.shields.io/badge/React-19-149ECA?logo=react&logoColor=white">
   <img alt="React Three Fiber" src="https://img.shields.io/badge/React_Three_Fiber-000000?logo=threedotjs&logoColor=white">
@@ -442,7 +443,7 @@ npx shadcn@latest add michidk/shadcn-3d-viewer/model-viewer
 For a version-pinned install, use the generated registry item from a release tag:
 
 ```sh
-npx shadcn@latest add https://raw.githubusercontent.com/michidk/shadcn-3d-viewer/v0.2.0/public/r/model-viewer.json
+npx shadcn@latest add https://raw.githubusercontent.com/michidk/shadcn-3d-viewer/v0.3.1/public/r/model-viewer.json
 ```
 
 The npm installer remains available if you prefer a published package with the exact shadcn version tested for that release:
