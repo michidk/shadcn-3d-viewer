@@ -18,10 +18,8 @@
 
 <p align="center">
   <a href="https://github.com/michidk/shadcn-3d-viewer/actions/workflows/ci.yml"><img alt="CI" src="https://github.com/michidk/shadcn-3d-viewer/actions/workflows/ci.yml/badge.svg"></a>
-  <a href="https://www.npmjs.com/package/shadcn-3d-viewer"><img alt="npm" src="https://img.shields.io/npm/v/shadcn-3d-viewer.svg"></a>
+  <a href="https://www.npmjs.com/package/shadcn-3d-viewer"><img alt="npm" src="https://img.shields.io/npm/v/shadcn-3d-viewer.svg?color=green"></a>
   <a href="LICENSE"><img alt="License: MIT" src="https://img.shields.io/badge/license-MIT-blue.svg"></a>
-  <img alt="React 19" src="https://img.shields.io/badge/React-19-149ECA?logo=react&logoColor=white">
-  <img alt="React Three Fiber" src="https://img.shields.io/badge/React_Three_Fiber-000000?logo=threedotjs&logoColor=white">
 </p>
 
 ---
@@ -46,7 +44,7 @@ Listed in the official [shadcn registry directory](https://ui.shadcn.com/docs/di
 Install the viewer into a Base UI shadcn project:
 
 ```sh
-npx shadcn@latest add @3d-viewer/model-viewer
+bunx shadcn@latest add @3d-viewer/model-viewer
 ```
 
 Then render it from the source now owned by your app:
@@ -398,7 +396,7 @@ Inspection uses source-model units and counts unique resources. Select meshes in
 Install from the official registry directory into a Base UI shadcn project:
 
 ```sh
-npx shadcn@latest add @3d-viewer/model-viewer
+bunx shadcn@latest add @3d-viewer/model-viewer
 ```
 
 The `@3d-viewer` namespace is built into the shadcn CLI, so you do not need to add a registry to `components.json`. The CLI copies the component source into your project. Pass shadcn options such as `--dry-run` to preview changes before accepting prompts.
@@ -408,9 +406,9 @@ The `@3d-viewer` namespace is built into the shadcn CLI, so you do not need to a
 Choose an item when you do not need the complete preset:
 
 ```sh
-npx shadcn@latest add @3d-viewer/model-viewer-core
-npx shadcn@latest add @3d-viewer/model-viewer-controls
-npx shadcn@latest add @3d-viewer/model-viewer-inspector
+bunx shadcn@latest add @3d-viewer/model-viewer-core
+bunx shadcn@latest add @3d-viewer/model-viewer-controls
+bunx shadcn@latest add @3d-viewer/model-viewer-inspector
 ```
 
 The core provides the renderer, shared state, loading and error states, keyboard orientation, fullscreen, and overlays. It excludes the toolbar and inspector UI. Controls and inspector bundles each include their required core sources, so they can also be installed directly. All items are self-contained within their release and do not fetch a different core version from the main branch. Keep your local changes when the installer prompts about existing files.
@@ -437,13 +435,13 @@ Import optional controls from `@/components/ui/model-viewer/controls` and inspec
 You can also install the registry item directly from GitHub without configuring a registry:
 
 ```sh
-npx shadcn@latest add michidk/shadcn-3d-viewer/model-viewer
+bunx shadcn@latest add michidk/shadcn-3d-viewer/model-viewer
 ```
 
 For a version-pinned install, use the generated registry item from a release tag:
 
 ```sh
-npx shadcn@latest add https://raw.githubusercontent.com/michidk/shadcn-3d-viewer/v0.3.1/public/r/model-viewer.json
+bunx shadcn@latest add https://raw.githubusercontent.com/michidk/shadcn-3d-viewer/v0.3.1/public/r/model-viewer.json
 ```
 
 The npm installer remains available if you prefer a published package with the exact shadcn version tested for that release:
